@@ -125,7 +125,7 @@ module.exports = async (req, res) => {
           index: 0,
           message: {
             role: "assistant",
-            content: `Aquí tienes la imagen generada: ${imageUrl}`
+            content: `Image generated: ${imageUrl}`
           },
           finish_reason: "stop"
         }],
