@@ -6,7 +6,8 @@ const DEFAULT_CONFIG = {
   modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/owl-alpha", key: "", system_prompt: "" },
   modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2-20260421:free", key: "", system_prompt: "" },
   modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
-  modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "meta/llama-3.2-11b-vision-instruct", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "Eres un modelo de visión. Analiza las imágenes se te envíen y describe todo lo que ves con detalle." }
+  modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." },
+  modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" }
 };
 
 async function getConfig() {
@@ -41,19 +42,21 @@ async function saveUsageDB(db) {
   try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2)); } catch(e) {}
   // Intentar guardar en GitHub
   const token = process.env.GITHUB_TOKEN;
-  if (token) {
-    try {
-      const content = JSON.stringify(db, null, 2);
-      const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato.llm/contents/api/usage-db.json';
-      const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}` } });
-      const fileData = await getRes.json();
-      await fetch(apiUrl, {
-        method: 'PUT',
-        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: 'Update usage stats', content: Buffer.from(content).toString('base64'), sha: fileData.sha })
-      });
-    } catch(e) {}
-  }
+  if (!token) { console.log('GITHUB_TOKEN no configurado'); return; }
+  try {
+    const content = JSON.stringify(db, null, 2);
+    const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato.llm/contents/api/usage-db.json';
+    const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}` } });
+    if (!getRes.ok) { console.log('Error obteniendo archivo GitHub:', getRes.status); return; }
+    const fileData = await getRes.json();
+    const putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: 'Update usage stats', content: Buffer.from(content).toString('base64'), sha: fileData.sha })
+    });
+    if (!putRes.ok) { console.log('Error guardando en GitHub:', putRes.status); }
+    else { console.log('Usage guardado en GitHub OK'); }
+  } catch(e) { console.log('Error GitHub:', e.message); }
 }
 
 module.exports = async (req, res) => {
@@ -165,10 +168,13 @@ module.exports = async (req, res) => {
         if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
         db.stats[userModel].totalTokens += tokens;
         db.stats[userModel].totalRequests += 1;
-        if (!db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
+        if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
         if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
+        db.lastUpdated = new Date().toISOString();
+        db.lastModel = userModel;
+        db.lastTokens = tokens;
         await saveUsageDB(db);
-      } catch(e) {}
+      } catch(e) { console.log('Error guardando uso:', e.message); }
       
       return res.status(upstreamRes.status).setHeader('Content-Type', 'application/json').send(result);
     } catch(e) {
