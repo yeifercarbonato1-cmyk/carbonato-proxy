@@ -66,7 +66,8 @@ module.exports = async (req, res) => {
         { id: "modelo1", object: "model", owned_by: "carbonato" },
         { id: "modelo2", object: "model", owned_by: "carbonato" },
         { id: "modelo3", object: "model", owned_by: "carbonato" },
-        { id: "modelo4", object: "model", owned_by: "carbonato" }
+        { id: "modelo4", object: "model", owned_by: "carbonato" },
+        { id: "modelo5", object: "model", owned_by: "carbonato" }
       ]
     });
   }
@@ -82,6 +83,39 @@ module.exports = async (req, res) => {
     const CONFIG = await getConfig();
     const userModel = body.model;
     const cfg = CONFIG[userModel];
+    
+    // Modelo5: Generación de imágenes con Pollinations
+    if (userModel === 'modelo5') {
+      try {
+        const messages = body.messages || [];
+        const lastMsg = messages[messages.length - 1];
+        const prompt = lastMsg?.content || body.prompt || 'a beautiful sunset';
+        const encodedPrompt = encodeURIComponent(prompt);
+        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
+        
+        // Registrar uso
+        try {
+          const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
+          const db = loadUsageDB();
+          db.usages.push({ model: userModel, ip: userIp, tokens: 1, timestamp: new Date().toISOString() });
+          if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+          db.stats[userModel].totalRequests += 1;
+          if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
+          if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
+          db.stats[userModel].totalTokens += 1;
+          await saveUsageDB(db);
+        } catch(e) {}
+        
+        // Respuesta en formato compatible con OpenAI
+        return res.status(200).json({
+          created: Math.floor(Date.now() / 1000),
+          data: [{ url: imageUrl }],
+          model: 'modelo5'
+        });
+      } catch(e) {
+        return res.status(500).json({ error: { message: e.message } });
+      }
+    }
     
     if (!cfg) {
       return res.status(400).json({ error: { message: "Modelo no configurado: " + userModel, type: "invalid_request_error" }});

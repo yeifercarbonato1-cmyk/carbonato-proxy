@@ -306,6 +306,12 @@ tr:hover td{
     <p><span class="tag tag-vision">VISION</span> <span class="tag tag-free">GRATIS</span></p>
     <p>Modelo de vision para analizar imagenes.</p>
   </div>
+  
+  <div class="model-card">
+    <h4>🎨 modelo5</h4>
+    <p><span class="tag tag-free">GRATIS</span></p>
+    <p>Genera imagenes con IA. Describe lo que quieres y lo dibujamos!</p>
+  </div>
 </div>
 
 <div class="section">
@@ -343,6 +349,18 @@ curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
     ],
     "max_tokens": 300
   }'</code>
+  
+  <h3>Generar imagen (modelo5)</h3>
+  <code>curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "model": "modelo5",
+    "messages": [
+      {"role": "user", "content": "Un gato astronauta en la luna"}
+    ]
+  }'
+# Respuesta: {"data":[{"url":"https://image.pollinations.ai/prompt/..."}]}
+# Abrir URL en navegador o descargar con: curl "URL" -o imagen.png</code>
 </div>
 
 <div class="section">
@@ -353,7 +371,7 @@ curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
 <a href="/api/admin" class="login-btn">[ ADMIN CASTLE ]</a>
 
   <div class="footer">
-PIPE BROS // KILO AI PROVIDER // 4 POWER-UPS // v4.20<br>
+PIPE BROS // KILO AI + POLLINATIONS // 5 POWER-UPS // v5.0<br>
   <span style="font-size:10px;color:#ffd700">Pagina creada con Hermes - 100% codigo libre</span>
 </div>
 </div>
