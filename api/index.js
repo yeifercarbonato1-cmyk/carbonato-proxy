@@ -313,11 +313,11 @@ tr:hover td{
   <p>Todos los power-ups usan la misma URL base:</p>
   
   <div class="endpoint">
-    <span class="method">POST</span> <span class="url">https://tmp-steel-kappa-98.vercel.app/chat/completions</span>
+    <span class="method">POST</span> <span class="url">https://carbonato-proxy.vercel.app/chat/completions</span>
   </div>
   
   <h3>Conversacion normal (modelo1, modelo2, modelo3)</h3>
-  <code>curl -s -X POST "https://tmp-steel-kappa-98.vercel.app/chat/completions" \\
+  <code>curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
   -H "Content-Type: application/json" \\
   -d '{
     "model": "modelo1",
@@ -330,15 +330,15 @@ tr:hover td{
   <code># Paso 1: Convertir imagen a base64
 IMAGE_B64=$(base64 -w 0 mi_imagen.png)
 
-# Paso 2: Usar el visor
-curl -s -X POST "https://tmp-steel-kappa-98.vercel.app/chat/completions" \\
+# Paso 2: Usar el visor de imagenes
+curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
   -H "Content-Type: application/json" \\
   -d '{
     "model": "modelo4",
     "messages": [
       {
         "role": "user",
-        "content": "Describe esta imagen: data:image/png;base64,'"$IMAGE_B64"'\\"
+        "content": "Describe esta imagen: data:image/png;base64,'"$IMAGE_B64"'\"
       }
     ],
     "max_tokens": 300
@@ -347,14 +347,14 @@ curl -s -X POST "https://tmp-steel-kappa-98.vercel.app/chat/completions" \\
 
 <div class="section">
   <h2>[ POWER-UP LIST ]</h2>
-  <code>curl -s "https://tmp-steel-kappa-98.vercel.app/models"</code>
+  <code>curl -s "https://carbonato-proxy.vercel.app/models"</code>
 </div>
 
 <a href="/api/admin" class="login-btn">[ ADMIN CASTLE ]</a>
 
-<div class="footer">
-  PIPE BROS // ZYDIT + KILO PROVIDERS // 4 POWER-UPS // v4.20<br>
-  <span style="font-size:7px;color:#ffd700">Pagina creada con Hermes usando modelo1 - 100% codigo libre</span>
+  <div class="footer">
+  PIPE BROS // KILLO AI PROVIDER // 4 POWER-UPS // v4.20<br>
+  <span style="font-size:7px;color:#ffd700">Pagina creada con Hermes - 100% codigo libre</span>
 </div>
 </div>
 </body>
