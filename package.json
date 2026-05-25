@@ -2,5 +2,8 @@
   "name": "carbonato-proxy",
   "version": "1.0.0",
   "description": "Carbonato Proxy API - Multi-model AI proxy",
-  "private": true
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  }
 }
