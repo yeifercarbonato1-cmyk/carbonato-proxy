@@ -1,16 +1,17 @@
 {
   "version": 2,
-  "rewrites": [
-    { "source": "/api/:match*", "destination": "/api/:match*.js" },
-    { "source": "/chat/:match*", "destination": "/api/chat.js" },
-    { "source": "/models", "destination": "/api/chat.js" },
-    { "source": "/", "destination": "/api/index.js" },
-    { "source": "/(.*)", "destination": "/api/index.js" }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1.js" },
+    { "src": "/", "dest": "/api/index.js" }
   ],
   "functions": {
-    "api/*.js": {
-      "runtime": "nodejs22.x",
-      "maxDuration": 60
-    }
+    "api/index.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
+    "api/chat.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 60 },
+    "api/admin.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
+    "api/admin-panel.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
+    "api/admin-auth.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
+    "api/admin-save.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
+    "api/admin-logout.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
+    "api/usage-save.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 }
   }
 }
