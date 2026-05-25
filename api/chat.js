@@ -1,4 +1,4 @@
-const fs = require('fs');
+const path = require('path');
 
 const CONFIG_PATH = '/tmp/proxy-config.json';
 
@@ -40,8 +40,11 @@ function loadUsageDB() {
 
 async function saveUsageDB(db) {
   try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2)); } catch(e) {}
-  // Intentar guardar en GitHub
-  const token = process.env.GITHUB_TOKEN;
+  // Obtener token de GitHub: primero env, luego archivo local
+  let token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    try { token = fs.readFileSync(path.join(__dirname, '..', '.github_token'), 'utf8').trim(); } catch(e) { token = null; }
+  }
   if (!token) { console.log('GITHUB_TOKEN no configurado'); return; }
   try {
     const content = JSON.stringify(db, null, 2);
