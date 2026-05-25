@@ -1,17 +1,11 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1.js" },
-    { "src": "/", "dest": "/api/index.js" }
+  "builds": [
+    { "src": "api/*.js", "use": "@vercel/node" }
   ],
-  "functions": {
-    "api/index.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
-    "api/chat.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 60 },
-    "api/admin.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
-    "api/admin-panel.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
-    "api/admin-auth.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
-    "api/admin-save.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
-    "api/admin-logout.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 },
-    "api/usage-save.js": { "runtime": "vercel/node@3.0.0", "maxDuration": 30 }
-  }
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/$1" },
+    { "src": "/", "dest": "/api/index.js" },
+    { "src": "/(.*)", "dest": "/api/index.js" }
+  ]
 }
