@@ -18,9 +18,9 @@
     "system_prompt": ""
   },
   "modelo4": {
-    "url": "https://text.pollinations.ai/openai",
-    "model": "openai",
-    "key": "",
+    "url": "https://api.zydit.in/v1/chat/completions",
+    "model": "meta/llama-3.2-11b-vision-instruct",
+    "key": "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg",
     "system_prompt": "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español."
   },
   "modelo5": {

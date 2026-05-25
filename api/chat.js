@@ -121,43 +121,37 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: { message: "Modelo no configurado: " + userModel, type: "invalid_request_error" }});
     }
     
-    // Modelo4: Si la imagen viene en base64, subir a upload y obtener URL
+    // Modelo4: Procesar imágenes para Zydit (formato OpenAI)
     if (userModel === 'modelo4' && body.messages) {
       for (let i = 0; i < body.messages.length; i++) {
         const msg = body.messages[i];
         if (msg.content && Array.isArray(msg.content)) {
-          // Convertir formato de array a formato de texto con URL para Pollinations
-          let textContent = '';
-          let imageUrl = '';
+          // Convertir y subir imágenes en base64 a URL pública
           for (let j = 0; j < msg.content.length; j++) {
             const part = msg.content[j];
-            if (part.type === 'text') {
-              textContent += part.text || part.content || '';
-            }
             if (part.type === 'image_url' && part.image_url && part.image_url.url) {
-              imageUrl = part.image_url.url;
-            }
-          }
-          // Si hay imagen en base64, subir a upload
-          if (imageUrl.startsWith('data:image')) {
-            try {
-              const base64Data = imageUrl.split(',')[1];
-              const uploadRes = await fetch(`${req.protocol || 'https'}://${req.headers.host}/api/upload`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ base64: base64Data })
-              });
-              const uploadData = await uploadRes.json();
-              if (uploadData.url) {
-                imageUrl = uploadData.url;
+              let imgUrl = part.image_url.url;
+              // Si es base64, subir a upload para obtener URL pública
+              if (imgUrl.startsWith('data:image')) {
+                try {
+                  const base64Data = imgUrl.split(',')[1];
+                  const mimeType = imgUrl.match(/data:(.*?);/)?.[1] || 'image/png';
+                  const uploadRes = await fetch(`${req.protocol || 'https'}://${req.headers.host}/api/upload`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ base64: base64Data, mimetype: mimeType })
+                  });
+                  const uploadData = await uploadRes.json();
+                  if (uploadData.url && !uploadData.url.startsWith('data:')) {
+                    imgUrl = uploadData.url;
+                  }
+                } catch(e) {
+                  console.log('Error subiendo imagen:', e.message);
+                }
               }
-            } catch(e) {}
-          }
-          // Formato compatible con Pollinations
-          if (imageUrl && !imageUrl.startsWith('data:')) {
-            msg.content = `${textContent}\n\n![imagen](${imageUrl})`;
-          } else {
-            msg.content = textContent;
+              // Actualizar la URL
+              part.image_url.url = imgUrl;
+            }
           }
         }
       }
