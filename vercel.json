@@ -1,5 +1,12 @@
 {
   "version": 2,
+  "rewrites": [
+    { "source": "/api/:match*", "destination": "/api/:match*.js" },
+    { "source": "/chat/:match*", "destination": "/api/chat.js" },
+    { "source": "/models", "destination": "/api/chat.js" },
+    { "source": "/", "destination": "/api/index.js" },
+    { "source": "/(.*)", "destination": "/api/index.js" }
+  ],
   "functions": {
     "api/*.js": {
       "runtime": "nodejs22.x",
