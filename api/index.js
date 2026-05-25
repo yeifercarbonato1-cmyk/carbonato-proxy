@@ -61,20 +61,20 @@ body{
   box-shadow:2px 2px 0 #8b6508;
 }
 h1{
-  font-size:20px;
+  font-size:24px;
   color:#ffd700;
   text-shadow:3px 3px 0 #b8860b;
   letter-spacing:4px;
   margin-bottom:10px;
 }
 .sub{
-  font-size:8px;
+  font-size:12px;
   color:#fff;
   text-shadow:1px 1px 0 #000;
   margin-bottom:5px;
 }
 .version{
-  font-size:7px;
+  font-size:10px;
   color:#ffd700;
 }
 .section{
@@ -95,18 +95,18 @@ h1{
   font-size:12px;
 }
 h2{
-  font-size:11px;
+  font-size:14px;
   color:#8b4513;
   margin-bottom:15px;
   text-shadow:1px 1px 0 #fff;
 }
 h3{
-  font-size:9px;
+  font-size:12px;
   margin:15px 0 8px;
   color:#5d2906;
 }
 p,li{
-  font-size:8px;
+  font-size:11px;
   color:#4a2c2a;
   line-height:1.8;
 }
@@ -117,7 +117,7 @@ code{
   background:#000;
   border:2px solid #ffd700;
   padding:12px;
-  font-size:7px;
+  font-size:10px;
   color:#00ff00;
   margin:8px 0;
   overflow-x:auto;
@@ -127,8 +127,8 @@ code{
 }
 .tag{
   display:inline-block;
-  padding:2px 6px;
-  font-size:6px;
+  padding:3px 8px;
+  font-size:9px;
   margin:2px;
   border:1px solid;
 }
@@ -152,12 +152,12 @@ code{
   font-size:14px;
 }
 .model-card h4{
-  font-size:9px;
+  font-size:12px;
   color:#8b4513;
   margin-bottom:8px;
 }
 .model-card p{
-  font-size:7px;
+  font-size:10px;
   color:#5d2906;
   line-height:1.8;
 }
@@ -166,7 +166,7 @@ code{
   border:2px solid #ffd700;
   padding:10px;
   margin:8px 0;
-  font-size:7px;
+  font-size:10px;
   color:#00ff00;
 }
 .method{color:#ff69b4}
@@ -179,7 +179,7 @@ table{
 th,td{
   border:2px solid #8b4513;
   padding:8px;
-  font-size:7px;
+  font-size:10px;
   text-align:left;
 }
 th{
@@ -226,7 +226,7 @@ tr:hover td{
   text-align:center;
   margin-top:40px;
   padding:20px;
-  font-size:6px;
+  font-size:9px;
   color:#fff;
   background:#8b4513;
   border-top:3px solid #d2691e;
@@ -353,8 +353,8 @@ curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
 <a href="/api/admin" class="login-btn">[ ADMIN CASTLE ]</a>
 
   <div class="footer">
-  PIPE BROS // KILLO AI PROVIDER // 4 POWER-UPS // v4.20<br>
-  <span style="font-size:7px;color:#ffd700">Pagina creada con Hermes - 100% codigo libre</span>
+PIPE BROS // KILO AI PROVIDER // 4 POWER-UPS // v4.20<br>
+  <span style="font-size:10px;color:#ffd700">Pagina creada con Hermes - 100% codigo libre</span>
 </div>
 </div>
 </body>
