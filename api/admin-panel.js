@@ -46,8 +46,8 @@ if (!cfg || Object.keys(cfg).length === 0) cfg = def;
   const usages = db.usages || [];
 
   let cards = '';
-  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f'];
-  for (let i = 1; i <= 6; i++) {
+  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1'];
+  for (let i = 1; i <= 8; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || def[name];
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -62,7 +62,7 @@ if (!cfg || Object.keys(cfg).length === 0) cfg = def;
   });
 
   let statsCards = '';
-  for (let i = 1; i <= 6; i++) {
+  for (let i = 1; i <= 8; i++) {
     const name = 'modelo' + i;
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     const ipsList = s.uniqueIPs.slice(0,5).join(', ');
