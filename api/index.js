@@ -312,6 +312,24 @@ tr:hover td{
     <p><span class="tag tag-free">GRATIS</span></p>
     <p>Genera imagenes con IA. Describe lo que quieres y lo dibujamos!</p>
   </div>
+ 
+  <div class="model-card">
+    <h4>⚡ modelo6</h4>
+    <p><span class="tag tag-free">GRATIS</span></p>
+    <p>Modelos para codigo lento pero bueno.</p>
+  </div>
+ 
+  <div class="model-card">
+    <h4>⚡ modelo7</h4>
+    <p><span class="tag tag-free">GRATIS</span></p>
+    <p>Modelos ultra rapido pero no tan bueno.</p>
+  </div>
+ 
+  <div class="model-card">
+    <h4>💻 modelo8</h4>
+    <p><span class="tag tag-free">GRATIS</span></p>
+    <p>Modelo para uso en codigo.</p>
+  </div>
 </div>
 
 <div class="section">
@@ -369,10 +387,12 @@ curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
 </div>
 
 <a href="/api/admin" class="login-btn">[ ADMIN CASTLE ]</a>
-
+ 
   <div class="footer">
-PIPE BROS // KILO AI + POLLINATIONS // 5 POWER-UPS // v5.0<br>
+PIPE BROS // KILO AI + POLLINATES // 8 POWER-UPS // v5.0<br>
   <span style="font-size:10px;color:#ffd700">Pagina creada con Hermes - 100% codigo libre</span>
+  <br><br>
+  <span style="font-size:9px;color:#ff6b6b">Si quieres que este proyecto se siga manteniendo se necesita colaboracion.</span>
 </div>
 </div>
 </body>

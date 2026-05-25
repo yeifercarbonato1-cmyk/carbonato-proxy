@@ -6,8 +6,11 @@ const DEFAULT_CONFIG = {
   modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/owl-alpha", key: "", system_prompt: "" },
   modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2-20260421:free", key: "", system_prompt: "" },
   modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
-  modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." },
-  modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" }
+  modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", key: "", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." },
+  modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
+  modelo6: { url: "https://api.zydit.in/v1/chat/completions", model: "moonshotai/kimi-k2.6", key: "", system_prompt: "" },
+  modelo7: { url: "https://api.zydit.in/v1/chat/completions", model: "openai/gpt-oss-120b", key: "", system_prompt: "" },
+  modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "qwen/qwen3.5-397b-a17b", key: "", system_prompt: "" }
 };
 
 async function getConfig() {
@@ -19,7 +22,7 @@ async function getConfig() {
   
   // Intentar leer desde GitHub API como fallback
   try {
-    const res = await fetch('https://api.github.com/repos/yeifer125/carbonato.llm/contents/api/config.json');
+    const res = await fetch('https://api.github.com/repos/yeifer125/carbonato-proxy/contents/api/config.json');
     if (res.ok) {
       const data = await res.json();
       const cfg = JSON.parse(Buffer.from(data.content, 'base64').toString());
@@ -45,7 +48,7 @@ async function saveUsageDB(db) {
   if (!token) { console.log('GITHUB_TOKEN no configurado'); return; }
   try {
     const content = JSON.stringify(db, null, 2);
-    const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato.llm/contents/api/usage-db.json';
+    const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato-proxy/contents/api/usage-db.json';
     const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}` } });
     if (!getRes.ok) { console.log('Error obteniendo archivo GitHub:', getRes.status); return; }
     const fileData = await getRes.json();
@@ -70,7 +73,10 @@ module.exports = async (req, res) => {
         { id: "modelo2", object: "model", owned_by: "carbonato" },
         { id: "modelo3", object: "model", owned_by: "carbonato" },
         { id: "modelo4", object: "model", owned_by: "carbonato" },
-        { id: "modelo5", object: "model", owned_by: "carbonato" }
+        { id: "modelo5", object: "model", owned_by: "carbonato" },
+        { id: "modelo6", object: "model", owned_by: "carbonato" },
+        { id: "modelo7", object: "model", owned_by: "carbonato" },
+        { id: "modelo8", object: "model", owned_by: "carbonato" }
       ]
     });
   }
@@ -87,38 +93,48 @@ module.exports = async (req, res) => {
     const userModel = body.model;
     const cfg = CONFIG[userModel];
     
-    // Modelo5: Generación de imágenes con Pollinations
-    if (userModel === 'modelo5') {
+  // Modelo5: Generación de imágenes con Pollinations
+  if (userModel === 'modelo5') {
+    try {
+      const messages = body.messages || [];
+      const lastMsg = messages[messages.length - 1];
+      const prompt = lastMsg?.content || body.prompt || 'a beautiful sunset';
+      const encodedPrompt = encodeURIComponent(prompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
+      
+      // Registrar uso
       try {
-        const messages = body.messages || [];
-        const lastMsg = messages[messages.length - 1];
-        const prompt = lastMsg?.content || body.prompt || 'a beautiful sunset';
-        const encodedPrompt = encodeURIComponent(prompt);
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
-        
-        // Registrar uso
-        try {
-          const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
-          const db = loadUsageDB();
-          db.usages.push({ model: userModel, ip: userIp, tokens: 1, timestamp: new Date().toISOString() });
-          if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-          db.stats[userModel].totalRequests += 1;
-          if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
-          if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
-          db.stats[userModel].totalTokens += 1;
-          await saveUsageDB(db);
-        } catch(e) {}
-        
-        // Respuesta en formato compatible con OpenAI
-        return res.status(200).json({
-          created: Math.floor(Date.now() / 1000),
-          data: [{ url: imageUrl }],
-          model: 'modelo5'
-        });
-      } catch(e) {
-        return res.status(500).json({ error: { message: e.message } });
-      }
+        const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
+        const db = loadUsageDB();
+        db.usages.push({ model: userModel, ip: userIp, tokens: 1, timestamp: new Date().toISOString() });
+        if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+        db.stats[userModel].totalRequests += 1;
+        if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
+        if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
+        db.stats[userModel].totalTokens += 1;
+        await saveUsageDB(db);
+      } catch(e) {}
+      
+      // Respuesta en formato OpenAI compatible con Hermes
+      return res.status(200).json({
+        id: "img-" + Date.now(),
+        object: "chat.completion",
+        created: Math.floor(Date.now() / 1000),
+        model: "modelo5",
+        choices: [{
+          index: 0,
+          message: {
+            role: "assistant",
+            content: "Imagen generada: " + imageUrl
+          },
+          finish_reason: "stop"
+        }],
+        usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
+      });
+    } catch(e) {
+      return res.status(500).json({ error: { message: e.message } });
     }
+  }
     
     if (!cfg) {
       return res.status(400).json({ error: { message: "Modelo no configurado: " + userModel, type: "invalid_request_error" }});
