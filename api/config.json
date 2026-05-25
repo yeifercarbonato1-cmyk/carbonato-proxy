@@ -32,7 +32,7 @@
   "modelo6": {
     "url": "https://api.zydit.in/v1/chat/completions",
     "model": "moonshotai/kimi-k2.6",
-    "key": "zyd_live_9B4Jq6J-dsx8f8OfoKvZqSXFhgaXbaHqQKZMs90ZeQA",
+    "key": "",
     "system_prompt": ""
   }
 }

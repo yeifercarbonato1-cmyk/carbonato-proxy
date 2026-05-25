@@ -1,4 +1,4 @@
-const path = require('path');
+const fs = require('fs');
 
 const CONFIG_PATH = '/tmp/proxy-config.json';
 
@@ -42,9 +42,6 @@ async function saveUsageDB(db) {
   try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2)); } catch(e) {}
   // Obtener token de GitHub: primero env, luego archivo local
   let token = process.env.GITHUB_TOKEN;
-  if (!token) {
-    try { token = fs.readFileSync(path.join(__dirname, '..', '.github_token'), 'utf8').trim(); } catch(e) { token = null; }
-  }
   if (!token) { console.log('GITHUB_TOKEN no configurado'); return; }
   try {
     const content = JSON.stringify(db, null, 2);
@@ -153,9 +150,14 @@ module.exports = async (req, res) => {
       }
     }
     
-    const headers = { 'Content-Type': 'application/json' };
-    if (cfg.key) headers['Authorization'] = 'Bearer ' + cfg.key;
-    
+  const headers = { 'Content-Type': 'application/json' };
+  if (cfg.key) {
+    headers['Authorization'] = 'Bearer ' + cfg.key;
+  } else if (cfg.url.includes('zydit.in')) {
+    // fallback to env vars for Zydit tokens (e.g., ZYDIT_TOKEN or MODEL6_KEY)
+    const envKey = process.env.ZYDIT_TOKEN || process.env.MODELO6_KEY;
+    if (envKey) headers['Authorization'] = 'Bearer ' + envKey;
+  }
     try {
       const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });
       const result = await upstreamRes.text();
