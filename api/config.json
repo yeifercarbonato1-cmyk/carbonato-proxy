@@ -30,9 +30,9 @@
     "system_prompt": ""
   },
   "modelo6": {
-    "url": "",
-    "model": "",
-    "key": "",
+    "url": "https://api.zydit.in/v1/chat/completions",
+    "model": "moonshotai/kimi-k2.6",
+    "key": "zyd_live_9B4Jq6J-dsx8f8OfoKvZqSXFhgaXbaHqQKZMs90ZeQA",
     "system_prompt": ""
   }
 }
