@@ -30,25 +30,27 @@ module.exports = async (req, res) => {
   if (!cfg || Object.keys(cfg).length === 0) {
     try { cfg = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8')); } catch(e) {}
   }
-  const def = {
-    modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/owl-alpha", key: "", system_prompt: "" },
-    modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2-20260421:free", key: "", system_prompt: "" },
-    modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
-    modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "meta/llama-3.2-11b-vision-instruct", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "Eres un modelo de visión. Analiza las imágenes se te envíen y describe todo lo que ves con detalle." }
-  };
-  if (!cfg || Object.keys(cfg).length === 0) cfg = def;
+  const    def = {
+      modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/owl-alpha", key: "", system_prompt: "" },
+      modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2-20260421:free", key: "", system_prompt: "" },
+      modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
+      modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." },
+      modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
+      modelo6: { url: "", model: "", key: "", system_prompt: "" }
+    };
+if (!cfg || Object.keys(cfg).length === 0) cfg = def;
 
   const db = loadDB();
   const stats = db.stats || {};
   const usages = db.usages || [];
 
   let cards = '';
-  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3'];
-  for (let i = 1; i <= 4; i++) {
+  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f'];
+  for (let i = 1; i <= 6; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || def[name];
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-    cards += `<div class="card" style="border-color:${colors[i-1]}"><h3 style="color:${colors[i-1]}">[ ${name} ]</h3><label>BASE URL</label><input id="url${i}" value="${c.url}"><label>MODEL ID</label><input id="id${i}" value="${c.model}"><label>API KEY</label><input id="key${i}" value="${c.key||''}"><label>SYSTEM PROMPT</label><textarea id="sp${i}" rows="3">${c.system_prompt||''}</textarea><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><button class="btn-test" onclick="test('${name}',${i})">[ PROBAR ]</button><div id="r${i}" class="result"></div></div>`;
+    cards += `<div class="card" style="border-color:${colors[i-1]}"><h3 style="color:${colors[i-1]}">[ ${name} ]</h3><label>BASE URL</label><input id="url${i}" value="${c.url||''}"><label>MODEL ID</label><input id="id${i}" value="${c.model||''}"><label>API KEY</label><input id="key${i}" value="${c.key||''}"><label>SYSTEM PROMPT</label><textarea id="sp${i}" rows="3">${c.system_prompt||''}</textarea><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><button class="btn-test" onclick="test('${name}',${i})">[ PROBAR ]</button><div id="r${i}" class="result"></div></div>`;
   }
 
   const recentUsages = usages.slice(-20).reverse();
@@ -59,7 +61,7 @@ module.exports = async (req, res) => {
   });
 
   let statsCards = '';
-  for (let i = 1; i <= 4; i++) {
+  for (let i = 1; i <= 6; i++) {
     const name = 'modelo' + i;
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     const ipsList = s.uniqueIPs.slice(0,5).join(', ');

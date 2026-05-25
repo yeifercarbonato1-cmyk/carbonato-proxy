@@ -28,5 +28,11 @@
     "model": "pollinations-image",
     "key": "",
     "system_prompt": ""
+  },
+  "modelo6": {
+    "url": "",
+    "model": "",
+    "key": "",
+    "system_prompt": ""
   }
 }
