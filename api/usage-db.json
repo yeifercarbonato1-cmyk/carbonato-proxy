@@ -1,35 +1,22 @@
 {
   "usages": [
     {
-      "model": "modelo1",
-      "ip": "190.211.125.254",
-      "tokens": 213,
-      "timestamp": "2026-05-26T21:27:56.348Z"
-    },
-    {
       "model": "modelo2",
       "ip": "190.211.125.254",
-      "tokens": 304,
-      "timestamp": "2026-05-26T21:28:02.967Z"
+      "tokens": 0,
+      "timestamp": "2026-05-26T21:28:11.325Z"
     }
   ],
   "stats": {
-    "modelo1": {
-      "totalTokens": 213,
-      "totalRequests": 1,
-      "uniqueIPs": [
-        "190.211.125.254"
-      ]
-    },
     "modelo2": {
-      "totalTokens": 304,
+      "totalTokens": 0,
       "totalRequests": 1,
       "uniqueIPs": [
         "190.211.125.254"
       ]
     }
   },
-  "lastUpdated": "2026-05-26T21:28:02.967Z",
+  "lastUpdated": "2026-05-26T21:28:11.325Z",
   "lastModel": "modelo2",
-  "lastTokens": 304
+  "lastTokens": 0
 }
