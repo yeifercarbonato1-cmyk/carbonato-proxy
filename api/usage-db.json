@@ -4,7 +4,7 @@
       "model": "modelo4",
       "ip": "190.211.125.254",
       "tokens": 0,
-      "timestamp": "2026-05-26T14:24:15.288Z"
+      "timestamp": "2026-05-26T14:24:48.257Z"
     }
   ],
   "stats": {
@@ -16,7 +16,7 @@
       ]
     }
   },
-  "lastUpdated": "2026-05-26T14:24:15.288Z",
+  "lastUpdated": "2026-05-26T14:24:48.257Z",
   "lastModel": "modelo4",
   "lastTokens": 0
 }
