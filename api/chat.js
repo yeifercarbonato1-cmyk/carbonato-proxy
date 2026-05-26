@@ -235,9 +235,7 @@ const envKey = process.env.ZYDIT_TOKEN || process.env.MODELO6_KEY;
 if (envKey) headers['Authorization'] = 'Bearer ' + envKey;
 }
 
-// Limpiar tool_choice y tools (algunos backends no lo soportan)
-if (body.tool_choice) delete body.tool_choice;
-if (body.tools) delete body.tools;
+// Los tools se envían directamente al backend para que los modelos los procesen
 
 try {
 const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });
