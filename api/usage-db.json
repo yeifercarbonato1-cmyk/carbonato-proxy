@@ -1,22 +1,22 @@
 {
   "usages": [
     {
-      "model": "modelo7",
+      "model": "modelo1",
       "ip": "190.211.125.254",
-      "tokens": 156,
-      "timestamp": "2026-05-26T18:39:20.648Z"
+      "tokens": 117,
+      "timestamp": "2026-05-26T21:26:21.089Z"
     }
   ],
   "stats": {
-    "modelo7": {
-      "totalTokens": 156,
+    "modelo1": {
+      "totalTokens": 117,
       "totalRequests": 1,
       "uniqueIPs": [
         "190.211.125.254"
       ]
     }
   },
-  "lastUpdated": "2026-05-26T18:39:20.648Z",
-  "lastModel": "modelo7",
-  "lastTokens": 156
+  "lastUpdated": "2026-05-26T21:26:21.089Z",
+  "lastModel": "modelo1",
+  "lastTokens": 117
 }
