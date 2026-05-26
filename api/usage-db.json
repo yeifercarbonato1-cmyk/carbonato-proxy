@@ -3,20 +3,20 @@
     {
       "model": "modelo7",
       "ip": "190.211.125.254",
-      "tokens": 254,
-      "timestamp": "2026-05-26T18:36:19.990Z"
+      "tokens": 209,
+      "timestamp": "2026-05-26T18:36:49.241Z"
     }
   ],
   "stats": {
     "modelo7": {
-      "totalTokens": 254,
+      "totalTokens": 209,
       "totalRequests": 1,
       "uniqueIPs": [
         "190.211.125.254"
       ]
     }
   },
-  "lastUpdated": "2026-05-26T18:36:19.990Z",
+  "lastUpdated": "2026-05-26T18:36:49.241Z",
   "lastModel": "modelo7",
-  "lastTokens": 254
+  "lastTokens": 209
 }
