@@ -5,6 +5,12 @@
       "ip": "190.211.125.254",
       "tokens": 277,
       "timestamp": "2026-05-26T18:37:39.543Z"
+    },
+    {
+      "model": "modelo6",
+      "ip": "190.211.125.254",
+      "tokens": 116,
+      "timestamp": "2026-05-26T18:37:52.530Z"
     }
   ],
   "stats": {
@@ -14,9 +20,16 @@
       "uniqueIPs": [
         "190.211.125.254"
       ]
+    },
+    "modelo6": {
+      "totalTokens": 116,
+      "totalRequests": 1,
+      "uniqueIPs": [
+        "190.211.125.254"
+      ]
     }
   },
-  "lastUpdated": "2026-05-26T18:37:39.543Z",
-  "lastModel": "modelo3",
-  "lastTokens": 277
+  "lastUpdated": "2026-05-26T18:37:52.530Z",
+  "lastModel": "modelo6",
+  "lastTokens": 116
 }
