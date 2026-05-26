@@ -245,12 +245,18 @@
       "ip": "190.211.125.254",
       "tokens": 0,
       "timestamp": "2026-05-26T21:37:13.416Z"
+    },
+    {
+      "model": "modelo2",
+      "ip": "190.211.125.254",
+      "tokens": 666,
+      "timestamp": "2026-05-26T21:37:21.903Z"
     }
   ],
   "stats": {
     "modelo2": {
-      "totalTokens": 1145,
-      "totalRequests": 29,
+      "totalTokens": 1811,
+      "totalRequests": 30,
       "uniqueIPs": [
         "190.211.125.254"
       ]
@@ -305,7 +311,7 @@
       ]
     }
   },
-  "lastUpdated": "2026-05-26T21:37:13.416Z",
+  "lastUpdated": "2026-05-26T21:37:21.903Z",
   "lastModel": "modelo2",
-  "lastTokens": 0
+  "lastTokens": 666
 }
