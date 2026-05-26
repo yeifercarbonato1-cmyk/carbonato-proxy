@@ -11,18 +11,24 @@
       "ip": "190.211.113.0",
       "tokens": 0,
       "timestamp": "2026-05-26T03:16:42.642Z"
+    },
+    {
+      "model": "modelo6",
+      "ip": "190.211.113.0",
+      "tokens": 0,
+      "timestamp": "2026-05-26T03:21:30.992Z"
     }
   ],
   "stats": {
     "modelo6": {
       "totalTokens": 0,
-      "totalRequests": 2,
+      "totalRequests": 3,
       "uniqueIPs": [
         "190.211.113.0"
       ]
     }
   },
-  "lastUpdated": "2026-05-26T03:16:42.642Z",
+  "lastUpdated": "2026-05-26T03:21:30.993Z",
   "lastModel": "modelo6",
   "lastTokens": 0
 }
