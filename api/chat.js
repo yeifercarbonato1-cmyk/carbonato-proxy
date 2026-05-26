@@ -227,15 +227,22 @@ module.exports = async (req, res) => {
     }
     
   const headers = { 'Content-Type': 'application/json' };
-  if (cfg.key) {
-    headers['Authorization'] = 'Bearer ' + cfg.key;
-  } else if (cfg.url.includes('zydit.in')) {
-    // fallback to env vars for Zydit tokens (e.g., ZYDIT_TOKEN or MODEL6_KEY)
-    const envKey = process.env.ZYDIT_TOKEN || process.env.MODELO6_KEY;
-    if (envKey) headers['Authorization'] = 'Bearer ' + envKey;
-  }
-    try {
-      const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });
+if (cfg.key) {
+headers['Authorization'] = 'Bearer ' + cfg.key;
+} else if (cfg.url.includes('zydit.in')) {
+// fallback to env vars for Zydit tokens (e.g., ZYDIT_TOKEN or MODEL6_KEY)
+const envKey = process.env.ZYDIT_TOKEN || process.env.MODELO6_KEY;
+if (envKey) headers['Authorization'] = 'Bearer ' + envKey;
+}
+
+// Limpiar tool_choice si el backend no lo soporta (NVIDIA/Zydit)
+if (cfg.url.includes('zydit.in') || cfg.url.includes('nvidia')) {
+if (body.tool_choice) delete body.tool_choice;
+if (body.tools) delete body.tools;
+}
+
+try {
+const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });
       const result = await upstreamRes.text();
       
       // Registrar uso
