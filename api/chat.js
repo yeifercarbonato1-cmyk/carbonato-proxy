@@ -119,6 +119,41 @@ module.exports = async (req, res) => {
     const cfg = CONFIG[userModel];
     
   // Modelo5: Generación de imágenes con Pollinations
+  // Soporte para streaming en modelo5
+  const useStream = body.stream === true;
+  if (userModel === 'modelo5' && useStream) {
+  try {
+  const messages = body.messages || [];
+  const lastMsg = messages[messages.length - 1];
+  const prompt = lastMsg?.content || body.prompt || 'a beautiful sunset';
+  const encodedPrompt = encodeURIComponent(prompt);
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
+  
+  // Responder en formato stream compatible con OpenAI
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  
+  // Chunk 1: Inicio
+  const chunk1 = { id: "img-" + Date.now(), object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: "modelo5", choices: [{ index: 0, delta: { role: "assistant" } }] };
+  res.write(`data: ${JSON.stringify(chunk1)}\n\n`);
+  
+  // Chunk 2: Content
+  const content = `Imagen generada: ${imageUrl}`;
+  const chunk2 = { id: "img-" + Date.now(), object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: "modelo5", choices: [{ index: 0, delta: { content: content } }] };
+  res.write(`data: ${JSON.stringify(chunk2)}\n\n`);
+  
+  // Chunk 3: Fin
+  const chunk3 = { id: "img-" + Date.now(), object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: "modelo5", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] };
+  res.write(`data: ${JSON.stringify(chunk3)}\n\n`);
+  res.write('data: [DONE]\n\n');
+  res.end();
+  return;
+  } catch(e) {
+  return res.status(500).json({ error: { message: e.message } });
+  }
+  }
+  
   if (userModel === 'modelo5') {
     try {
       const messages = body.messages || [];
