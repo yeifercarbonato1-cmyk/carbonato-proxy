@@ -1,22 +1,19 @@
 {
   "usages": [
     {
-      "model": "modelo4",
+      "model": "modelo5",
       "ip": "190.211.125.254",
-      "tokens": 0,
-      "timestamp": "2026-05-26T14:25:53.069Z"
+      "tokens": 1,
+      "timestamp": "2026-05-26T17:30:19.776Z"
     }
   ],
   "stats": {
-    "modelo4": {
-      "totalTokens": 0,
+    "modelo5": {
+      "totalTokens": 1,
       "totalRequests": 1,
       "uniqueIPs": [
         "190.211.125.254"
       ]
     }
-  },
-  "lastUpdated": "2026-05-26T14:25:53.069Z",
-  "lastModel": "modelo4",
-  "lastTokens": 0
+  }
 }
