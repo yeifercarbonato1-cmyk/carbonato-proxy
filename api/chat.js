@@ -81,6 +81,31 @@ module.exports = async (req, res) => {
     });
   }
   
+  // Endpoint para generación de imágenes (compatible con OpenAI DALL-E)
+  if (url.endsWith('/images/generations') && req.method === 'POST') {
+  let body = {};
+  const chunks = [];
+  for await (const chunk of req) chunks.push(chunk);
+  if (chunks.length > 0) {
+  try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch(e) {}
+  }
+  
+  try {
+  const prompt = body.prompt || '';
+  const size = body.size || '1024x1024';
+  const [width, height] = size.split('x').map(Number);
+  const encodedPrompt = encodeURIComponent(prompt);
+  const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width||1024}&height=${height||1024}&nologo=true`;
+  
+  return res.status(200).json({
+  created: Math.floor(Date.now() / 1000),
+  data: [{ url: imageUrl, revised_prompt: prompt }]
+  });
+  } catch(e) {
+  return res.status(500).json({ error: { message: e.message } });
+  }
+  }
+  
   if (req.method === 'POST') {
     let body = {};
     const chunks = [];
