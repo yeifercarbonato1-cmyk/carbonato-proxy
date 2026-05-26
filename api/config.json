@@ -32,25 +32,19 @@
   "modelo6": {
     "url": "https://api.zydit.in/v1/chat/completions",
     "model": "moonshotai/kimi-k2.6",
-    "key": "",
-    "system_prompt": ""
-  },
-  "modelo7": {
-    "url": "",
-    "model": "",
-    "key": "",
+    "key": "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg",
     "system_prompt": ""
   },
   "modelo7": {
     "url": "https://api.zydit.in/v1/chat/completions",
     "model": "openai/gpt-oss-120b",
-    "key": "",
+    "key": "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg",
     "system_prompt": ""
   },
   "modelo8": {
     "url": "https://api.zydit.in/v1/chat/completions",
     "model": "qwen/qwen3.5-397b-a17b",
-    "key": "",
+    "key": "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg",
     "system_prompt": ""
   }
 }
