@@ -235,11 +235,9 @@ const envKey = process.env.ZYDIT_TOKEN || process.env.MODELO6_KEY;
 if (envKey) headers['Authorization'] = 'Bearer ' + envKey;
 }
 
-// Limpiar tool_choice si el backend no lo soporta (NVIDIA/Zydit)
-if (cfg.url.includes('zydit.in') || cfg.url.includes('nvidia')) {
+// Limpiar tool_choice y tools (algunos backends no lo soportan)
 if (body.tool_choice) delete body.tool_choice;
 if (body.tools) delete body.tools;
-}
 
 try {
 const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });
