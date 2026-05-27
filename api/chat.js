@@ -225,6 +225,13 @@ module.exports = async (req, res) => {
         body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
       }
     }
+   
+    // Modelo4 (Zydit vision) no soporta tool_choice auto - eliminar herramientas
+    if (userModel === 'modelo4') {
+      delete body.tools;
+      delete body.tool_choice;
+      delete body.tool_calls;
+    }
     
   const headers = { 'Content-Type': 'application/json' };
 if (cfg.key) {
