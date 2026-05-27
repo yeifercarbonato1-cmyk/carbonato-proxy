@@ -19,8 +19,8 @@
   },
   "modelo4": {
     "url": "https://api.zydit.in/v1/chat/completions",
-    "model": "meta/llama-3.2-11b-vision",
-    "key": "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg",
+    "model": "meta/llama-3.2-11b-vision-instruct",
+    "key": "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk",
     "system_prompt": "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español."
   },
   "modelo5": {
