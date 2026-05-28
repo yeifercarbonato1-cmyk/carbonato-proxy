@@ -23,6 +23,12 @@
       "ip": "190.211.125.254",
       "tokens": 81,
       "timestamp": "2026-05-28T01:04:14.835Z"
+    },
+    {
+      "model": "modelo5",
+      "ip": "190.211.125.254",
+      "tokens": 1,
+      "timestamp": "2026-05-28T01:04:16.362Z"
     }
   ],
   "stats": {
@@ -49,6 +55,13 @@
     },
     "modelo4": {
       "totalTokens": 81,
+      "totalRequests": 1,
+      "uniqueIPs": [
+        "190.211.125.254"
+      ]
+    },
+    "modelo5": {
+      "totalTokens": 1,
       "totalRequests": 1,
       "uniqueIPs": [
         "190.211.125.254"
