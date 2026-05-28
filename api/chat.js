@@ -28,7 +28,7 @@ async function uploadBase64Image(base64Data, mimeType = 'image/png') {
 
 // Transform message content for vision models
 // Zydit accepts base64 directly in image_url.url, no conversion needed
-async function transformVisionContent(messages) {
+function transformVisionContent(messages) {
   return messages.map((msg) => {
     if (msg.content && Array.isArray(msg.content)) {
       const newContent = [];
@@ -56,38 +56,14 @@ const DEFAULT_CONFIG = {
   modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
   modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "meta/llama-3.2-11b-vision-instruct", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." },
   modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-  modelo6: { url: "https://api.zydit.in/v1/chat/completions", model: "moonshotai/kimi-k2.6", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
+  modelo6: { url: "https://api.zydit.in/v1/chat/completions", model: "mistralai/ministral-14b-instruct-2512", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
   modelo7: { url: "https://api.zydit.in/v1/chat/completions", model: "openai/gpt-oss-120b", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
-  modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "qwen/qwen3.5-397b-a17b", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
-  modelo9: { url: "https://api.zydit.in/v4/chat/completions", model: "gemini-2.5-flash", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." }
+  modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "google/gemma-3n-e4b-it", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
+  modelo9: { url: "https://api.zydit.in/v1/chat/completions", model: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." }
 };
 
-async function getConfig() {
-  // Intentar leer desde /tmp primero
-  try {
-    const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    if (cfg && Object.keys(cfg).length > 0) {
-      // Asegurar que todos los modelos del DEFAULT_CONFIG existan
-      for (const key of Object.keys(DEFAULT_CONFIG)) {
-        if (!cfg[key]) cfg[key] = DEFAULT_CONFIG[key];
-      }
-      return cfg;
-    }
-  } catch(e) {}
-  
-  // Intentar leer desde GitHub API como fallback
-  try {
-    const res = await fetch('https://api.github.com/repos/yeifer125/carbonato-proxy/contents/api/config.json');
-    if (res.ok) {
-      const data = await res.json();
-      const cfg = JSON.parse(Buffer.from(data.content, 'base64').toString());
-      if (cfg && Object.keys(cfg).length > 0) {
-        try { fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg)); } catch(e) {}
-        return cfg;
-      }
-    }
-  } catch(e) {}
-
+function getConfig() {
+  // Siempre usar DEFAULT_CONFIG para evitar inconsistencias con /tmp
   return DEFAULT_CONFIG;
 }
 
@@ -169,7 +145,7 @@ module.exports = async (req, res) => {
       try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch(e) {}
     }
     
-    const CONFIG = await getConfig();
+    const CONFIG = getConfig();
     const userModel = body.model;
     const cfg = CONFIG[userModel];
     
@@ -257,25 +233,14 @@ module.exports = async (req, res) => {
     
     // Modelo4: Transformar formato OpenAI a formato Zydit para vision
     if (userModel === 'modelo4' && body.messages) {
-      body.messages = await transformVisionContent(body.messages);
+      body.messages = transformVisionContent(body.messages);
     }
     
-    // Modelo9 (Gemini): Embedding base64 images in text format
+    // Modelo9 (Zydit vision): Transformar formato OpenAI a formato Zydit para vision
     if (userModel === 'modelo9' && body.messages) {
-      for (const msg of body.messages) {
-        if (msg.content && Array.isArray(msg.content)) {
-          const textParts = [];
-          for (const part of msg.content) {
-            if (part.type === 'text' && part.text) {
-              textParts.push(part.text);
-            } else if (part.type === 'image_url' && part.image_url?.url?.startsWith('data:')) {
-              textParts.push(`Analyze this image: ${part.image_url.url}`);
-            }
-          }
-          if (textParts.length > 0) msg.content = textParts.join(' ');
-        }
-      }
+      body.messages = transformVisionContent(body.messages);
     }
+    
     
     body.model = cfg.model;
     
@@ -287,7 +252,7 @@ module.exports = async (req, res) => {
     }
    
     // Modelo4 (Zydit vision) no soporta tool_choice auto - eliminar herramientas
-    if (userModel === 'modelo4') {
+    if (userModel === 'modelo4' || userModel === 'modelo9') {
       delete body.tools;
       delete body.tool_choice;
       delete body.tool_calls;

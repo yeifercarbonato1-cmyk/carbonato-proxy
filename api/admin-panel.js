@@ -36,10 +36,10 @@ module.exports = async (req, res) => {
       modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
       modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "meta/llama-3.2-11b-vision-instruct", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." },
       modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-      modelo6: { url: "https://api.zydit.in/v1/chat/completions", model: "moonshotai/kimi-k2.6", key: "", system_prompt: "" },
-      modelo7: { url: "https://api.zydit.in/v1/chat/completions", model: "openai/gpt-oss-120b", key: "", system_prompt: "" },
-      modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "qwen/qwen3.5-397b-a17b", key: "", system_prompt: "" },
-      modelo9: { url: "https://api.zydit.in/v4/chat/completions", model: "gemini-2.5-flash", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." }
+      modelo6: { url: "https://api.zydit.in/v1/chat/completions", model: "mistralai/ministral-14b-instruct-2512", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
+      modelo7: { url: "https://api.zydit.in/v1/chat/completions", model: "openai/gpt-oss-120b", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
+      modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "google/gemma-3n-e4b-it", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
+      modelo9: { url: "https://api.zydit.in/v1/chat/completions", model: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." }
     };
 if (!cfg || Object.keys(cfg).length === 0) cfg = def;
 
