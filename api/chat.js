@@ -72,7 +72,8 @@ const DEFAULT_CONFIG = {
   modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
   modelo6: { url: "https://api.zydit.in/v1/chat/completions", model: "moonshotai/kimi-k2.6", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
   modelo7: { url: "https://api.zydit.in/v1/chat/completions", model: "openai/gpt-oss-120b", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
-  modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "qwen/qwen3.5-397b-a17b", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" }
+  modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "qwen/qwen3.5-397b-a17b", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
+  modelo9: { url: "https://api.zydit.in/v4/chat/completions", model: "gemini-2.5-flash", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." }
 };
 
 async function getConfig() {
@@ -138,7 +139,8 @@ module.exports = async (req, res) => {
         { id: "modelo5", object: "model", owned_by: "carbonato" },
         { id: "modelo6", object: "model", owned_by: "carbonato" },
         { id: "modelo7", object: "model", owned_by: "carbonato" },
-        { id: "modelo8", object: "model", owned_by: "carbonato" }
+        { id: "modelo8", object: "model", owned_by: "carbonato" },
+        { id: "modelo9", object: "model", owned_by: "carbonato" }
       ]
     });
   }
@@ -265,6 +267,23 @@ module.exports = async (req, res) => {
     // Modelo4: Transformar formato OpenAI a formato Zydit para vision
     if (userModel === 'modelo4' && body.messages) {
       body.messages = await transformVisionContent(body.messages);
+    }
+    
+    // Modelo9 (Gemini): Embedding base64 images in text format
+    if (userModel === 'modelo9' && body.messages) {
+      for (const msg of body.messages) {
+        if (msg.content && Array.isArray(msg.content)) {
+          const textParts = [];
+          for (const part of msg.content) {
+            if (part.type === 'text' && part.text) {
+              textParts.push(part.text);
+            } else if (part.type === 'image_url' && part.image_url?.url?.startsWith('data:')) {
+              textParts.push(`Analyze this image: ${part.image_url.url}`);
+            }
+          }
+          if (textParts.length > 0) msg.content = textParts.join(' ');
+        }
+      }
     }
     
     body.model = cfg.model;
