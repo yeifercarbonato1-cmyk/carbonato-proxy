@@ -2,6 +2,67 @@ const fs = require('fs');
 
 const CONFIG_PATH = '/tmp/proxy-config.json';
 
+// Convert base64 image to public URL using transfer.sh (Node 18+ native fetch)
+async function uploadBase64Image(base64Data, mimeType = 'image/png') {
+  try {
+    const buffer = Buffer.from(base64Data, 'base64');
+    const ext = mimeType.includes('jpeg') ? 'jpg' : 'png';
+    const filename = 'vision-' + Date.now() + '.' + ext;
+    
+    const res = await fetch('https://transfer.sh/' + filename, {
+      method: 'PUT',
+      body: buffer,
+      headers: { 'Content-Type': mimeType }
+    });
+    
+    if (res.ok) {
+      const url = await res.text();
+      return url.trim();
+    }
+  } catch(e) {
+    console.log('Error uploading image:', e.message);
+  }
+  return null;
+}
+
+// Transform message content for vision models with base64 support
+async function transformVisionContent(messages) {
+  return Promise.all(messages.map(async (msg) => {
+    if (msg.content && Array.isArray(msg.content)) {
+      const newContent = [];
+      for (const part of msg.content) {
+        // Transform text content: content -> text
+        if (part.type === 'text') {
+          if (part.content && !part.text) {
+            newContent.push({ type: 'text', text: part.content });
+          } else {
+            newContent.push(part);
+          }
+        }
+        // Transform base64 image to public URL
+        else if (part.type === 'image_url' && part.image_url?.url?.startsWith('data:')) {
+          const dataUrl = part.image_url.url;
+          const matches = dataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
+          if (matches) {
+            const mimeType = matches[1];
+            const base64Data = matches[2];
+            const publicUrl = await uploadBase64Image(base64Data, mimeType);
+            if (publicUrl) {
+              newContent.push({ type: 'image_url', image_url: { url: publicUrl } });
+            }
+          }
+        }
+        // Keep other types as-is
+        else {
+          newContent.push(part);
+        }
+      }
+      return { ...msg, content: newContent };
+    }
+    return msg;
+  }));
+}
+
 const DEFAULT_CONFIG = {
   modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/owl-alpha", key: "", system_prompt: "" },
   modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2-20260421:free", key: "", system_prompt: "" },
@@ -202,19 +263,7 @@ module.exports = async (req, res) => {
     
     // Modelo4: Transformar formato OpenAI a formato Zydit para vision
     if (userModel === 'modelo4' && body.messages) {
-      for (let i = 0; i < body.messages.length; i++) {
-        const msg = body.messages[i];
-        if (msg.content && Array.isArray(msg.content)) {
-          for (let j = 0; j < msg.content.length; j++) {
-            const part = msg.content[j];
-            // Zydit espera "text" no "content" para el tipo text
-            if (part.type === 'text' && part.content && !part.text) {
-              part.text = part.content;
-              delete part.content;
-            }
-          }
-        }
-      }
+      body.messages = await transformVisionContent(body.messages);
     }
     
     body.model = cfg.model;
