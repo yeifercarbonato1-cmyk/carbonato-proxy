@@ -2,15 +2,16 @@ const fs = require('fs');
 
 const CONFIG_PATH = '/tmp/proxy-config.json';
 
-// Convert base64 image to public URL using transfer.sh (Node 18+ native fetch)
+// Convert base64 image to public URL using picfly.io (free image hosting)
 async function uploadBase64Image(base64Data, mimeType = 'image/png') {
   try {
     const buffer = Buffer.from(base64Data, 'base64');
     const ext = mimeType.includes('jpeg') ? 'jpg' : 'png';
     const filename = 'vision-' + Date.now() + '.' + ext;
     
-    const res = await fetch('https://transfer.sh/' + filename, {
-      method: 'PUT',
+    // Usar 0x0.st (servicio simple y confiable)
+    const res = await fetch('https://0x0.st', {
+      method: 'POST',
       body: buffer,
       headers: { 'Content-Type': mimeType }
     });
