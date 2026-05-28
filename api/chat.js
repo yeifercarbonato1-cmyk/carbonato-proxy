@@ -80,7 +80,13 @@ async function getConfig() {
   // Intentar leer desde /tmp primero
   try {
     const cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    if (cfg && Object.keys(cfg).length > 0) return cfg;
+    if (cfg && Object.keys(cfg).length > 0) {
+      // Asegurar que todos los modelos del DEFAULT_CONFIG existan
+      for (const key of Object.keys(DEFAULT_CONFIG)) {
+        if (!cfg[key]) cfg[key] = DEFAULT_CONFIG[key];
+      }
+      return cfg;
+    }
   } catch(e) {}
   
   // Intentar leer desde GitHub API como fallback
@@ -90,13 +96,12 @@ async function getConfig() {
       const data = await res.json();
       const cfg = JSON.parse(Buffer.from(data.content, 'base64').toString());
       if (cfg && Object.keys(cfg).length > 0) {
-        // Guardar en /tmp para próximas peticiones
         try { fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg)); } catch(e) {}
         return cfg;
       }
     }
   } catch(e) {}
-  
+
   return DEFAULT_CONFIG;
 }
 
