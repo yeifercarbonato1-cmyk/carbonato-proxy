@@ -48,7 +48,7 @@ async function saveUsageDB(db) {
   if (!token) { console.log('GITHUB_TOKEN no configurado'); return; }
   try {
     const content = JSON.stringify(db, null, 2);
-    const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato-proxy/contents/api/usage-db.json';
+    const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
     const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}` } });
     if (!getRes.ok) { console.log('Error obteniendo archivo GitHub:', getRes.status); return; }
     const fileData = await getRes.json();

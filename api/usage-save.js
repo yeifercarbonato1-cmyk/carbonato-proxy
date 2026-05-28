@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     if (githubToken) {
       try {
         const dbContent = JSON.stringify(db, null, 2);
-        const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato.llm/contents/api/usage-db.json';
+        const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
         
         // Primero obtener el SHA del archivo actual
         const getResponse = await fetch(apiUrl, {

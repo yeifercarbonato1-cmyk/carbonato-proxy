@@ -4,7 +4,7 @@ const fs = require('fs');
 async function loadDB() {
   try { return JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch(e) {}
   try {
-    const res = await fetch('https://api.github.com/repos/yeifer125/carbonato.llm/contents/api/usage-db.json');
+    const res = await fetch('https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json');
     if (res.ok) {
       const data = await res.json();
       const db = JSON.parse(Buffer.from(data.content, 'base64').toString());
