@@ -26,42 +26,28 @@ async function uploadBase64Image(base64Data, mimeType = 'image/png') {
   return null;
 }
 
-// Transform message content for vision models with base64 support
+// Transform message content for vision models
+// Zydit accepts base64 directly in image_url.url, no conversion needed
 async function transformVisionContent(messages) {
-  return Promise.all(messages.map(async (msg) => {
+  return messages.map((msg) => {
     if (msg.content && Array.isArray(msg.content)) {
       const newContent = [];
       for (const part of msg.content) {
-        // Transform text content: content -> text
         if (part.type === 'text') {
           if (part.content && !part.text) {
             newContent.push({ type: 'text', text: part.content });
           } else {
             newContent.push(part);
           }
-        }
-        // Transform base64 image to public URL
-        else if (part.type === 'image_url' && part.image_url?.url?.startsWith('data:')) {
-          const dataUrl = part.image_url.url;
-          const matches = dataUrl.match(/^data:(image\/[a-z+]+);base64,(.+)$/);
-          if (matches) {
-            const mimeType = matches[1];
-            const base64Data = matches[2];
-            const publicUrl = await uploadBase64Image(base64Data, mimeType);
-            if (publicUrl) {
-              newContent.push({ type: 'image_url', image_url: { url: publicUrl } });
-            }
-          }
-        }
-        // Keep other types as-is
-        else {
+        } else {
+          // Keep image_url and other types as-is (base64 works directly with Zydit)
           newContent.push(part);
         }
       }
       return { ...msg, content: newContent };
     }
     return msg;
-  }));
+  });
 }
 
 const DEFAULT_CONFIG = {
