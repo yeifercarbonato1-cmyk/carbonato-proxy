@@ -143,6 +143,12 @@
       "ip": "190.211.125.254",
       "tokens": 236,
       "timestamp": "2026-05-28T00:19:13.602Z"
+    },
+    {
+      "model": "modelo8",
+      "ip": "190.211.125.254",
+      "tokens": 198,
+      "timestamp": "2026-05-28T00:19:16.225Z"
     }
   ],
   "stats": {
@@ -196,14 +202,14 @@
       ]
     },
     "modelo8": {
-      "totalTokens": 236,
-      "totalRequests": 1,
+      "totalTokens": 434,
+      "totalRequests": 2,
       "uniqueIPs": [
         "190.211.125.254"
       ]
     }
   },
-  "lastUpdated": "2026-05-28T00:19:13.602Z",
+  "lastUpdated": "2026-05-28T00:19:16.225Z",
   "lastModel": "modelo8",
-  "lastTokens": 236
+  "lastTokens": 198
 }
