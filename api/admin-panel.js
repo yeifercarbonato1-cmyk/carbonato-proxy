@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
   const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'Desconocida').split(',')[0].trim();
 
   let cfg = {};
-  try { cfg = JSON.parse(fs.readFileSync('/home/fsociety/tmp/api/config.json', 'utf8')); } catch(e) {}
+  try { cfg = JSON.parse(fs.readFileSync('/media/disco1tb/hermes-cosas/espacio-de-trabajo/carbonato-proxy/tmp/api/config.json', 'utf8')); } catch(e) {}
   if (!cfg || Object.keys(cfg).length === 0) {
     try { cfg = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8')); } catch(e) {}
   }
@@ -37,7 +37,7 @@ module.exports = async (req, res) => {
       modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "meta/llama-3.2-11b-vision-instruct", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." },
       modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
       modelo6: { url: "https://api.zydit.in/v1/chat/completions", model: "mistralai/ministral-14b-instruct-2512", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
-      modelo7: { url: "https://api.zydit.in/v1/chat/completions", model: "openai/gpt-oss-120b", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
+      modelo7: { url: "https://api.zydit.in/v1/chat/completions", model: "qwen/qwen3-coder-480b-a35b-instruct", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
       modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "moonshotai/kimi-k2.6", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
       modelo9: { url: "https://api.zydit.in/v1/chat/completions", model: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." }
     };

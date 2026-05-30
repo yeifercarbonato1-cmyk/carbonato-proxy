@@ -37,7 +37,7 @@
   },
   "modelo7": {
     "url": "https://api.zydit.in/v1/chat/completions",
-    "model": "openai/gpt-oss-120b",
+    "model": "qwen/qwen3-coder-480b-a35b-instruct",
     "key": "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg",
     "system_prompt": ""
   },
