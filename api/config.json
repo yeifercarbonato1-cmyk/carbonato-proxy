@@ -31,7 +31,7 @@
   },
   "modelo6": {
     "url": "https://api.zydit.in/v1/chat/completions",
-    "model": "z-ai/glm5.1-reasoning",
+    "model": "minimaxai/minimax-m2.7",
     "key": "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg",
     "system_prompt": ""
   },
