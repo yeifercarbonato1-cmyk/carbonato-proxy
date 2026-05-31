@@ -12,7 +12,7 @@ module.exports = async (req, res) => {
         modelo3: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "kilo" },
         modelo4: { id: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", vision: true, provider: "zydit", env: "ZYDIT_TOKEN" },
         modelo5: { id: "pollinations-image", image_gen: true, provider: "pollinations" },
-        modelo6: { id: "moonshotai/kimi-k2.6", provider: "zydit", env: "ZYDIT_TOKEN" },
+        modelo6: { id: "z-ai/glm5.1-reasoning", provider: "zydit", env: "ZYDIT_TOKEN" },
         modelo7: { id: "openai/gpt-oss-120b", provider: "zydit", env: "ZYDIT_TOKEN" },
         modelo8: { id: "qwen/qwen3.5-397b-a17b", provider: "zydit", env: "ZYDIT_TOKEN" }
       },

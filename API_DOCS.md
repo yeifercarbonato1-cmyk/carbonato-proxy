@@ -40,7 +40,7 @@ No global auth required. Individual models may require provider-specific tokens 
 - **Usage**: `{ "model": "modelo5", "messages": [{"role":"user","content":"puppy playing in garden"}] }`
 - **Response**: `{ "data": [{ "url": "https://image.pollinations.ai/..." }] }`
 
-### modelo6: Zydit/Kimi K2.6
+### modelo6: Zydit/z-ai/glm5.1-reasoning
 - **Model ID**: `moonshotai/kimi-k2.6`
 - **Token Env**: `ZYDIT_TOKEN`
 
