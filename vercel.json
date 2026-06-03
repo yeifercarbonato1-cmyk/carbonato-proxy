@@ -19,6 +19,7 @@
     { "src": "/models", "dest": "/api/chat.js" },
     { "src": "/v1/models", "dest": "/api/chat.js" },
     { "src": "/v1/images/generations", "dest": "/api/chat.js" },
+    { "src": "/images/generations", "dest": "/api/chat.js" },
     { "src": "/api/upload", "dest": "/api/upload.js" },
     { "src": "/api/models-check", "dest": "/api/models-check.js" },
     { "src": "/api/docs-ia", "dest": "/api/docs-ia.js" },

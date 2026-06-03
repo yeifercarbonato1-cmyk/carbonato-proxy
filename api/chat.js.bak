@@ -203,26 +203,7 @@ module.exports = async (req, res) => {
         return res.status(500).json({ error: { message: e.message } });
       }
     }
-
-    // Modelo10: Generación de imágenes con Pollinations
-    if (userModel === 'modelo10') {
-      try {
-        const messages = body.messages || [];
-        const lastMsg = messages[messages.length - 1];
-        const prompt = lastMsg?.content || body.prompt || 'a beautiful sunset';
-        const size = body.size || '1024x1024';
-        const [width, height] = size.split('x').map(Number);
-        const encodedPrompt = encodeURIComponent(prompt);
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${width||1024}&height=${height||1024}&nologo=true`;
-        return res.status(200).json({
-          created: Math.floor(Date.now() / 1000),
-          data: [{ url: imageUrl, revised_prompt: prompt }]
-        });
-      } catch(e) {
-        return res.status(500).json({ error: { message: e.message } });
-      }
-    }
-
+    
     if (!cfg) {
       return res.status(400).json({ error: { message: "Modelo no configurado: " + userModel, type: "invalid_request_error" }});
     }
