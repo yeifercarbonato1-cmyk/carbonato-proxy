@@ -77,7 +77,7 @@ const KILO_MODELS = [
   const token = process.env.GITHUB_TOKEN;
   if (token && workingModels.length > 0) {
     try {
-      const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/api/config.json';
+      const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato-proxy/contents/api/config.json';
       const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}` } });
       const fileData = await getRes.json();
       
