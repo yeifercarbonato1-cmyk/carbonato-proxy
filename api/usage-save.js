@@ -6,11 +6,23 @@ module.exports = async (req, res) => {
   try {
     const newData = JSON.parse(body);
     
-    // Cargar datos actuales (desde /tmp cache)
+    // Cargar datos actuales desde GitHub (si hay token)
+    const githubToken = process.env.GITHUB_TOKEN || '';
     let db = { usages: [], stats: {} };
-    try {
-      db = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8'));
-    } catch(e) {}
+    
+    if (githubToken) {
+      try {
+        const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
+        const getResponse = await fetch(apiUrl, {
+          headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        
+        if (getResponse.ok) {
+          const fileData = await getResponse.json();
+          db = JSON.parse(Buffer.from(fileData.content, 'base64').toString());
+        }
+      } catch(e) {}
+    }
     
     // Añadir nuevos usos al historial (si es array)
     if (Array.isArray(newData.usages)) {
@@ -38,39 +50,32 @@ module.exports = async (req, res) => {
       }
     }
     
-    // Guardar en /tmp para uso inmediato
+    const dbContent = JSON.stringify(db, null, 2);
+    
+    // Guardar en /tmp para uso inmediato (puede no persistir)
     try {
-      fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2));
+      fs.writeFileSync('/tmp/usage-db.json', dbContent);
     } catch(e) {}
     
-    // Usar GitHub API para hacer commit (necesita GITHUB_TOKEN)
-    const githubToken = process.env.GITHUB_TOKEN || '';
-    console.log(`[DEBUG] GITHUB_TOKEN presente: ${!!githubToken}`);
+    // Usar GitHub API para hacer commit
     if (githubToken) {
       try {
-        const dbContent = JSON.stringify(db, null, 2);
         const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
         
-        console.log(`[DEBUG] Intentando guardar en: ${apiUrl}`);
-        
-        // Primero obtener el SHA del archivo actual (o crear si no existe)
-        const getResponse = await fetch(apiUrl, {
-          headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
-        });
-        
-        console.log(`[DEBUG] GET response status: ${getResponse.status}`);
-        
+        // Obtener SHA actual
         let sha = '';
-        if (getResponse.ok) {
-          const fileData = await getResponse.json();
-          sha = fileData.sha || '';
-          console.log(`[DEBUG] SHA obtenido: ${sha.substring(0,7)}...`);
-        } else {
-          console.log(`[DEBUG] GET falló - archivo probablemente no existe`);
-        }
+        try {
+          const getSha = await fetch(apiUrl, {
+            headers: { 'Authorization': `token ${githubToken}` }
+          });
+          if (getSha.ok) {
+            const fileData = await getSha.json();
+            sha = fileData.sha || '';
+          }
+        } catch(e) {}
         
-        // Hacer el commit con el nuevo contenido
-        const putResponse = await fetch(apiUrl, {
+        // PUT actualizado
+        await fetch(apiUrl, {
           method: 'PUT',
           headers: {
             'Authorization': `token ${githubToken}`,
@@ -78,29 +83,16 @@ module.exports = async (req, res) => {
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            message: 'Update usage stats (append)',
+            message: `Update usage stats - ${db.usages.length} records`,
             content: Buffer.from(dbContent).toString('base64'),
             sha: sha
           })
         });
-        
-        console.log(`[DEBUG] PUT response status: ${putResponse.status}`);
-        if (!putResponse.ok) {
-          const errorText = await putResponse.text();
-          console.log(`[DEBUG] PUT error: ${errorText}`);
-        }
-        
-      } catch(e) {
-        console.log(`[ERROR] Excepción en guardado GitHub: ${e.message}`);
-        console.log(e.stack);
-      }
-    } else {
-      console.log(`[WARNING] GITHUB_TOKEN vacío`);
+      } catch(e) {}
     }
     
     return res.status(200).json({ success: true, count: db.usages.length });
   } catch(e) {
-    console.log(`[ERROR] Excepción general: ${e.message}`);
     return res.status(400).json({ error: e.message });
   }
 };
