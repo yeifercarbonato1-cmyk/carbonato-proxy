@@ -16,13 +16,18 @@ module.exports = async (req, res) => {
     if (githubToken) {
       try {
         const configContent = JSON.stringify(config, null, 2);
-        const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato-proxy/contents/api/config.json';
+        const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/config.json';
         
-        // Primero obtener el SHA del archivo actual
+        // Primero obtener el SHA del archivo actual (o crear si no existe)
         const getResponse = await fetch(apiUrl, {
           headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
         });
-        const fileData = await getResponse.json();
+        
+        let sha = '';
+        if (getResponse.ok) {
+          const fileData = await getResponse.json();
+          sha = fileData.sha || '';
+        }
         
         // Hacer el commit con el nuevo contenido
         await fetch(apiUrl, {
@@ -35,7 +40,7 @@ module.exports = async (req, res) => {
           body: JSON.stringify({
             message: 'Update config via panel',
             content: Buffer.from(configContent).toString('base64'),
-            sha: fileData.sha
+            sha: sha
           })
         });
       } catch(e) {}

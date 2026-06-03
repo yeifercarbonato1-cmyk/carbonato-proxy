@@ -16,14 +16,18 @@ module.exports = async (req, res) => {
     if (githubToken) {
       try {
         const dbContent = JSON.stringify(db, null, 2);
-        const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato-proxy/contents/api/usage-db.json';
+        const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
         
-        // Primero obtener el SHA del archivo actual
+        // Primero obtener el SHA del archivo actual (o crear si no existe)
         const getResponse = await fetch(apiUrl, {
           headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' }
         });
-        const fileData = await getResponse.json();
-        const sha = fileData.sha || '';
+        
+        let sha = '';
+        if (getResponse.ok) {
+          const fileData = await getResponse.json();
+          sha = fileData.sha || '';
+        }
         
         // Hacer el commit con el nuevo contenido
         await fetch(apiUrl, {

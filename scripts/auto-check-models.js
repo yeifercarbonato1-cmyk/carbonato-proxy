@@ -77,20 +77,26 @@ const KILO_MODELS = [
   const token = process.env.GITHUB_TOKEN;
   if (token && workingModels.length > 0) {
     try {
-      const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato-proxy/contents/api/config.json';
+      const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/config.json';
       const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}` } });
-      const fileData = await getRes.json();
+      
+      let fileData = {};
+      let sha = '';
+      if (getRes.ok) {
+        fileData = await getRes.json();
+        sha = fileData.sha || '';
+      }
       
       const putRes = await fetch(apiUrl, {
         method: 'PUT',
-        headers: { 
+        headers: {
           'Authorization': `token ${token}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
           message: `Auto-update models - ${workingModels.length} working - ${new Date().toISOString()}`,
           content: Buffer.from(JSON.stringify(newConfig, null, 2)).toString('base64'),
-          sha: fileData.sha
+          sha: sha
         })
       });
       
