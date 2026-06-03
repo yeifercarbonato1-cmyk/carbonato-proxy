@@ -9,6 +9,8 @@
     { "src": "api/admin-logout.js", "use": "@vercel/node" },
     { "src": "api/usage-save.js", "use": "@vercel/node" },
     { "src": "api/upload.js", "use": "@vercel/node" },
+    { "src": "api/models-check.js", "use": "@vercel/node" },
+    { "src": "api/docs-ia.js", "use": "@vercel/node" },
     { "src": "api/index.js", "use": "@vercel/node" }
   ],
   "routes": [
@@ -18,6 +20,8 @@
     { "src": "/v1/models", "dest": "/api/chat.js" },
     { "src": "/v1/images/generations", "dest": "/api/chat.js" },
     { "src": "/api/upload", "dest": "/api/upload.js" },
+    { "src": "/api/models-check", "dest": "/api/models-check.js" },
+    { "src": "/api/docs-ia", "dest": "/api/docs-ia.js" },
     { "src": "/api/admin-panel", "dest": "/api/admin-panel.js" },
     { "src": "/api/admin-auth", "dest": "/api/admin-auth.js" },
     { "src": "/api/admin-save", "dest": "/api/admin-save.js" },

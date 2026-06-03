@@ -6,17 +6,17 @@ module.exports = async (req, res) => {
   try {
     const config = JSON.parse(body);
     
-    // Guardar en /tmp para uso inmediato (solo funciona local)
+    // Guardar en /tmp para uso inmediato
     try {
       fs.writeFileSync('/tmp/proxy-config.json', JSON.stringify(config, null, 2));
     } catch(e) {}
     
-    // Usar GitHub API para hacer commit (necesita GITHUB_TOKEN)
+    // Usar GitHub API para hacer commit - repo proxi-datos
     const githubToken = process.env.GITHUB_TOKEN || '';
     if (githubToken) {
       try {
         const configContent = JSON.stringify(config, null, 2);
-        const apiUrl = 'https://api.github.com/repos/yeifer125/carbonato.llm/contents/api/config.json';
+        const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/api/config.json';
         
         // Primero obtener el SHA del archivo actual
         const getResponse = await fetch(apiUrl, {

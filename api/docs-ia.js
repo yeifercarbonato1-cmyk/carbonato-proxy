@@ -7,18 +7,22 @@ module.exports = async (req, res) => {
       api_base: "https://carbonato-proxy.vercel.app",
       endpoint: "/chat/completions",
       models: {
-        modelo1: { id: "openrouter/owl-alpha", free: true, provider: "kilo" },
-        modelo2: { id: "poolside/laguna-xs.2", free: true, provider: "kilo" },
-        modelo3: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "kilo" },
-        modelo4: { id: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", vision: true, provider: "zydit", env: "ZYDIT_TOKEN" },
-        modelo5: { id: "pollinations-image", image_gen: true, provider: "pollinations" },
-        modelo6: { id: "minimaxai/minimax-m2.7", provider: "zydit", env: "ZYDIT_TOKEN" },
-        modelo7: { id: "openai/gpt-oss-120b", provider: "zydit", env: "ZYDIT_TOKEN" },
-        modelo8: { id: "qwen/qwen3.5-397b-a17b", provider: "zydit", env: "ZYDIT_TOKEN" }
+        modelo1: { id: "kilo-auto/free", free: true, provider: "kilo", description: "Auto-selection best model" },
+        modelo2: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "kilo", description: "120B reasoning" },
+        modelo3: { id: "poolside/laguna-m.1:free", free: true, provider: "kilo", description: "Laguna M.1 balanced" },
+        modelo4: { id: "poolside/laguna-xs.2:free", free: true, provider: "kilo", description: "Laguna XS.2 speed" },
+        modelo5: { id: "pollinations-image", free: true, provider: "pollinations", image_gen: true, description: "Image generation" },
+        modelo6: { id: "stepfun/step-3.7-flash:free", free: true, provider: "kilo", description: "Fast reasoning" },
+        modelo7: { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", free: true, provider: "kilo", description: "Code model" },
+        modelo8: { id: "openrouter/free", free: true, provider: "kilo", description: "OpenRouter access" }
       },
-      auth: {
-        note: "No global auth required",
-        env_vars: ["ZYDIT_TOKEN", "GITHUB_TOKEN"]
+      endpoints: {
+        chat: "/chat/completions",
+        models: "/models",
+        admin: "/api/admin",
+        admin_panel: "/api/admin-panel",
+        check_models: "/api/models-check",
+        upload: "/api/upload"
       },
       usage: {
         chat: {
@@ -31,26 +35,11 @@ module.exports = async (req, res) => {
         image_gen: {
           model: "modelo5",
           body: { messages: [{ role: "user", content: "prompt text" }] }
-        },
-        vision: {
-          model: "modelo4",
-          body: {
-            messages: [{
-              role: "user",
-              content: [
-                { type: "text", content: "Describe this image" },
-                { type: "image_url", image_url: { url: "data:image/png;base64,..." } }
-              ]
-            }]
-          }
         }
       },
-      endpoints: {
-        chat: "/chat/completions",
-        models: "/models",
-        admin: "/api/admin",
-        admin_panel: "/api/admin-panel",
-        upload: "/api/upload"
+      auth: {
+        note: "No global auth required. Admin panel uses hardcoded credentials (change in production)",
+        env_vars: ["GITHUB_TOKEN", "IMGBB_API_KEY"]
       }
     });
   }

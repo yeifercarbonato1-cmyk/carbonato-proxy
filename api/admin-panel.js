@@ -25,35 +25,30 @@ module.exports = async (req, res) => {
 
   const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'Desconocida').split(',')[0].trim();
 
-  let cfg = {};
-  try { cfg = JSON.parse(fs.readFileSync('/media/disco1tb/hermes-cosas/espacio-de-trabajo/carbonato-proxy/tmp/api/config.json', 'utf8')); } catch(e) {}
-  if (!cfg || Object.keys(cfg).length === 0) {
-    try { cfg = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8')); } catch(e) {}
-  }
- const def = {
-      modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/owl-alpha", key: "", system_prompt: "" },
-      modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2-20260421:free", key: "", system_prompt: "" },
-      modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
-      modelo4: { url: "https://api.zydit.in/v1/chat/completions", model: "meta/llama-3.2-11b-vision-instruct", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." },
-      modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-      modelo6: { url: "https://api.zydit.in/v1/chat/completions", model: "minimaxai/minimax-m2.7", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
-      modelo7: { url: "https://api.zydit.in/v1/chat/completions", model: "qwen/qwen3-coder-480b-a35b-instruct", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
-      modelo8: { url: "https://api.zydit.in/v1/chat/completions", model: "moonshotai/kimi-k2.6", key: "zyd_live_n1n4mk4CM8Ty_oK9yIaZH85zg-g9YNN1_3yNLbkDzvg", system_prompt: "" },
-      modelo9: { url: "https://api.zydit.in/v1/chat/completions", model: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", key: "zyd_live_mCWYk5_LnIoDSrt1Ac-jwpjnlz3SI85--FrKjg0RFRk", system_prompt: "Eres un modelo de visión. Analiza las imágenes que te envíen y describe todo lo que ves con detalle en español." }
-    };
-if (!cfg || Object.keys(cfg).length === 0) cfg = def;
-  // Merge: usar defaults completos, solo sobreescribir si cfg tiene datos
+  const def = {
+    modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" },
+    modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
+    modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-m.1:free", key: "", system_prompt: "" },
+    modelo4: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2:free", key: "", system_prompt: "" },
+    modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
+    modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "stepfun/step-3.7-flash:free", key: "", system_prompt: "" },
+    modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", key: "", system_prompt: "" },
+    modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/free", key: "", system_prompt: "" }
+  };
+
+  let cfg = def;
+  try { cfg = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8')); } catch(e) {}
   for (const key of Object.keys(def)) {
     if (!cfg[key] || Object.keys(cfg[key]).length === 0) cfg[key] = def[key];
   }
 
-  const db = loadDB();
+  const db = await loadDB();
   const stats = db.stats || {};
   const usages = db.usages || [];
 
   let cards = '';
-  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#ba55d3'];
-  for (let i = 1; i <= 9; i++) {
+  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1'];
+  for (let i = 1; i <= 8; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || def[name];
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -68,7 +63,7 @@ if (!cfg || Object.keys(cfg).length === 0) cfg = def;
   });
 
   let statsCards = '';
-  for (let i = 1; i <= 9; i++) {
+  for (let i = 1; i <= 8; i++) {
     const name = 'modelo' + i;
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     const ipsList = s.uniqueIPs.slice(0,5).join(', ');
@@ -158,6 +153,8 @@ table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:2px solid #d2691e;padding:8px;font-size:6px;text-align:left}
 th{background:#8b4513;color:#ffd700}
 td{color:#ffd700}
+.check-btn{position:relative;z-index:1;display:block;width:100%;max-width:200px;margin:20px auto;padding:10px;background:#8b4513;border:2px solid #00ff00;color:#00ff00;font-family:'Press Start 2P',monospace;font-size:8px;cursor:pointer}
+.check-btn:hover{background:#00ff00;color:#000}
 </style></head><body>
 <div class="clouds">
   <div class="cloud cloud1"></div>
@@ -168,10 +165,11 @@ td{color:#ffd700}
 </div>
 <div class="ground"></div>
 <a href="/api/admin-logout" class="logout">[ SALIR CASTLE ]</a>
-<div class="header"><h1>🌟 ADMIN CASTLE 🌟</h1><div class="sub">/// MUSHROOM KINGDOM CONTROL /// v4.20</div></div>
+<div class="header"><h1>🌟 ADMIN CASTLE 🌟</h1><div class="sub">/// MUSHROOM KINGDOM CONTROL /// v5.0</div></div>
 <div class="info-bar"><span>📡 TU IP: ${userIp}</span><span>🕐 ${new Date().toLocaleString()}</span></div>
 <div class="cards">${cards}</div>
 <button class="save-btn" onclick="save()">[ GUARDAR CAMBIOS ]</button>
+<button class="check-btn" onclick="checkModels()">[ VERIFICAR MODELOS KILO ]</button>
 <div id="status"></div>
 <div class="stats-section"><h2>📊 ESTADISTICAS</h2><div class="stat-cards">${statsCards}</div></div>
 <div class="stats-section"><h2>📋 USO RECIENTE</h2><table><tr><th>Modelo</th><th>IP</th><th>Tokens</th><th>Fecha</th></tr>${usageRows||'<tr><td colspan="4" style="text-align:center">Sin datos</td></tr>'}</table></div>
@@ -196,9 +194,10 @@ else{var cont=js.choices?.[0]?.message?.content||JSON.stringify(js,null,2);d.cla
 }catch(e){d.className='result ok';d.textContent=x.substring(0,500)}
 })
 .catch(e=>{d.className='result err';d.textContent='Error: '+e.message})}
+
 function save(){
 var c={};
-for(var i=1;i<=9;i++){
+for(var i=1;i<=8;i++){
 c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value}
 }
 fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
@@ -207,5 +206,33 @@ fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json
 document.getElementById('status').innerHTML=x.success?'<span class="ok-msg">GUARDADO EN EL CASTILLO</span>':'<span style="color:#ff4444">ERROR</span>';
 setTimeout(()=>document.getElementById('status').innerHTML='',3000)
 })}
+
+function checkModels(){
+document.getElementById('status').innerHTML='<span style="color:#00d4ff">CONSULTANDO KILO.AI...</span>';
+fetch('/api/models-check')
+.then(r=>r.json())
+.then(x=>{
+if(x.models){
+var html='<div style="margin-top:10px">';
+x.models.forEach(m=>{
+html+='<div style="font-size:6px;margin:3px 0;color:'+(m.status=='active'? '#00ff00':'#ff4444')+'">[ '+m.model+' ] '+m.status.toUpperCase()+'</div>';
+});
+html+='</div>';
+document.getElementById('status').innerHTML+='<br>MODELOS ENCONTRADOS: '+x.active;
+if(x.config_update){
+for(var i=1;i<=8;i++){
+if(x.config_update['modelo'+i]){
+document.getElementById('id'+i).value=x.config_update['modelo'+i].model;
+}
+}
+document.getElementById('status').innerHTML+='<br><span class="ok-msg">MODELOS ACTUALIZADOS EN FORMULARIO</span>';
+}
+}else{
+document.getElementById('status').innerHTML='<span style="color:#ff4444">ERROR AL CONSULTAR</span>';
+}
+setTimeout(()=>document.getElementById('status').innerHTML='',5000)
+})
+.catch(e=>{document.getElementById('status').innerHTML='<span style="color:#ff4444">ERROR: '+e.message+'</span>';})
+}
 </script></body></html>`);
 };

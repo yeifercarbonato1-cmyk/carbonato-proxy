@@ -133,8 +133,6 @@ code{
   border:1px solid;
 }
 .tag-kilo{background:#ffd700;color:#8b4513;border-color:#b8860b}
-.tag-zydit{background:#ff69b4;color:#fff;border-color:#ff1493}
-.tag-vision{background:#9400d3;color:#fff;border-color:#8a2be2}
 .tag-free{background:#00ff00;color:#000;border-color:#006400}
 .model-card{
   background:#d2b48c;
@@ -272,7 +270,7 @@ tr:hover td{
 <div class="header">
   <h1>🍄 CARBONATO PROXY 🍄</h1>
   <div class="sub">/// SUPER AI BROS GATEWAY ///</div>
-  <div class="version">v4.20 // 4 POWER-UP MODELS</div>
+  <div class="version">v5.20 // 7 POWER-UP MODELS from KILO.AI</div>
 </div>
 
 <div class="section">
@@ -285,50 +283,50 @@ tr:hover td{
   
   <div class="model-card">
     <h4>🌟 modelo1</h4>
-    <p><span class="tag tag-free">GRATIS</span></p>
-    <p>Modelo especializado en agente.</p>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO</span></p>
+    <p>Auto-selection de Kilo - mejor modelo disponible.</p>
   </div>
   
   <div class="model-card">
     <h4>🌙 modelo2</h4>
-    <p><span class="tag tag-free">GRATIS</span></p>
-    <p>Perfecto para misiones de codigo y tareas ninja.</p>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO</span></p>
+    <p>Nemotron 3 Super 120B - razonamiento epico.</p>
   </div>
   
   <div class="model-card">
     <h4>🚀 modelo3</h4>
-    <p><span class="tag tag-free">GRATIS</span></p>
-    <p>El power-up mas poderoso para razonamiento epico!</p>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO</span></p>
+    <p>Laguna M.1 - equilibrio rendimiento/gratis.</p>
   </div>
   
   <div class="model-card">
-    <h4>👁️ modelo4</h4>
-    <p><span class="tag tag-vision">VISION</span> <span class="tag tag-free">GRATIS</span></p>
-    <p>Modelo de vision para analizar imagenes.</p>
+    <h4>⚡ modelo4</h4>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO</span></p>
+    <p>Laguna XS.2 - velocidad relámpago.</p>
   </div>
   
   <div class="model-card">
     <h4>🎨 modelo5</h4>
-    <p><span class="tag tag-free">GRATIS</span></p>
-    <p>Genera imagenes con IA. Describe lo que quieres y lo dibujamos!</p>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">POLLINATIONS</span></p>
+    <p>Generación de imágenes - describe y crea!</p>
   </div>
- 
+  
   <div class="model-card">
     <h4>⚡ modelo6</h4>
-    <p><span class="tag tag-free">GRATIS</span></p>
-    <p>Modelos para codigo lento pero bueno.</p>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO</span></p>
+    <p>Step-3.7-Flash - razonamiento rápido.</p>
   </div>
- 
+  
   <div class="model-card">
-    <h4>⚡ modelo7</h4>
-    <p><span class="tag tag-free">GRATIS</span></p>
-    <p>Modelos ultra rapido pero no tan bueno.</p>
+    <h4>💻 modelo7</h4>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO</span></p>
+    <p>Nemotron Nano Omni 30B - código ninja.</p>
   </div>
- 
+  
   <div class="model-card">
-    <h4>💻 modelo8</h4>
-    <p><span class="tag tag-free">GRATIS</span></p>
-    <p>Modelo para uso en codigo.</p>
+    <h4>🌐 modelo8</h4>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO/OPENROUTER</span></p>
+    <p>OpenRouter free - acceso a múltiples modelos.</p>
   </div>
 </div>
 
@@ -340,9 +338,9 @@ tr:hover td{
     <span class="method">POST</span> <span class="url">https://carbonato-proxy.vercel.app/chat/completions</span>
   </div>
   
-  <h3>Conversacion normal (modelo1, modelo2, modelo3)</h3>
-  <code>curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
-  -H "Content-Type: application/json" \\
+  <h3>Conversacion normal (modelo1-modelo4)</h3>
+  <code>curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\\\
+  -H "Content-Type: application/json" \\\\
   -d '{
     "model": "modelo1",
     "messages": [
@@ -350,35 +348,18 @@ tr:hover td{
     ]
   }'</code>
   
-  <h3>Vision con imagenes (modelo4)</h3>
-  <code># Paso 1: Convertir imagen a base64
-IMAGE_B64=$(base64 -w 0 mi_imagen.png)
-
-# Paso 2: Usar el visor de imagenes
-curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "modelo4",
-    "messages": [
-      {
-        "role": "user",
-        "content": "Describe esta imagen: data:image/png;base64,'"$IMAGE_B64"'\"
-      }
-    ],
-    "max_tokens": 300
-  }'</code>
-  
   <h3>Generar imagen (modelo5)</h3>
-  <code>curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
-  -H "Content-Type: application/json" \\
+  <code>curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\\\
+  -H "Content-Type: application/json" \\\\
   -d '{
     "model": "modelo5",
     "messages": [
       {"role": "user", "content": "Un gato astronauta en la luna"}
     ]
-  }'
-# Respuesta: {"data":[{"url":"https://image.pollinations.ai/prompt/..."}]}
-# Abrir URL en navegador o descargar con: curl "URL" -o imagen.png</code>
+  }'</code>
+  
+  <h3>Verificar modelos disponibles</h3>
+  <code>curl -s "https://carbonato-proxy.vercel.app/api/models-check"</code>
 </div>
 
 <div class="section">
@@ -389,7 +370,7 @@ curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\
 <a href="/api/admin" class="login-btn">[ ADMIN CASTLE ]</a>
  
   <div class="footer">
-PIPE BROS // KILO AI + POLLINATES // 8 POWER-UPS // v5.0<br>
+PIPE BROS // KILO AI // 8 POWER-UPS // v5.20<br>
   <span style="font-size:10px;color:#ffd700">Pagina creada con Hermes - 100% codigo libre</span>
   <br><br>
   <span style="font-size:9px;color:#ff6b6b">Si quieres que este proyecto se siga manteniendo se necesita colaboracion.</span>
