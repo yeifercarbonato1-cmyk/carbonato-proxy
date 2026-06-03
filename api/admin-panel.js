@@ -1,20 +1,39 @@
 const fs = require('fs');
 
-// DB functions - lee desde /tmp o GitHub
+// DB functions - lee desde /tmp y refresca desde GitHub (server-side)
 async function loadDB() {
-  try { return JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch(e) {}
+  let db;
   try {
-    const res = await fetch('https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json');
-    if (res.ok) {
-      const data = await res.json();
-      const db = JSON.parse(Buffer.from(data.content, 'base64').toString());
-      if (db) {
-        try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db)); } catch(e) {}
-        return db;
+    db = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8'));
+  } catch(e) {
+    db = { usages: [], stats: {} };
+  }
+  
+  const githubToken = process.env.GITHUB_TOKEN || '';
+  if (githubToken) {
+    try {
+      const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
+      const getRes = await fetch(apiUrl, {
+        headers: { 'Authorization': `token ${githubToken}` }
+      });
+      
+      if (getRes.ok) {
+        const data = await getRes.json();
+        const remoteDb = JSON.parse(Buffer.from(data.content, 'base64').toString());
+        
+        // Merge datos remotos con locales
+        if (remoteDb.usages) db.usages = remoteDb.usages;
+        if (remoteDb.stats) db.stats = remoteDb.stats;
+        
+        // Actualizar cache local
+        try {
+          fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2));
+        } catch(e) {}
       }
-    }
-  } catch(e) {}
-  return { usages: [], stats: {} };
+    } catch(e) {}
+  }
+  
+  return db;
 }
 
 module.exports = async (req, res) => {
