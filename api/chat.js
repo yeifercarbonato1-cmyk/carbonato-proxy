@@ -2,6 +2,42 @@ const fs = require('fs');
 
 const CONFIG_PATH = '/tmp/proxy-config.json';
 
+// Circuit breaker para modelo9 - persiste en /tmp
+let circuitBreaker = { failures: {}, lastFailures: {} };
+try {
+  const cbData = fs.readFileSync('/tmp/model9-circuit.json', 'utf8');
+  circuitBreaker = JSON.parse(cbData);
+} catch(e) {}
+
+function saveCircuitBreaker() {
+  try {
+    fs.writeFileSync('/tmp/model9-circuit.json', JSON.stringify(circuitBreaker));
+  } catch(e) {}
+}
+
+function isCircuitOpen(modelKey) {
+  const failures = circuitBreaker.failures[modelKey] || [];
+  const now = Date.now();
+  // Filtrar fallos de los últimos 30s
+  const recent = failures.filter(t => now - t < 30000);
+  circuitBreaker.failures[modelKey] = recent;
+  saveCircuitBreaker();
+  return recent.length >= 2;
+}
+
+function recordFailure(modelKey) {
+  if (!circuitBreaker.failures[modelKey]) {
+    circuitBreaker.failures[modelKey] = [];
+  }
+  circuitBreaker.failures[modelKey].push(Date.now());
+  saveCircuitBreaker();
+}
+
+function recordSuccess(modelKey) {
+  circuitBreaker.failures[modelKey] = [];
+  saveCircuitBreaker();
+}
+
 // Transform message content for vision models
 function transformVisionContent(messages) {
   return messages.map((msg) => {
@@ -34,6 +70,9 @@ const KILO_MODELS = [
   "openrouter/free"
 ];
 
+// Rotación para modelo9 (sin modelo5 que es imágenes)
+const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo6', 'modelo7', 'modelo8'];
+
 const DEFAULT_CONFIG = {
   modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[0], key: "", system_prompt: "" },
   modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[1], key: "", system_prompt: "" },
@@ -42,7 +81,8 @@ const DEFAULT_CONFIG = {
   modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
   modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[4], key: "", system_prompt: "" },
   modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[5], key: "", system_prompt: "" },
-  modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" }
+  modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" },
+  modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "smart-rotator", key: "", system_prompt: "", isRotator: true }
 };
 
 function getConfig() {
@@ -87,7 +127,8 @@ module.exports = async (req, res) => {
         { id: "modelo5", object: "model", owned_by: "carbonato" },
         { id: "modelo6", object: "model", owned_by: "carbonato" },
         { id: "modelo7", object: "model", owned_by: "carbonato" },
-        { id: "modelo8", object: "model", owned_by: "carbonato" }
+        { id: "modelo8", object: "model", owned_by: "carbonato" },
+        { id: "modelo9", object: "model", owned_by: "carbonato", description: "Smart Model Rotator - auto-failover entre modelos" }
       ]
     });
   }
@@ -203,6 +244,98 @@ module.exports = async (req, res) => {
     
     if (!cfg) {
       return res.status(400).json({ error: { message: "Modelo no configurado: " + userModel, type: "invalid_request_error" }});
+    }
+    
+    //Modelo9: Smart Rotator con circuit breaker
+    if (cfg.isRotator) {
+      const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
+      let lastError = null;
+      let usedModel = null;
+      
+      for (const modelKey of ROTATION_ORDER) {
+        const targetCfg = CONFIG[modelKey];
+        if (!targetCfg) continue;
+        
+        // Saltar si circuito abierto
+        if (isCircuitOpen(modelKey)) {
+          console.log(`[rotator] ${modelKey} circuito abierto, saltando`);
+          continue;
+        }
+        
+        console.log(`[rotator] Probando ${modelKey} (${targetCfg.model})...`);
+        
+        try {
+          const rotatorBody = { ...body, model: targetCfg.model };
+          if (targetCfg.system_prompt) {
+            const hasSystem = rotatorBody.messages && rotatorBody.messages.some(m => m.role === 'system');
+            if (!hasSystem) {
+              rotatorBody.messages = [{ role: 'system', content: targetCfg.system_prompt }, ...(rotatorBody.messages || [])];
+            }
+          }
+          
+          const upstreamRes = await fetch(targetCfg.url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(rotatorBody),
+            signal: AbortSignal.timeout(15000)
+          });
+          
+          const resultText = await upstreamRes.text();
+          
+          if (upstreamRes.ok) {
+            // Éxito - cerrar circuito
+            recordSuccess(modelKey);
+            usedModel = modelKey;
+            
+            // Registrar uso
+            try {
+              let tokens = 0;
+              try { tokens = JSON.parse(resultText).usage?.total_tokens || 0; } catch(e) {}
+              const db = loadUsageDB();
+              db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString(), rotatorModel: modelKey });
+              if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+              db.stats[userModel].totalTokens += tokens;
+              db.stats[userModel].totalRequests += 1;
+              if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
+              if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
+              db.lastUpdated = new Date().toISOString();
+              db.lastModel = userModel;
+              db.lastTokens = tokens;
+              await saveUsageDB(db);
+            } catch(e) {}
+            
+            console.log(`[rotator] OK con ${modelKey}`);
+            return res.status(upstreamRes.status).setHeader('Content-Type', 'application/json').send(resultText);
+          } else if (upstreamRes.status === 429) {
+            // Rate limit - abrir circuito
+            recordFailure(modelKey);
+            console.log(`[rotator] ${modelKey} rate limited (429), siguiente...`);
+            lastError = { message: `Rate limit en ${modelKey}`, type: "rate_limit" };
+            continue;
+          } else {
+            // Otro error - también registrar fallo
+            recordFailure(modelKey);
+            console.log(`[rotator] ${modelKey} falló con ${upstreamRes.status}`);
+            lastError = { message: `${modelKey} retornó ${upstreamRes.status}`, type: "upstream_error" };
+            continue;
+          }
+        } catch(e) {
+          recordFailure(modelKey);
+          console.log(`[rotator] ${modelKey} excepción: ${e.message}`);
+          lastError = { message: `${modelKey}: ${e.message}`, type: "network_error" };
+          continue;
+        }
+      }
+      
+      // Todos fallaron
+      console.log('[rotator] Todos los modelos agotados');
+      return res.status(503).json({
+        error: {
+          message: "Todos los modelos agotados, espera unos segundos",
+          type: "all_models_exhausted",
+          details: lastError
+        }
+      });
     }
     
     body.model = cfg.model;

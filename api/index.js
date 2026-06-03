@@ -270,7 +270,7 @@ tr:hover td{
 <div class="header">
   <h1>🍄 CARBONATO PROXY 🍄</h1>
   <div class="sub">/// SUPER AI BROS GATEWAY ///</div>
-  <div class="version">v5.20 // 7 POWER-UP MODELS from KILO.AI</div>
+  <div class="version">v5.30 // 8 POWER-UPS + SMART ROTATOR from KILO.AI</div>
 </div>
 
 <div class="section">
@@ -328,6 +328,12 @@ tr:hover td{
     <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO/OPENROUTER</span></p>
     <p>OpenRouter free - acceso a múltiples modelos.</p>
   </div>
+  
+  <div class="model-card" style="border-color:#00ff00">
+    <h4>🔄 modelo9</h4>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">SMART ROTATOR</span></p>
+    <p>Auto-failover: prueba modelo1→2→3→4→6→7→8 hasta que uno responda. Circuit breaker incluido (2 fallos/30s = skip).</p>
+  </div>
 </div>
 
 <div class="section">
@@ -360,6 +366,16 @@ tr:hover td{
   
   <h3>Verificar modelos disponibles</h3>
   <code>curl -s "https://carbonato-proxy.vercel.app/api/models-check"</code>
+  
+  <h3>Smart Rotator - auto-failover (modelo9)</h3>
+  <code>curl -s -X POST "https://carbonato-proxy.vercel.app/chat/completions" \\\
+  -H "Content-Type: application/json" \\\
+  -d '{
+    "model": "modelo9",
+    "messages": [
+      {"role": "user", "content": "Hola"}
+    ]
+  }'</code>
 </div>
 
 <div class="section">
