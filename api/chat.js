@@ -70,15 +70,15 @@ const KILO_MODELS = [
   "openrouter/free"
 ];
 
-// Rotación para modelo9 (sin modelo5 que es imágenes)
-const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo6', 'modelo7', 'modelo8'];
+// Rotación para modelo9 (modelos de texto/imagen)
+const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8'];
 
 const DEFAULT_CONFIG = {
   modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[0], key: "", system_prompt: "" },
   modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[1], key: "", system_prompt: "" },
   modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[2], key: "", system_prompt: "" },
   modelo4: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[3], key: "", system_prompt: "" },
-  modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
+  modelo5: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", key: "", system_prompt: "" },
   modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[4], key: "", system_prompt: "" },
   modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[5], key: "", system_prompt: "" },
   modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" },
@@ -196,47 +196,6 @@ module.exports = async (req, res) => {
         res.write('data: [DONE]\n\n');
         res.end();
         return;
-      } catch(e) {
-        return res.status(500).json({ error: { message: e.message } });
-      }
-    }
-    
-    if (userModel === 'modelo5') {
-      try {
-        const messages = body.messages || [];
-        const lastMsg = messages[messages.length - 1];
-        const prompt = lastMsg?.content || body.prompt || 'a beautiful sunset';
-        const encodedPrompt = encodeURIComponent(prompt);
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
-        
-        // Registrar uso
-        try {
-          const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
-          const db = loadUsageDB();
-          db.usages.push({ model: userModel, ip: userIp, tokens: 1, timestamp: new Date().toISOString() });
-          if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-          db.stats[userModel].totalRequests += 1;
-          if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
-          if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
-          db.stats[userModel].totalTokens += 1;
-          await saveUsageDB(db);
-        } catch(e) {}
-        
-        return res.status(200).json({
-          id: "img-" + Date.now(),
-          object: "chat.completion",
-          created: Math.floor(Date.now() / 1000),
-          model: "modelo5",
-          choices: [{
-            index: 0,
-            message: {
-              role: "assistant",
-              content: "Imagen generada: " + imageUrl
-            },
-            finish_reason: "stop"
-          }],
-          usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }
-        });
       } catch(e) {
         return res.status(500).json({ error: { message: e.message } });
       }

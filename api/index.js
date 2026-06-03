@@ -306,9 +306,9 @@ tr:hover td{
   </div>
   
   <div class="model-card">
-    <h4>🎨 modelo5</h4>
-    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">POLLINATIONS</span></p>
-    <p>Generación de imágenes - describe y crea!</p>
+    <h4>✨ modelo5</h4>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">KILO MULTIMODAL</span></p>
+    <p>Nemotron Nano Omni - texto + audio + imagen + video. Modelo con visión integrada.</p>
   </div>
   
   <div class="model-card">

@@ -49,7 +49,7 @@ module.exports = async (req, res) => {
     modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
     modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-m.1:free", key: "", system_prompt: "" },
     modelo4: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2:free", key: "", system_prompt: "" },
-    modelo5: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
+    modelo5: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", key: "", system_prompt: "" },
     modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "stepfun/step-3.7-flash:free", key: "", system_prompt: "" },
     modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", key: "", system_prompt: "" },
     modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/free", key: "", system_prompt: "" }
