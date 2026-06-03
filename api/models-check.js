@@ -7,6 +7,7 @@ module.exports = async (req, res) => {
     "poolside/laguna-xs.2:free",
     "stepfun/step-3.7-flash:free",
     "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "google/gemini-2.0-flash-exp:free",
     "openrouter/free"
   ];
 

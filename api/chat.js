@@ -67,11 +67,12 @@ const KILO_MODELS = [
   "poolside/laguna-xs.2:free",
   "stepfun/step-3.7-flash:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "google/gemini-2.0-flash-exp:free",
   "openrouter/free"
 ];
 
 // Rotación para modelo9 (modelos de texto/imagen)
-const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8'];
+const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10'];
 
 const DEFAULT_CONFIG = {
   modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[0], key: "", system_prompt: "" },
@@ -82,7 +83,8 @@ const DEFAULT_CONFIG = {
   modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[4], key: "", system_prompt: "" },
   modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[5], key: "", system_prompt: "" },
   modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" },
-  modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "smart-rotator", key: "", system_prompt: "", isRotator: true }
+  modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "smart-rotator", key: "", system_prompt: "", isRotator: true },
+  modelo10: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[7], key: "", system_prompt: "" }
 };
 
 function getConfig() {
@@ -118,19 +120,20 @@ module.exports = async (req, res) => {
   
   if (url.endsWith('/models') && req.method === 'GET') {
     return res.status(200).json({
-      object: "list",
-      data: [
-        { id: "modelo1", object: "model", owned_by: "carbonato" },
-        { id: "modelo2", object: "model", owned_by: "carbonato" },
-        { id: "modelo3", object: "model", owned_by: "carbonato" },
-        { id: "modelo4", object: "model", owned_by: "carbonato" },
-        { id: "modelo5", object: "model", owned_by: "carbonato" },
-        { id: "modelo6", object: "model", owned_by: "carbonato" },
-        { id: "modelo7", object: "model", owned_by: "carbonato" },
-        { id: "modelo8", object: "model", owned_by: "carbonato" },
-        { id: "modelo9", object: "model", owned_by: "carbonato", description: "Smart Model Rotator - auto-failover entre modelos" }
-      ]
-    });
+          object: "list",
+          data: [
+            { id: "modelo1", object: "model", owned_by: "carbonato" },
+            { id: "modelo2", object: "model", owned_by: "carbonato" },
+            { id: "modelo3", object: "model", owned_by: "carbonato" },
+            { id: "modelo4", object: "model", owned_by: "carbonato" },
+            { id: "modelo5", object: "model", owned_by: "carbonato" },
+            { id: "modelo6", object: "model", owned_by: "carbonato" },
+            { id: "modelo7", object: "model", owned_by: "carbonato" },
+            { id: "modelo8", object: "model", owned_by: "carbonato" },
+            { id: "modelo9", object: "model", owned_by: "carbonato", description: "Smart Model Rotator - auto-failover entre modelos Kilo" },
+            { id: "modelo10", object: "model", owned_by: "carbonato" }
+          ]
+        });
   }
   
   // Endpoint para generación de imágenes (compatible con OpenAI DALL-E)

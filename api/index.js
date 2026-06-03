@@ -270,7 +270,7 @@ tr:hover td{
 <div class="header">
   <h1>🍄 CARBONATO PROXY 🍄</h1>
   <div class="sub">/// SUPER AI BROS GATEWAY ///</div>
-  <div class="version">v5.30 // 8 POWER-UPS + SMART ROTATOR from KILO.AI</div>
+  <div class="version">v5.30 // 10 POWER-UPS + SMART ROTATOR from KILO.AI</div>
 </div>
 
 <div class="section">
@@ -332,7 +332,13 @@ tr:hover td{
   <div class="model-card" style="border-color:#00ff00">
     <h4>🔄 modelo9</h4>
     <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">SMART ROTATOR</span></p>
-    <p>Auto-failover: prueba modelo1→2→3→4→6→7→8 hasta que uno responda. Circuit breaker incluido (2 fallos/30s = skip).</p>
+    <p>Auto-failover: prueba modelo1→2→3→4→5→6→7→8→10 hasta que uno responda. Circuit breaker incluido (2 fallos/30s = skip).</p>
+  </div>
+  \
+  <div class="model-card" style="border-color:#ff8c00">
+    <h4>💎 modelo10</h4>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">GOOGLE GEMINI</span></p>
+    <p>Gemini 2.0 Flash Experimental - Último modelo de Google con razonamiento avanzado.</p>
   </div>
 </div>
 

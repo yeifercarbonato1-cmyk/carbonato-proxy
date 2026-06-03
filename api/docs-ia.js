@@ -11,10 +11,12 @@ module.exports = async (req, res) => {
         modelo2: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "kilo", description: "120B reasoning" },
         modelo3: { id: "poolside/laguna-m.1:free", free: true, provider: "kilo", description: "Laguna M.1 balanced" },
         modelo4: { id: "poolside/laguna-xs.2:free", free: true, provider: "kilo", description: "Laguna XS.2 speed" },
-        modelo5: { id: "pollinations-image", free: true, provider: "pollinations", image_gen: true, description: "Image generation" },
+        modelo5: { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", free: true, provider: "kilo", description: "Multimodal (text+image)", image_gen: true },
         modelo6: { id: "stepfun/step-3.7-flash:free", free: true, provider: "kilo", description: "Fast reasoning" },
         modelo7: { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", free: true, provider: "kilo", description: "Code model" },
-        modelo8: { id: "openrouter/free", free: true, provider: "kilo", description: "OpenRouter access" }
+        modelo8: { id: "openrouter/free", free: true, provider: "kilo", description: "OpenRouter access" },
+        modelo9: { id: "smart-rotator", free: true, provider: "kilo", description: "Auto-failover with circuit breaker" },
+        modelo10: { id: "google/gemini-2.0-flash-exp:free", free: true, provider: "kilo", description: "Google Gemini 2.0 Experimental" }
       },
       endpoints: {
         chat: "/chat/completions",
@@ -22,19 +24,21 @@ module.exports = async (req, res) => {
         admin: "/api/admin",
         admin_panel: "/api/admin-panel",
         check_models: "/api/models-check",
+        images: "/images/generations",
         upload: "/api/upload"
       },
       usage: {
         chat: {
           method: "POST",
           body: {
-            model: "modelo1-modelo8",
+            model: "modelo1-modelo10",
             messages: [{ role: "user", content: "Hello" }]
           }
         },
         image_gen: {
+          endpoint: "/images/generations",
           model: "modelo5",
-          body: { messages: [{ role: "user", content: "prompt text" }] }
+          body: { prompt: "a beautiful sunset over mountains" }
         }
       },
       auth: {
