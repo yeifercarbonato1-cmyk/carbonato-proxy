@@ -65,12 +65,11 @@ const KILO_MODELS = [
   "nvidia/nemotron-3-super-120b-a12b:free",
   "poolside/laguna-m.1:free",
   "poolside/laguna-xs.2:free",
-  "stepfun/step-3.7-flash:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "google/gemini-2.0-flash-exp:free",
+  "stepfun/step-3.7-flash:free",
+  "stepfun/step-3.7-flash:free",
   "openrouter/free"
 ];
-
 // Rotación para modelo9 (modelos de texto/imagen)
 const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10'];
 
@@ -83,8 +82,8 @@ const DEFAULT_CONFIG = {
   modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[4], key: "", system_prompt: "" },
   modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[5], key: "", system_prompt: "" },
   modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" },
-  modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "smart-rotator", key: "", system_prompt: "", isRotator: true },
-  modelo10: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[7], key: "", system_prompt: "" }
+  modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "", isRotator: true },
+  modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" }
 };
 
 function getConfig() {

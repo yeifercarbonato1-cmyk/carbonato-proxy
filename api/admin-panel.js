@@ -51,9 +51,10 @@ module.exports = async (req, res) => {
     modelo4: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2:free", key: "", system_prompt: "" },
     modelo5: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", key: "", system_prompt: "" },
     modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "stepfun/step-3.7-flash:free", key: "", system_prompt: "" },
-    modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", key: "", system_prompt: "" },
+    modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "stepfun/step-3.7-flash:free", key: "", system_prompt: "" },
     modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/free", key: "", system_prompt: "" },
-    modelo10: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "google/gemini-2.0-flash-exp:free", key: "", system_prompt: "" }
+    modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
+    modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" }
   };
 
   let cfg = def;

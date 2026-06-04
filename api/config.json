@@ -46,5 +46,17 @@
     "model": "openrouter/free",
     "key": "",
     "system_prompt": ""
+  },
+  "modelo9": {
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "kilo-auto/free",
+    "key": "",
+    "system_prompt": ""
+  },
+  "modelo10": {
+    "url": "https://image.pollinations.ai/prompt/",
+    "model": "pollinations-image",
+    "key": "",
+    "system_prompt": ""
   }
 }
