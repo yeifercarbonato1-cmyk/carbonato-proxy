@@ -68,7 +68,7 @@ const KILO_MODELS = [
   "openrouter/free"
 ];
 // Rotación para modelo9 (modelos de texto/imagen)
-const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10'];
+const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12'];
 
 const DEFAULT_CONFIG = {
   modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[0], key: "", system_prompt: "" },
@@ -81,7 +81,8 @@ const DEFAULT_CONFIG = {
   modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" },
   modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "", isRotator: true },
   modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-  modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "sk-DxtqPcesVyDCwxglZmG46aTsl9Ukkhh7H3bmSIztB317vmt36mmRct3xt5Hxv5vg", system_prompt: "" }
+  modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "sk-Dxt...v5vg", system_prompt: "" },
+  modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "sk-Dxt...v5vg", system_prompt: "" }
 };
 
 function getConfig() {
@@ -129,7 +130,8 @@ module.exports = async (req, res) => {
             { id: "modelo8", object: "model", owned_by: "carbonato" },
             { id: "modelo9", object: "model", owned_by: "carbonato", description: "Smart Model Rotator - auto-failover entre modelos Kilo" },
             { id: "modelo10", object: "model", owned_by: "carbonato" },
-            { id: "modelo11", object: "model", owned_by: "carbonato", description: "DeepSeek V4 Flash via OpenCode Zen - gratuito e ilimitado" }
+            { id: "modelo11", object: "model", owned_by: "carbonato", description: "DeepSeek V4 Flash via OpenCode Zen - gratuito e ilimitado" },
+            { id: "modelo12", object: "model", owned_by: "carbonato", description: "MiniMax M3 via OpenCode Zen - gratuito e ilimitado" }
           ]
         });
   }

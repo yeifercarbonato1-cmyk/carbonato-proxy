@@ -54,9 +54,10 @@ module.exports = async (req, res) => {
     modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "stepfun/step-3.7-flash:free", key: "", system_prompt: "" },
     modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/free", key: "", system_prompt: "" },
     modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-    modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" },
-    modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "sk-DxtqPcesVyDCwxglZmG46aTsl9Ukkhh7H3bmSIztB317vmt36mmRct3xt5Hxv5vg", system_prompt: "" }
-  };
+        modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" },
+        modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "sk-Dxt...v5vg", system_prompt: "" },
+        modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "sk-Dxt...v5vg", system_prompt: "" }
+      };
 
   let cfg = def;
   try { cfg = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8')); } catch(e) {}
@@ -69,8 +70,8 @@ module.exports = async (req, res) => {
   const usages = db.usages || [];
 
   let cards = '';
-  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#00ff00','#ff8c00','#8a2be2'];
-  for (let i = 1; i <= 11; i++) {
+  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#00ff00','#ff8c00','#8a2be2','#ff1493'];
+  for (let i = 1; i <= 12; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || def[name];
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -90,7 +91,7 @@ module.exports = async (req, res) => {
   });
 
   let statsCards = '';
-  for (let i = 1; i <= 11; i++) {
+  for (let i = 1; i <= 12; i++) {
     const name = 'modelo' + i;
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     const ipsList = s.uniqueIPs.slice(0,5).join(', ');
@@ -224,8 +225,7 @@ else{var cont=js.choices?.[0]?.message?.content||JSON.stringify(js,null,2);d.cla
 
 function save(){
 var c={};
-for(var i=1;i<=11;i++){
-      // modelo11 ahora es editable como los demas
+for(var i=1;i<=12;i++){
       c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value}
 }
 fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
