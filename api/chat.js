@@ -81,8 +81,8 @@ const DEFAULT_CONFIG = {
   modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" },
   modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "", isRotator: true },
   modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-  modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "sk-Dxt...v5vg", system_prompt: "" },
-  modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "sk-Dxt...v5vg", system_prompt: "" }
+  modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "", system_prompt: "" },
+  modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "", system_prompt: "" }
 };
 
 function getConfig() {

@@ -63,13 +63,13 @@
   "modelo11": {
     "url": "https://opencode.ai/zen/v1/chat/completions",
     "model": "deepseek-v4-flash-free",
-    "key": "sk-Dxt...v5vg",
+    "key": "",
     "system_prompt": ""
   },
   "modelo12": {
     "url": "https://opencode.ai/zen/v1/chat/completions",
     "model": "minimax-m3-free",
-    "key": "sk-Dxt...v5vg",
+    "key": "",
     "system_prompt": ""
   }
 }
