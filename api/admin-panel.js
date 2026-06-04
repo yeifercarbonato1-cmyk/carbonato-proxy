@@ -75,10 +75,7 @@ module.exports = async (req, res) => {
     const c = cfg[name] || def[name];
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     
-    if (name === 'modelo9') {
-      // Card readonly para el rotador
-      cards += `<div class="card" style="border-color:${colors[i-1]};opacity:0.9"><h3 style="color:${colors[i-1]}">[ ${name} ] 🔄 SMART ROTATOR</h3><div style="font-size:6px;color:#ffd700;margin-bottom:10px">Auto-failover entre modelos Kilo (salta modelo5)</div><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><div style="font-size:5px;color:#00ff00;margin-top:5px">✓ Circuit breaker activo (2 fallos/30s = skip)</div></div>`;
-    } else if (name === 'modelo11') {
+    if (name === 'modelo11') {
       cards += `<div class="card" style="border-color:${colors[i-1]}"><h3 style="color:${colors[i-1]}">[ ${name} ] 🧠 ZEN DEEPSEEK</h3><label>BASE URL</label><input id="url${i}" value="${c.url||''}"><label>MODEL ID</label><input id="id${i}" value="${c.model||''}"><label>API KEY</label><input id="key${i}" value="${c.key||''}"><label>SYSTEM PROMPT</label><textarea id="sp${i}" rows="3">${c.system_prompt||''}</textarea><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><button class="btn-test" onclick="test('${name}',${i})">[ PROBAR ]</button><div id="r${i}" class="result"></div></div>`;
     } else {
       cards += `<div class="card" style="border-color:${colors[i-1]}"><h3 style="color:${colors[i-1]}">[ ${name} ]</h3><label>BASE URL</label><input id="url${i}" value="${c.url||''}"><label>MODEL ID</label><input id="id${i}" value="${c.model||''}"><label>API KEY</label><input id="key${i}" value="${c.key||''}"><label>SYSTEM PROMPT</label><textarea id="sp${i}" rows="3">${c.system_prompt||''}</textarea><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><button class="btn-test" onclick="test('${name}',${i})">[ PROBAR ]</button><div id="r${i}" class="result"></div></div>`;
