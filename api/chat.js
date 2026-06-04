@@ -157,7 +157,7 @@ const DEFAULT_CONFIG = {
   modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" },
   modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "", isRotator: true },
   modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-  modelo11: { url: "puter", model: "anthropic/claude-sonnet-4-6", key: "", system_prompt: "", isPuter: true }
+  modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "sk-DxtqPcesVyDCwxglZmG46aTsl9Ukkhh7H3bmSIztB317vmt36mmRct3xt5Hxv5vg", system_prompt: "" }
 };
 
 function getConfig() {
@@ -205,7 +205,7 @@ module.exports = async (req, res) => {
             { id: "modelo8", object: "model", owned_by: "carbonato" },
             { id: "modelo9", object: "model", owned_by: "carbonato", description: "Smart Model Rotator - auto-failover entre modelos Kilo" },
             { id: "modelo10", object: "model", owned_by: "carbonato" },
-            { id: "modelo11", object: "model", owned_by: "carbonato", description: "Claude Sonnet 4.6 via Puter - tool calling soportado" }
+            { id: "modelo11", object: "model", owned_by: "carbonato", description: "DeepSeek V4 Flash via OpenCode Zen - gratuito e ilimitado" }
           ]
         });
   }
@@ -468,7 +468,7 @@ module.exports = async (req, res) => {
     }
     
     const headers = { 'Content-Type': 'application/json' };
-    // Los tools se envían directamente al backend
+    if (cfg.key) headers['Authorization'] = `Bearer ${cfg.key}`;
     
     try {
       const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });

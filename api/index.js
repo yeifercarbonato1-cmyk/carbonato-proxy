@@ -343,8 +343,8 @@ tr:hover td{
   
   <div class="model-card" style="border-color:#8a2be2">
     <h4>🧠 modelo11</h4>
-    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">PUTER/CLAUDE</span></p>
-    <p>Claude Sonnet 4.6 via Puter - Razonamiento avanzado con tool calling.</p>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">OPENCODE ZEN</span></p>
+    <p>DeepSeek V4 Flash via OpenCode Zen - Razonamiento avanzado con tool calling, gratuito e ilimitado.</p>
   </div>
 </div>
 

@@ -60,9 +60,9 @@
     "system_prompt": ""
   },
   "modelo11": {
-    "url": "puter",
-    "model": "anthropic/claude-sonnet-4-6",
-    "key": "",
+    "url": "https://opencode.ai/zen/v1/chat/completions",
+    "model": "deepseek-v4-flash-free",
+    "key": "sk-DxtqPcesVyDCwxglZmG46aTsl9Ukkhh7H3bmSIztB317vmt36mmRct3xt5Hxv5vg",
     "system_prompt": ""
   }
 }
