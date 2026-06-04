@@ -54,7 +54,8 @@ module.exports = async (req, res) => {
     modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "stepfun/step-3.7-flash:free", key: "", system_prompt: "" },
     modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/free", key: "", system_prompt: "" },
     modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-    modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" }
+    modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" },
+    modelo11: { url: "puter", model: "anthropic/claude-sonnet-4-6", key: "", system_prompt: "" }
   };
 
   let cfg = def;
@@ -68,8 +69,8 @@ module.exports = async (req, res) => {
   const usages = db.usages || [];
 
   let cards = '';
-  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#00ff00','#ff8c00'];
-  for (let i = 1; i <= 10; i++) {
+  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#00ff00','#ff8c00','#8a2be2'];
+  for (let i = 1; i <= 11; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || def[name];
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -77,6 +78,9 @@ module.exports = async (req, res) => {
     if (name === 'modelo9') {
       // Card readonly para el rotador
       cards += `<div class="card" style="border-color:${colors[i-1]};opacity:0.9"><h3 style="color:${colors[i-1]}">[ ${name} ] 🔄 SMART ROTATOR</h3><div style="font-size:6px;color:#ffd700;margin-bottom:10px">Auto-failover entre modelos Kilo (salta modelo5)</div><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><div style="font-size:5px;color:#00ff00;margin-top:5px">✓ Circuit breaker activo (2 fallos/30s = skip)</div></div>`;
+    } else if (name === 'modelo11') {
+      // Card readonly para Puter/Claude
+      cards += `<div class="card" style="border-color:${colors[i-1]};opacity:0.9"><h3 style="color:${colors[i-1]}">[ ${name} ] 🧠 PUTER/CLAUDE</h3><div style="font-size:6px;color:#ffd700;margin-bottom:10px">Claude Sonnet 4.6 via Puter. Requiere PUTER_AUTH_TOKEN en .env</div><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><div style="font-size:5px;color:#00ff00;margin-top:5px">✓ Tool calling soportado</div></div>`;
     } else {
       cards += `<div class="card" style="border-color:${colors[i-1]}"><h3 style="color:${colors[i-1]}">[ ${name} ]</h3><label>BASE URL</label><input id="url${i}" value="${c.url||''}"><label>MODEL ID</label><input id="id${i}" value="${c.model||''}"><label>API KEY</label><input id="key${i}" value="${c.key||''}"><label>SYSTEM PROMPT</label><textarea id="sp${i}" rows="3">${c.system_prompt||''}</textarea><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><button class="btn-test" onclick="test('${name}',${i})">[ PROBAR ]</button><div id="r${i}" class="result"></div></div>`;
     }
@@ -90,7 +94,7 @@ module.exports = async (req, res) => {
   });
 
   let statsCards = '';
-  for (let i = 1; i <= 10; i++) {
+  for (let i = 1; i <= 11; i++) {
     const name = 'modelo' + i;
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     const ipsList = s.uniqueIPs.slice(0,5).join(', ');
@@ -224,8 +228,9 @@ else{var cont=js.choices?.[0]?.message?.content||JSON.stringify(js,null,2);d.cla
 
 function save(){
 var c={};
-for(var i=1;i<=10;i++){
-c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value}
+for(var i=1;i<=11;i++){
+      if(i===11) continue; // modelo11 es readonly, no se guarda desde el form
+      c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value}
 }
 fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
 .then(r=>r.json())

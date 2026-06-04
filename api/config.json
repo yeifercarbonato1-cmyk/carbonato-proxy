@@ -58,5 +58,11 @@
     "model": "pollinations-image",
     "key": "",
     "system_prompt": ""
+  },
+  "modelo11": {
+    "url": "puter",
+    "model": "anthropic/claude-sonnet-4-6",
+    "key": "",
+    "system_prompt": ""
   }
 }

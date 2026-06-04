@@ -270,7 +270,7 @@ tr:hover td{
 <div class="header">
   <h1>🍄 CARBONATO PROXY 🍄</h1>
   <div class="sub">/// SUPER AI BROS GATEWAY ///</div>
-  <div class="version">v5.30 // 10 POWER-UPS + SMART ROTATOR from KILO.AI</div>
+  <div class="version">v5.31 // 11 POWER-UPS + SMART ROTATOR from KILO.AI</div>
 </div>
 
 <div class="section">
@@ -339,6 +339,12 @@ tr:hover td{
     <h4>💎 modelo10</h4>
     <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">GOOGLE GEMINI</span></p>
     <p>Gemini 2.0 Flash Experimental - Último modelo de Google con razonamiento avanzado.</p>
+  </div>
+  
+  <div class="model-card" style="border-color:#8a2be2">
+    <h4>🧠 modelo11</h4>
+    <p><span class="tag tag-free">GRATIS</span> <span class="tag tag-kilo">PUTER/CLAUDE</span></p>
+    <p>Claude Sonnet 4.6 via Puter - Razonamiento avanzado con tool calling.</p>
   </div>
 </div>
 
