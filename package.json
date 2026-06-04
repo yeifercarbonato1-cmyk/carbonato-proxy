@@ -6,7 +6,5 @@
   "engines": {
     "node": "22.x"
   },
-  "dependencies": {
-    "@heyputer/puter.js": "^2.5.0"
-  }
+  "dependencies": {}
 }

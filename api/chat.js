@@ -1,80 +1,5 @@
 const fs = require('fs');
 
-const CONFIG_PATH = '/tmp/proxy-config.json';
-
-function formatPuterResponse(puterResp, modelName) {
-  if (typeof puterResp === 'string') {
-    return {
-      id: 'chatcmpl-' + Date.now(),
-      object: 'chat.completion',
-      created: Math.floor(Date.now() / 1000),
-      model: modelName,
-      choices: [{ index: 0, message: { role: 'assistant', content: puterResp }, finish_reason: 'stop' }],
-      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-    };
-  }
-
-  const msg = puterResp?.result?.message || puterResp?.message || null;
-  if (!msg) {
-    return {
-      id: 'chatcmpl-' + Date.now(),
-      object: 'chat.completion',
-      created: Math.floor(Date.now() / 1000),
-      model: modelName,
-      choices: [{ index: 0, message: { role: 'assistant', content: String(puterResp || '') }, finish_reason: 'stop' }],
-      usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-    };
-  }
-
-  const message = { role: msg.role || 'assistant' };
-  const toolCalls = [];
-
-  if (typeof msg.content === 'string') {
-    message.content = msg.content;
-  } else if (Array.isArray(msg.content)) {
-    const textParts = [];
-    for (const block of msg.content) {
-      if (block.type === 'text') {
-        textParts.push(block.text || '');
-      } else if (block.type === 'tool_use') {
-        toolCalls.push({
-          id: block.id,
-          type: 'function',
-          function: {
-            name: block.name,
-            arguments: JSON.stringify(block.input || {})
-          }
-        });
-      }
-    }
-    message.content = textParts.join('') || null;
-  } else {
-    message.content = msg.content || null;
-  }
-
-  if (msg.tool_calls && msg.tool_calls.length > 0) {
-    message.tool_calls = msg.tool_calls;
-  } else if (toolCalls.length > 0) {
-    message.tool_calls = toolCalls;
-  }
-
-  const finish_reason = message.tool_calls ? 'tool_calls' : 'stop';
-  const usage = puterResp?.result?.usage || msg.usage || {};
-
-  return {
-    id: 'chatcmpl-' + Date.now(),
-    object: 'chat.completion',
-    created: Math.floor(Date.now() / 1000),
-    model: modelName,
-    choices: [{ index: 0, message, finish_reason }],
-    usage: {
-      prompt_tokens: usage.input_tokens || 0,
-      completion_tokens: usage.output_tokens || 0,
-      total_tokens: (usage.input_tokens || 0) + (usage.output_tokens || 0)
-    }
-  };
-}
-
 // Circuit breaker para modelo9 - persiste en /tmp
 let circuitBreaker = { failures: {}, lastFailures: {} };
 try {
@@ -139,7 +64,6 @@ const KILO_MODELS = [
   "poolside/laguna-m.1:free",
   "poolside/laguna-xs.2:free",
   "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
-  "stepfun/step-3.7-flash:free",
   "stepfun/step-3.7-flash:free",
   "openrouter/free"
 ];
@@ -294,71 +218,6 @@ module.exports = async (req, res) => {
         });
       } catch(e) {
         return res.status(500).json({ error: { message: e.message } });
-      }
-    }
-
-    // Modelo11: Puter/Claude via REST API
-    if (cfg && cfg.isPuter) {
-      const puterToken = process.env.PUTER_AUTH_TOKEN;
-      if (!puterToken) {
-        return res.status(502).json({ error: { message: "Puter no configurado (falta PUTER_AUTH_TOKEN)", type: "api_error" }});
-      }
-      try {
-        let messages = body.messages || [];
-        if (cfg.system_prompt) {
-          const hasSystem = messages.some(m => m.role === 'system');
-          if (!hasSystem) {
-            messages = [{ role: 'system', content: cfg.system_prompt }, ...messages];
-          }
-        }
-
-        const args = { messages, model: cfg.model };
-        if (body.tools) args.tools = body.tools;
-        if (body.tool_choice) args.tool_choice = body.tool_choice;
-        if (body.temperature) args.temperature = body.temperature;
-        if (body.max_tokens) args.max_tokens = body.max_tokens;
-
-        const resp = await fetch('https://api.puter.com/drivers/call', {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;actually=json' },
-          body: JSON.stringify({
-            interface: 'puter-chat-completion',
-            driver: 'ai-chat',
-            test_mode: false,
-            method: 'complete',
-            args,
-            auth_token: puterToken
-          })
-        });
-
-        const data = await resp.json();
-
-        if (data.success === false || data.code) {
-          throw new Error(data.message || data.code || 'Puter API error');
-        }
-
-        const formatted = formatPuterResponse(data, userModel);
-
-        // Registrar uso
-        try {
-          const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
-          const db = loadUsageDB();
-          const usage = data?.result?.usage || {};
-          const tokens = (usage.input_tokens || 0) + (usage.output_tokens || 0);
-          db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
-          if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-          db.stats[userModel].totalTokens += tokens;
-          db.stats[userModel].totalRequests += 1;
-          if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
-          if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
-          db.lastUpdated = new Date().toISOString();
-          db.lastModel = userModel;
-          await saveUsageDB(db);
-        } catch(e) {}
-
-        return res.status(200).json(formatted);
-      } catch(e) {
-        return res.status(502).json({ error: { message: e.message, type: "puter_error" }});
       }
     }
 
