@@ -59,8 +59,8 @@ module.exports = async (req, res) => {
         modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "", system_prompt: "" },
         modelo13: { url: "https://openrouter.ai/api/v1/chat/completions", model: "openai/gpt-oss-120b:free", key: "$OR_KEY1", system_prompt: "" },
         modelo14: { url: "https://openrouter.ai/api/v1/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "$OR_KEY2", system_prompt: "" },
-        modelo15: { url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free", key: "$OR_KEY1", system_prompt: "" },
-        modelo16: { url: "https://openrouter.ai/api/v1/chat/completions", model: "z-ai/glm-4.5-air:free", key: "$OR_KEY2", system_prompt: "" }
+        modelo15: { url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free", key: "$OR_KEY2", system_prompt: "" },
+        modelo16: { url: "https://openrouter.ai/api/v1/chat/completions", model: "z-ai/glm-4.5-air:free", key: "$OR_KEY1", system_prompt: "" }
       };
 
   let cfg = def;
