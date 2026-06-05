@@ -92,7 +92,7 @@
   },
   "modelo16": {
     "url": "https://openrouter.ai/api/v1/chat/completions",
-    "model": "openrouter/owl-alpha",
+    "model": "z-ai/glm-4.5-air:free",
     "key": "$OR_KEY2",
     "system_prompt": ""
   }

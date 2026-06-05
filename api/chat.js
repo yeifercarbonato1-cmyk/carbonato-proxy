@@ -86,7 +86,7 @@ const DEFAULT_CONFIG = {
   modelo13: { url: "https://openrouter.ai/api/v1/chat/completions", model: "openai/gpt-oss-120b:free", key: "$OR_KEY1", system_prompt: "" },
   modelo14: { url: "https://openrouter.ai/api/v1/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "$OR_KEY2", system_prompt: "" },
   modelo15: { url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free", key: "$OR_KEY1", system_prompt: "" },
-  modelo16: { url: "https://openrouter.ai/api/v1/chat/completions", model: "openrouter/owl-alpha", key: "$OR_KEY2", system_prompt: "" }
+  modelo16: { url: "https://openrouter.ai/api/v1/chat/completions", model: "z-ai/glm-4.5-air:free", key: "$OR_KEY2", system_prompt: "" }
 };
 
 function resolveKey(cfg) {
@@ -146,7 +146,7 @@ module.exports = async (req, res) => {
             { id: "modelo13", object: "model", owned_by: "carbonato", description: "OpenAI GPT OSS 120B via OpenRouter - key1" },
             { id: "modelo14", object: "model", owned_by: "carbonato", description: "Nvidia Nemotron Super 120B via OpenRouter - key2" },
             { id: "modelo15", object: "model", owned_by: "carbonato", description: "Google Gemma 4 31B via OpenRouter - key1" },
-            { id: "modelo16", object: "model", owned_by: "carbonato", description: "OpenRouter Owl Alpha 1M contexto via OpenRouter - key2" }
+            { id: "modelo16", object: "model", owned_by: "carbonato", description: "Z.ai GLM 4.5 Air MoE via OpenRouter - key2" }
           ]
         });
   }
