@@ -68,7 +68,7 @@ const KILO_MODELS = [
   "openrouter/free"
 ];
 // Rotación para modelo9 (modelos de texto/imagen)
-const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12'];
+const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12', 'modelo13', 'modelo14', 'modelo15', 'modelo16'];
 
 const DEFAULT_CONFIG = {
   modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[0], key: "", system_prompt: "" },
@@ -82,8 +82,19 @@ const DEFAULT_CONFIG = {
   modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "", isRotator: true },
   modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
   modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "", system_prompt: "" },
-  modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "", system_prompt: "" }
+  modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "", system_prompt: "" },
+  modelo13: { url: "https://openrouter.ai/api/v1/chat/completions", model: "openai/gpt-oss-120b:free", key: "$OR_KEY1", system_prompt: "" },
+  modelo14: { url: "https://openrouter.ai/api/v1/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "$OR_KEY2", system_prompt: "" },
+  modelo15: { url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free", key: "$OR_KEY1", system_prompt: "" },
+  modelo16: { url: "https://openrouter.ai/api/v1/chat/completions", model: "qwen/qwen3-coder:free", key: "$OR_KEY2", system_prompt: "" }
 };
+
+function resolveKey(cfg) {
+  if (!cfg.key) return '';
+  if (cfg.key === '$OR_KEY1') return process.env.OR_KEY1 || '';
+  if (cfg.key === '$OR_KEY2') return process.env.OR_KEY2 || '';
+  return cfg.key;
+}
 
 function getConfig() {
   return DEFAULT_CONFIG;
@@ -131,7 +142,11 @@ module.exports = async (req, res) => {
             { id: "modelo9", object: "model", owned_by: "carbonato", description: "Smart Model Rotator - auto-failover entre modelos Kilo" },
             { id: "modelo10", object: "model", owned_by: "carbonato" },
             { id: "modelo11", object: "model", owned_by: "carbonato", description: "DeepSeek V4 Flash via OpenCode Zen - gratuito e ilimitado" },
-            { id: "modelo12", object: "model", owned_by: "carbonato", description: "MiniMax M3 via OpenCode Zen - gratuito e ilimitado" }
+            { id: "modelo12", object: "model", owned_by: "carbonato", description: "MiniMax M3 via OpenCode Zen - gratuito e ilimitado" },
+            { id: "modelo13", object: "model", owned_by: "carbonato", description: "OpenAI GPT OSS 120B via OpenRouter - key1" },
+            { id: "modelo14", object: "model", owned_by: "carbonato", description: "Nvidia Nemotron Super 120B via OpenRouter - key2" },
+            { id: "modelo15", object: "model", owned_by: "carbonato", description: "Google Gemma 4 31B via OpenRouter - key1" },
+            { id: "modelo16", object: "model", owned_by: "carbonato", description: "Qwen Qwen3 Coder via OpenRouter - key2" }
           ]
         });
   }
@@ -256,7 +271,7 @@ module.exports = async (req, res) => {
           
           const upstreamRes = await fetch(targetCfg.url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', ...(targetCfg.key ? { 'Authorization': `Bearer ${resolveKey(targetCfg)}` } : {}) },
             body: JSON.stringify(rotatorBody),
             signal: AbortSignal.timeout(15000)
           });
@@ -329,7 +344,8 @@ module.exports = async (req, res) => {
     }
     
     const headers = { 'Content-Type': 'application/json' };
-    if (cfg.key) headers['Authorization'] = `Bearer ${cfg.key}`;
+    const resolvedKey = resolveKey(cfg);
+    if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
     
     try {
       const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });

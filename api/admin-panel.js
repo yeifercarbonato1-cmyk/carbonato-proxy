@@ -56,7 +56,11 @@ module.exports = async (req, res) => {
     modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
         modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" },
         modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "", system_prompt: "" },
-        modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "", system_prompt: "" }
+        modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "", system_prompt: "" },
+        modelo13: { url: "https://openrouter.ai/api/v1/chat/completions", model: "openai/gpt-oss-120b:free", key: "$OR_KEY1", system_prompt: "" },
+        modelo14: { url: "https://openrouter.ai/api/v1/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "$OR_KEY2", system_prompt: "" },
+        modelo15: { url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free", key: "$OR_KEY1", system_prompt: "" },
+        modelo16: { url: "https://openrouter.ai/api/v1/chat/completions", model: "qwen/qwen3-coder:free", key: "$OR_KEY2", system_prompt: "" }
       };
 
   let cfg = def;
@@ -70,8 +74,8 @@ module.exports = async (req, res) => {
   const usages = db.usages || [];
 
   let cards = '';
-  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#00ff00','#ff8c00','#8a2be2','#ff1493'];
-  for (let i = 1; i <= 12; i++) {
+  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#00ff00','#ff8c00','#8a2be2','#ff1493','#ff6347','#7fff00','#da70d6','#00bfff'];
+  for (let i = 1; i <= 16; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || def[name];
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -91,7 +95,7 @@ module.exports = async (req, res) => {
   });
 
   let statsCards = '';
-  for (let i = 1; i <= 12; i++) {
+  for (let i = 1; i <= 16; i++) {
     const name = 'modelo' + i;
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     const ipsList = s.uniqueIPs.slice(0,5).join(', ');
@@ -225,7 +229,7 @@ else{var cont=js.choices?.[0]?.message?.content||JSON.stringify(js,null,2);d.cla
 
 function save(){
 var c={};
-for(var i=1;i<=12;i++){
+for(var i=1;i<=16;i++){
       c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value}
 }
 fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
