@@ -44,29 +44,11 @@ module.exports = async (req, res) => {
 
   const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'Desconocida').split(',')[0].trim();
 
-  const def = {
-    modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" },
-    modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "", system_prompt: "" },
-    modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-m.1:free", key: "", system_prompt: "" },
-    modelo4: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "poolside/laguna-xs.2:free", key: "", system_prompt: "" },
-    modelo5: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", key: "", system_prompt: "" },
-    modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "stepfun/step-3.7-flash:free", key: "", system_prompt: "" },
-    modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "stepfun/step-3.7-flash:free", key: "", system_prompt: "" },
-    modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "openrouter/free", key: "", system_prompt: "" },
-    modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-        modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "" },
-        modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "", system_prompt: "" },
-        modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "", system_prompt: "" },
-        modelo13: { url: "https://openrouter.ai/api/v1/chat/completions", model: "openai/gpt-oss-120b:free", key: "$OR_KEY1", system_prompt: "" },
-        modelo14: { url: "https://openrouter.ai/api/v1/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "$OR_KEY2", system_prompt: "" },
-        modelo15: { url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free", key: "$OR_KEY2", system_prompt: "" },
-        modelo16: { url: "https://openrouter.ai/api/v1/chat/completions", model: "z-ai/glm-4.5-air:free", key: "$OR_KEY1", system_prompt: "" }
-      };
-
-  let cfg = def;
+  // Cargar config desde /tmp (hot-reload) → config.json (deploy)
+  let cfg = {};
   try { cfg = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8')); } catch(e) {}
-  for (const key of Object.keys(def)) {
-    if (!cfg[key] || Object.keys(cfg[key]).length === 0) cfg[key] = def[key];
+  if (Object.keys(cfg).length === 0) {
+    try { cfg = JSON.parse(fs.readFileSync(__dirname + '/config.json', 'utf8')); } catch(e) {}
   }
 
   const db = await loadDB();
@@ -77,7 +59,7 @@ module.exports = async (req, res) => {
   const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#00ff00','#ff8c00','#8a2be2','#ff1493','#ff6347','#7fff00','#da70d6','#00bfff'];
   for (let i = 1; i <= 16; i++) {
     const name = 'modelo' + i;
-    const c = cfg[name] || def[name];
+    const c = cfg[name] || {};
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     
     if (name === 'modelo11') {

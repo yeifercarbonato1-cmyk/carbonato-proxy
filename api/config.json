@@ -24,8 +24,8 @@
     "system_prompt": ""
   },
   "modelo5": {
-    "url": "https://image.pollinations.ai/prompt/",
-    "model": "pollinations-image",
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
     "key": "",
     "system_prompt": ""
   },

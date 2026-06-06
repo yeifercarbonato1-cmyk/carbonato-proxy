@@ -1,4 +1,5 @@
 const fs = require('fs');
+const path = require('path');
 
 // Circuit breaker para modelo9 - persiste en /tmp
 let circuitBreaker = { failures: {}, lastFailures: {} };
@@ -70,25 +71,8 @@ const KILO_MODELS = [
 // Rotación para modelo9 (modelos de texto/imagen)
 const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12', 'modelo13', 'modelo14', 'modelo15', 'modelo16'];
 
-const DEFAULT_CONFIG = {
-  modelo1: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[0], key: "", system_prompt: "" },
-  modelo2: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[1], key: "", system_prompt: "" },
-  modelo3: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[2], key: "", system_prompt: "" },
-  modelo4: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[3], key: "", system_prompt: "" },
-  modelo5: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", key: "", system_prompt: "" },
-  modelo6: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[4], key: "", system_prompt: "" },
-  modelo7: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[5], key: "", system_prompt: "" },
-  modelo8: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: KILO_MODELS[6], key: "", system_prompt: "" },
-  modelo9: { url: "https://api.kilo.ai/api/gateway/chat/completions", model: "kilo-auto/free", key: "", system_prompt: "", isRotator: true },
-  modelo10: { url: "https://image.pollinations.ai/prompt/", model: "pollinations-image", key: "", system_prompt: "" },
-  modelo11: { url: "https://opencode.ai/zen/v1/chat/completions", model: "deepseek-v4-flash-free", key: "", system_prompt: "" },
-  modelo12: { url: "https://opencode.ai/zen/v1/chat/completions", model: "minimax-m3-free", key: "", system_prompt: "" },
-  modelo13: { url: "https://openrouter.ai/api/v1/chat/completions", model: "openai/gpt-oss-120b:free", key: "$OR_KEY1", system_prompt: "" },
-  modelo14: { url: "https://openrouter.ai/api/v1/chat/completions", model: "nvidia/nemotron-3-super-120b-a12b:free", key: "$OR_KEY2", system_prompt: "" },
-  modelo15: { url: "https://openrouter.ai/api/v1/chat/completions", model: "google/gemma-4-31b-it:free", key: "$OR_KEY2", system_prompt: "" },
-  modelo16: { url: "https://openrouter.ai/api/v1/chat/completions", model: "z-ai/glm-4.5-air:free", key: "$OR_KEY1", system_prompt: "" }
-};
-
+// ─── Config dinámico desde config.json ───
+// Busca: /tmp/proxy-config.json (hot-reload desde admin) → config.json (deploy)
 function resolveKey(cfg) {
   if (!cfg.key) return '';
   if (cfg.key === '$OR_KEY1') return process.env.OR_KEY1 || '';
@@ -97,7 +81,26 @@ function resolveKey(cfg) {
 }
 
 function getConfig() {
-  return DEFAULT_CONFIG;
+  try {
+    const tmp = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8'));
+    if (tmp && typeof tmp === 'object' && Object.keys(tmp).length > 0) return tmp;
+  } catch(e) {}
+  try {
+    const cfgPath = path.join(__dirname, 'config.json');
+    return JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
+  } catch(e) {
+    console.log('[config] Error leyendo config.json:', e.message);
+    return {};
+  }
+}
+
+// Rate limiter para GitHub writes - máx 1 cada 30s
+let _lastGithubSync = 0;
+function shouldSyncToGitHub() {
+  const now = Date.now();
+  if (now - _lastGithubSync < 30000) return false;
+  _lastGithubSync = now;
+  return true;
 }
 
 function loadUsageDB() {
@@ -106,6 +109,7 @@ function loadUsageDB() {
 
 async function saveUsageDB(db) {
   try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2)); } catch(e) {}
+  if (!shouldSyncToGitHub()) return; // Rate limit: solo cada 30s
   let token = process.env.GITHUB_TOKEN;
   if (!token) { console.log('GITHUB_TOKEN no configurado'); return; }
   try {
@@ -128,27 +132,20 @@ module.exports = async (req, res) => {
   const url = (req.url || '').split('?')[0];
   
   if (url.endsWith('/models') && req.method === 'GET') {
-    return res.status(200).json({
-          object: "list",
-          data: [
-            { id: "modelo1", object: "model", owned_by: "carbonato" },
-            { id: "modelo2", object: "model", owned_by: "carbonato" },
-            { id: "modelo3", object: "model", owned_by: "carbonato" },
-            { id: "modelo4", object: "model", owned_by: "carbonato" },
-            { id: "modelo5", object: "model", owned_by: "carbonato" },
-            { id: "modelo6", object: "model", owned_by: "carbonato" },
-            { id: "modelo7", object: "model", owned_by: "carbonato" },
-            { id: "modelo8", object: "model", owned_by: "carbonato" },
-            { id: "modelo9", object: "model", owned_by: "carbonato", description: "Smart Model Rotator - auto-failover entre modelos Kilo" },
-            { id: "modelo10", object: "model", owned_by: "carbonato" },
-            { id: "modelo11", object: "model", owned_by: "carbonato", description: "DeepSeek V4 Flash via OpenCode Zen - gratuito e ilimitado" },
-            { id: "modelo12", object: "model", owned_by: "carbonato", description: "MiniMax M3 via OpenCode Zen - gratuito e ilimitado" },
-            { id: "modelo13", object: "model", owned_by: "carbonato", description: "OpenAI GPT OSS 120B via OpenRouter - key1" },
-            { id: "modelo14", object: "model", owned_by: "carbonato", description: "Nvidia Nemotron Super 120B via OpenRouter - key2" },
-            { id: "modelo15", object: "model", owned_by: "carbonato", description: "Google Gemma 4 31B via OpenRouter - key2" },
-            { id: "modelo16", object: "model", owned_by: "carbonato", description: "Z.ai GLM 4.5 Air MoE via OpenRouter - key1" }
-          ]
-        });
+    const CONFIG = getConfig();
+    const data = Object.keys(CONFIG).map(key => ({
+      id: key,
+      object: "model",
+      owned_by: "carbonato",
+      ...(key === 'modelo9' ? { description: "Smart Model Rotator - auto-failover entre todos los modelos" } : {}),
+      ...(key === 'modelo11' ? { description: "DeepSeek V4 Flash via OpenCode Zen - gratuito e ilimitado" } : {}),
+      ...(key === 'modelo12' ? { description: "MiniMax M3 via OpenCode Zen - gratuito e ilimitado" } : {}),
+      ...(key === 'modelo13' ? { description: "OpenAI GPT OSS 120B via OpenRouter - key1" } : {}),
+      ...(key === 'modelo14' ? { description: "Nvidia Nemotron Super 120B via OpenRouter - key2" } : {}),
+      ...(key === 'modelo15' ? { description: "Google Gemma 4 31B via OpenRouter - key2" } : {}),
+      ...(key === 'modelo16' ? { description: "Z.ai GLM 4.5 Air MoE via OpenRouter - key1" } : {})
+    }));
+    return res.status(200).json({ object: "list", data });
   }
   
   // Endpoint para generación de imágenes (compatible con OpenAI DALL-E)
@@ -187,37 +184,7 @@ module.exports = async (req, res) => {
     const CONFIG = getConfig();
     const userModel = body.model;
     const cfg = CONFIG[userModel];
-    
-    // Modelo5: Generación de imágenes con Pollinations
     const useStream = body.stream === true;
-    if (userModel === 'modelo5' && useStream) {
-      try {
-        const messages = body.messages || [];
-        const lastMsg = messages[messages.length - 1];
-        const prompt = lastMsg?.content || body.prompt || 'a beautiful sunset';
-        const encodedPrompt = encodeURIComponent(prompt);
-        const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&nologo=true`;
-        
-        res.setHeader('Content-Type', 'text/event-stream');
-        res.setHeader('Cache-Control', 'no-cache');
-        res.setHeader('Connection', 'keep-alive');
-        
-        const chunk1 = { id: "img-" + Date.now(), object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: "modelo5", choices: [{ index: 0, delta: { role: "assistant" } }] };
-        res.write(`data: ${JSON.stringify(chunk1)}\n\n`);
-        
-        const content = `Imagen generada: ${imageUrl}`;
-        const chunk2 = { id: "img-" + Date.now(), object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: "modelo5", choices: [{ index: 0, delta: { content: content } }] };
-        res.write(`data: ${JSON.stringify(chunk2)}\n\n`);
-        
-        const chunk3 = { id: "img-" + Date.now(), object: "chat.completion.chunk", created: Math.floor(Date.now() / 1000), model: "modelo5", choices: [{ index: 0, delta: {}, finish_reason: "stop" }] };
-        res.write(`data: ${JSON.stringify(chunk3)}\n\n`);
-        res.write('data: [DONE]\n\n');
-        res.end();
-        return;
-      } catch(e) {
-        return res.status(500).json({ error: { message: e.message } });
-      }
-    }
 
     // Modelo10: Generación de imágenes con Pollinations
     if (userModel === 'modelo10') {
@@ -333,7 +300,57 @@ module.exports = async (req, res) => {
         }
       });
     }
-    
+
+    // ─── Streaming real ───
+    if (useStream) {
+      body.model = cfg.model;
+      body.stream = true;
+      if (cfg.system_prompt) {
+        const hasSystem = body.messages && body.messages.some(m => m.role === 'system');
+        if (!hasSystem) {
+          body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
+        }
+      }
+      const headers = { 'Content-Type': 'application/json' };
+      const resolvedKey = resolveKey(cfg);
+      if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
+      try {
+        const ac = new AbortController();
+        const to = setTimeout(() => ac.abort(), 60000);
+        const upstreamRes = await fetch(cfg.url, {
+          method: 'POST', headers, body: JSON.stringify(body), signal: ac.signal
+        });
+        clearTimeout(to);
+        if (!upstreamRes.ok) {
+          const errText = await upstreamRes.text();
+          return res.status(upstreamRes.status).json({ error: { message: errText } });
+        }
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        for await (const chunk of upstreamRes.body) {
+          res.write(chunk);
+        }
+        res.end();
+        try {
+          const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
+          const db = loadUsageDB();
+          db.usages.push({ model: userModel, ip: userIp, tokens: 0, timestamp: new Date().toISOString() });
+          if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+          db.stats[userModel].totalRequests += 1;
+          if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
+          if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
+          db.lastUpdated = new Date().toISOString();
+          db.lastModel = userModel;
+          await saveUsageDB(db);
+        } catch(e) { console.log('Error guardando uso streaming:', e.message); }
+        return;
+      } catch(e) {
+        return res.status(502).json({ error: { message: e.message, type: "api_error" } });
+      }
+    }
+
     body.model = cfg.model;
     
     if (cfg.system_prompt) {
