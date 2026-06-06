@@ -31,6 +31,16 @@ function saveCircuitBreaker() {
   } catch(e) {}
 }
 
+function saveLog(model, ip, status, latency, error) {
+  try {
+    let logs = [];
+    try { logs = JSON.parse(fs.readFileSync('/tmp/proxy-logs.json', 'utf8')); } catch(e) { logs = []; }
+    logs.push({ time: Date.now(), model, ip, status, latency, error });
+    if (logs.length > 1000) logs = logs.slice(-1000);
+    fs.writeFileSync('/tmp/proxy-logs.json', JSON.stringify(logs));
+  } catch(e) {}
+}
+
 function isCircuitOpen(modelKey) {
   const failures = circuitBreaker.failures[modelKey] || [];
   const now = Date.now();
@@ -356,6 +366,8 @@ module.exports = async (req, res) => {
               await saveUsageDB(db);
             } catch(e) {}
             
+            saveLog(userModel, userIp, upstreamRes.status, 0, null);
+            
             console.log(`[rotator] OK con ${modelKey}`);
             return res.status(upstreamRes.status).setHeader('Content-Type', 'application/json').send(resultText);
           } else if (upstreamRes.status === 429) {
@@ -381,6 +393,7 @@ module.exports = async (req, res) => {
       
       // Todos fallaron
       console.log('[rotator] Todos los modelos agotados');
+      saveLog(userModel, userIp, 503, 0, 'Todos los modelos agotados');
       return res.status(503).json({
         error: {
           message: "Todos los modelos agotados, espera unos segundos",
@@ -403,6 +416,7 @@ module.exports = async (req, res) => {
       const headers = { 'Content-Type': 'application/json' };
       const resolvedKey = resolveKey(cfg);
       if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
+      const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
       try {
         const ac = new AbortController();
         const to = setTimeout(() => ac.abort(), 60000);
@@ -423,7 +437,6 @@ module.exports = async (req, res) => {
         }
         res.end();
         try {
-          const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
           const db = loadUsageDB();
           db.usages.push({ model: userModel, ip: userIp, tokens: 0, timestamp: new Date().toISOString() });
           if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -434,8 +447,10 @@ module.exports = async (req, res) => {
           db.lastModel = userModel;
           await saveUsageDB(db);
         } catch(e) { console.log('Error guardando uso streaming:', e.message); }
+        saveLog(userModel, userIp, 200, 0, null);
         return;
       } catch(e) {
+        saveLog(userModel, userIp, 502, 0, e.message);
         return res.status(502).json({ error: { message: e.message, type: "api_error" } });
       }
     }
@@ -453,13 +468,13 @@ module.exports = async (req, res) => {
     const resolvedKey = resolveKey(cfg);
     if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
     
+    const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
     try {
       const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });
       const result = await upstreamRes.text();
       
       // Registrar uso
       try {
-        const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
         let tokens = 0;
         try { tokens = JSON.parse(result).usage?.total_tokens || 0; } catch(e) {}
         
@@ -476,8 +491,11 @@ module.exports = async (req, res) => {
         await saveUsageDB(db);
       } catch(e) { console.log('Error guardando uso:', e.message); }
       
+      saveLog(userModel, userIp, upstreamRes.status, 0, null);
+      
       return res.status(upstreamRes.status).setHeader('Content-Type', 'application/json').send(result);
     } catch(e) {
+      saveLog(userModel, userIp, 502, 0, e.message);
       return res.status(502).json({ error: { message: e.message, type: "api_error" }});
     }
   }
