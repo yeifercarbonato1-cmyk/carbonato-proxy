@@ -100,11 +100,11 @@ module.exports = async (req, res) => {
   let botStatus = 'nodata';
   try {
     const hdb = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8'));
-    if (Array.isArray(hdb) && hdb.length > 0) {
-      const last = hdb[hdb.length - 1];
-      if (Date.now() - last.time < 3600000) botStatus = 'ok';
-      else botStatus = 'error';
-    }
+    const lastCheck = Array.isArray(hdb) && hdb.length > 0
+      ? hdb[hdb.length - 1].time
+      : hdb.lastCheck ? new Date(hdb.lastCheck).getTime() : 0;
+    if (lastCheck && Date.now() - lastCheck < 3600000) botStatus = 'ok';
+    else if (lastCheck) botStatus = 'error';
   } catch(e) {}
 
   res.setHeader('Content-Type', 'text/html');
