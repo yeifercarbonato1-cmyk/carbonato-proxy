@@ -121,7 +121,12 @@ async function saveUsageDB(localDb) {
     if (getRes.ok) {
       const fileData = await getRes.json();
       sha = fileData.sha || '';
-      remoteDb = JSON.parse(Buffer.from(fileData.content, 'base64').toString());
+      try {
+        remoteDb = JSON.parse(Buffer.from(fileData.content, 'base64').toString());
+      } catch(e) {
+        console.log('Usage-DB corrupto en GitHub, inicializando nuevo');
+        remoteDb = { usages: [], stats: {} };
+      }
     } else if (getRes.status !== 404) {
       console.log('Error obteniendo archivo GitHub:', getRes.status);
       return;

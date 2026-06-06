@@ -1,8 +1,9 @@
 module.exports = async (req, res) => {
   // Serve static video from public/
-  if (req.url === '/hero-bg.mp4') {
+  if (req.url === '/hero-bg.mp4' || req.url === '/logo.mp4') {
     const fs = require('fs');
-    const p = require('path').join(__dirname, '..', 'public', 'hero-bg.mp4');
+    const fileName = req.url.slice(1);
+    const p = require('path').join(__dirname, '..', 'public', fileName);
     if (fs.existsSync(p)) {
       res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': fs.statSync(p).size });
       fs.createReadStream(p).pipe(res);
@@ -50,9 +51,34 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 @keyframes orbFloat{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(30px,-30px) scale(1.1)}66%{transform:translate(-20px,20px) scale(0.9)}}
 .container{position:relative;z-index:1;max-width:800px;margin:0 auto;padding:24px 16px 60px}
 /* HERO compacto */
-.hero{text-align:center;padding:40px 16px 24px}
-.hero-badge{display:inline-block;padding:4px 14px;border:1px solid rgba(255,255,255,0.6);border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:16px;letter-spacing:2px;text-transform:uppercase;animation:glowPulse 3s ease-in-out infinite}
+.hero{text-align:center;padding:40px 16px 24px;position:relative}
+.hero-text{text-align:center}
+.hero-badge{display:inline-block;padding:4px 14px;border:1px solid rgba(255,255,255,0.6);border-radius:20px;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.6);margin-bottom:8px;letter-spacing:2px;text-transform:uppercase;animation:glowPulse 3s ease-in-out infinite}
+.logo-video{position:absolute;left:40px;top:50%;transform:translateY(-50%);width:100px;height:100px;object-fit:cover;border-radius:50%;border:1px solid rgba(255,255,255,0.08);opacity:0.85}
 @keyframes glowPulse{0%,100%{box-shadow:0 0 10px rgba(0,255,245,0.2)}50%{box-shadow:0 0 25px rgba(0,255,245,0.5)}}
+/* Loco card animations */
+@keyframes wobbleCard{0%,100%{transform:scale(1) rotate(0deg)}15%{transform:scale(1.02) rotate(-1.5deg)}30%{transform:scale(0.98) rotate(1deg)}45%{transform:scale(1.01) rotate(-0.5deg)}60%{transform:scale(0.99) rotate(0.8deg)}75%{transform:scale(1.01) rotate(-0.3deg)}}
+@keyframes bounceIcon{0%,100%{transform:translateY(0)}25%{transform:translateY(-6px) rotate(-5deg)}50%{transform:translateY(0) rotate(0)}75%{transform:translateY(-3px) rotate(5deg)}}
+@keyframes glitchText{0%,100%{opacity:1;transform:translateX(0)}10%{opacity:0.7;transform:translateX(-2px)}12%{opacity:1;transform:translateX(0)}20%{opacity:0.8;transform:translateX(1px)}22%{opacity:1;transform:translateX(0)}}
+@keyframes floatCard{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
+@keyframes breathe{0%,100%{opacity:0.85}50%{opacity:1}}
+@keyframes tiltPulse{0%,100%{transform:rotate(0deg)}25%{transform:rotate(0.5deg)}75%{transform:rotate(-0.5deg)}}
+/* Loco: animaciones generales a toda la página */
+.hero{animation:floatCard 4s ease-in-out infinite}
+.hero-badge{animation:breathe 3s ease-in-out infinite}
+.logo-video{animation:breathe 4s ease-in-out infinite}
+.carousel-slide.active{animation:floatCard 5s ease-in-out infinite}
+.carousel-btn{animation:tiltPulse 3s ease-in-out infinite}
+.code-block{animation:floatCard 6s ease-in-out infinite;transition:all 0.3s}
+.code-block:hover{animation:glitchText 0.5s ease-in-out}
+.cta-btn{animation:breathe 4s ease-in-out infinite;transition:all 0.3s}
+.cta-btn:hover{animation:glitchText 0.3s ease-in-out}
+.comp-select{animation:tiltPulse 4s ease-in-out infinite}
+.comp-btn{animation:breathe 3s ease-in-out infinite}
+.comp-btn:hover{transform:scale(1.05)}
+.comp-result{animation:floatCard 6s ease-in-out infinite}
+.comp-result:nth-child(odd){animation-delay:-2s}
+.footer{animation:breathe 6s ease-in-out infinite}
 .hero h1{font-size:clamp(28px,5vw,48px);font-weight:800;background:linear-gradient(135deg,#fff 0%,rgba(255,255,255,0.6) 40%,rgba(255,255,255,0.5) 70%,rgba(255,255,255,0.4) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-1px;margin-bottom:8px;line-height:1.1}
 .hero .sub{font-family:'JetBrains Mono',monospace;font-size:clamp(11px,1.5vw,14px);color:rgba(255,255,255,0.35);letter-spacing:4px;margin-bottom:4px}
 .hero .version{font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,0.25);letter-spacing:1px}
@@ -61,8 +87,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .desc{font-size:14px;line-height:1.7;color:var(--text);opacity:0.7;text-align:center;margin-bottom:24px;padding:0 12px}
 .desc strong{color:rgba(255,255,255,0.6);opacity:1}
 /* CAROUSEL - linea unica */
-.carousel-wrap{position:relative;margin:0 auto 32px;max-width:600px}
-.carousel-viewport{position:relative;overflow:hidden;border-radius:12px;height:100px}
+.carousel-wrap{position:relative;margin:0 auto 32px;max-width:600px;margin-left:-50px}
+.carousel-viewport{position:relative;overflow:hidden;border-radius:12px;height:100px;max-width:520px}
 .carousel-track{position:relative;height:100%}
 .carousel-slide{position:absolute;inset:0;display:flex;align-items:center;gap:16px;padding:16px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;backdrop-filter:blur(12px);opacity:0;transform:scale(0.92);transition:all 0.6s cubic-bezier(0.16,1,0.3,1);pointer-events:none}
 .carousel-slide.active{opacity:1;transform:scale(1);pointer-events:auto}
@@ -88,6 +114,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-h
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.6),transparent)}
 /* Secciones compactas */
 .section{margin-bottom:28px}
+.grid-2col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:28px;margin-left:-20px}
+.grid-left,.grid-right{display:flex;flex-direction:column}
 .section-title{font-size:14px;font-weight:700;color:rgba(255,255,255,0.6);margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .section-title::before{content:'◆';font-size:10px;color:rgba(255,255,255,0.5)}
 .section p{font-size:13px;line-height:1.6;color:var(--text);opacity:0.7}
@@ -131,11 +159,13 @@ h3{font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(255,255,255,
 .comp-select{flex:1;min-width:100px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,0.8);outline:none}
 .comp-select:focus{border-color:rgba(255,255,255,0.3)}
 .comp-select option{background:#0a0a0f;color:rgba(255,255,255,0.8)}
-.comp-textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);resize:vertical;min-height:60px;outline:none;box-sizing:border-box}
+.comp-textarea{width:100%;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:6px;padding:10px 12px;font-family:'Inter',sans-serif;font-size:13px;color:rgba(255,255,255,0.85);resize:vertical;min-height:60px;outline:none;box-sizing:border-box;flex:1}
 .comp-textarea:focus{border-color:rgba(255,255,255,0.3)}
-.comp-btn{display:block;width:100%;padding:10px;margin-top:10px;border:none;border-radius:6px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;letter-spacing:1px}
+.comp-btn{display:block;padding:10px;border:none;border-radius:6px;background:rgba(255,255,255,0.12);color:rgba(255,255,255,0.85);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;letter-spacing:1px}
 .comp-btn:hover{background:rgba(255,255,255,0.2)}
 .comp-btn:disabled{opacity:0.3;cursor:not-allowed}
+.comp-prompt-row{display:flex;gap:8px;align-items:flex-start}
+.comp-prompt-row .comp-btn{flex-shrink:0;padding:10px 20px;margin:0}
 .comp-status{text-align:center;font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.4);margin-top:8px;min-height:18px}
 .comp-results{display:flex;flex-direction:column;gap:10px;margin-top:16px}
 .comp-card{border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:12px 14px;background:rgba(255,255,255,0.02)}
@@ -162,10 +192,13 @@ h3{font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(255,255,255,
 <div class="container">
 
 <div class="hero">
+  <video autoplay loop muted playsinline class="logo-video" src="/logo.mp4"></video>
+  <div class="hero-text">
   <div class="hero-badge">⚡ v6.0 — Multi-Provider Gateway</div>
   <h1>CARBONATO<br>PROXY</h1>
   <div class="sub">⎈ AI GATEWAY UNIFIED ⎈</div>
   <div class="version"><span>●</span> 16 modelos <span>●</span></div>
+</div>
 </div>
 
 <p class="desc">
@@ -185,46 +218,53 @@ h3{font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(255,255,255,
   </div>
 </div>
 
-<div class="divider">ENDPOINT</div>
+<div class="divider">DOCS & ENDPOINT</div>
 
-<div class="section">
-  <div class="endpoint-display">
-    <span class="method">POST</span>
-    <span class="url">https://carbonato-proxy.vercel.app/chat/completions</span>
-    <span class="copy-hint" onclick="navigator.clipboard.writeText('https://carbonato-proxy.vercel.app/chat/completions')">📋</span>
+<div class="grid-2col">
+  <div class="grid-left">
+    <div class="endpoint-display">
+      <span class="method">POST</span>
+      <span class="url">https://carbonato-proxy.vercel.app/chat/completions</span>
+      <span class="copy-hint" onclick="navigator.clipboard.writeText('https://carbonato-proxy.vercel.app/chat/completions')">📋</span>
+    </div>
+    <div class="endpoint-display" style="margin-top:6px">
+      <span class="method">GET</span>
+      <span class="url">/models</span>
+      <span class="copy-hint" onclick="navigator.clipboard.writeText('https://carbonato-proxy.vercel.app/models')">📋</span>
+    </div>
   </div>
-
-  <h3>⟫ Conversación</h3>
-  <div class="code-block"><span class="lang">BASH</span><code>
-<span class="prompt-line">curl -s -X POST https://carbonato-proxy.vercel.app/chat/completions \\</span>
-  -H <span class="string">"Content-Type: application/json"</span> \\<br>  -d '{<span class="string">"model"</span>:<span class="string">"modelo1"</span>,<span class="string">"messages"</span>:[{<span class="string">"role"</span>:<span class="string">"user"</span>,<span class="string">"content"</span>:<span class="string">"Hola"</span>}]}'
-  </code></div>
-
-  <h3>⟫ Streaming</h3>
-  <div class="code-block"><span class="lang">BASH</span><code>
-<span class="prompt-line">curl -s -N -X POST https://carbonato-proxy.vercel.app/chat/completions \\</span>
-  -H <span class="string">"Content-Type: application/json"</span> \\<br>  -d '{<span class="string">"model"</span>:<span class="string">"modelo1"</span>,<span class="string">"stream"</span>:<span class="string" style="color:rgba(255,255,255,0.6)">true</span>,<span class="string">"messages"</span>:[{<span class="string">"role"</span>:<span class="string">"user"</span>,<span class="string">"content"</span>:<span class="string">"Cuento"</span>}]}'
-  </code></div>
-
-  <h3>⟫ Modelos disponibles</h3>
-  <div class="code-block"><span class="lang">HTTP</span><code><span class="method">GET</span> <span class="url">https://carbonato-proxy.vercel.app/models</span></code></div>
+  <div class="grid-right">
+    <div class="code-block"><span class="lang">BASH</span><code>
+<span class="prompt-line">curl -s https://carbonato-proxy.vercel.app/models</span> | jq .
+    </code></div>
+    <div class="code-block" style="margin-top:6px"><span class="lang">BASH</span><code>
+<span class="prompt-line">curl -s -X POST https://carbonato-proxy.vercel.app/chat/completions \</span>
+  -H <span class="string">"Content-Type: application/json"</span> \
+  -d '{"model":"modelo1","messages":[{"role":"user","content":"Hola"}]}' | jq .
+    </code></div>
+  </div>
 </div>
 
 <div class="divider">COMPETENCIA</div>
 
 <div class="comp-wrap">
-  <label class="comp-label">SELECCIONAR 3 MODELOS</label>
+  <label class="comp-label">⬡ SELECCIONAR 3 MODELOS</label>
   <div class="comp-selects">
     <select class="comp-select" id="comp1"></select>
     <select class="comp-select" id="comp2"></select>
     <select class="comp-select" id="comp3"></select>
   </div>
-  <label class="comp-label">PROMPT</label>
-  <textarea class="comp-textarea" id="compPrompt" placeholder="Escribe tu prompt aquí..."></textarea>
-  <button class="comp-btn" id="compBtn">⟫ COMPETIR ⟪</button>
+  <label class="comp-label">⬡ PROMPT</label>
+  <div class="comp-prompt-row">
+    <textarea class="comp-textarea" id="compPrompt" placeholder="Escribe tu prompt aquí..."></textarea>
+    <button class="comp-btn" id="compBtn">⟫ COMPETIR ⟪</button>
+  </div>
   <div class="comp-status" id="compStatus"></div>
   <div class="comp-results" id="compResults"></div>
 </div>
+
+<div class="divider">ACCESO</div>
+
 <div class="cta-row">
   <a href="/api/playground" class="cta-btn cta-playground">⟫ CHAT IA ⟪</a>
 </div>
