@@ -1,4 +1,5 @@
 module.exports = async (req, res) => {
+  const { MODELOS, MODEL_IDS } = require('./models-def.js');
   // Serve static video from public/
   if (req.url === '/hero-bg.mp4' || req.url === '/logo.mp4') {
     const fs = require('fs');
@@ -10,24 +11,7 @@ module.exports = async (req, res) => {
       return;
     }
   }
-  const modelos = [
-    {icon:'🌟',name:'modelo1',desc:'Modelo estrella — alto rendimiento'},
-    {icon:'🌙',name:'modelo2',desc:'Razonamiento profundo — tareas complejas'},
-    {icon:'🚀',name:'modelo3',desc:'Equilibrio velocidad y calidad'},
-    {icon:'⚡',name:'modelo4',desc:'Máxima velocidad — respuestas instantáneas'},
-    {icon:'✨',name:'modelo5',desc:'Visión y texto — multimodal'},
-    {icon:'🧠',name:'modelo6',desc:'Razonamiento rápido y preciso'},
-    {icon:'💻',name:'modelo7',desc:'Código y procesamiento visual'},
-    {icon:'🌐',name:'modelo8',desc:'Acceso multi-proveedor'},
-    {icon:'🔄',name:'modelo9',desc:'Failover inteligente — siempre activo'},
-    {icon:'💎',name:'modelo10',desc:'Generación de imágenes HD'},
-    {icon:'🧬',name:'modelo11',desc:'Tool calling avanzado'},
-    {icon:'🔮',name:'modelo12',desc:'Ligero y eficiente'},
-    {icon:'🔥',name:'modelo13',desc:'Potencia open-source'},
-    {icon:'🌀',name:'modelo14',desc:'Alta capacidad de proceso'},
-    {icon:'💫',name:'modelo15',desc:'Precisión y confiabilidad'},
-    {icon:'⚗️',name:'modelo16',desc:'Arquitectura MoE eficiente'},
-  ];
+  const modelos = MODELOS.map(m => ({icon:m.icon, name:m.id, desc:m.desc}));
   const cardsJS = JSON.stringify(modelos);
   return res.setHeader('Content-Type', 'text/html').status(200).send(`<!DOCTYPE html>
 <html lang="es">
@@ -270,7 +254,7 @@ h3{font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(255,255,255,
 </div>
 
 <div class="footer">
-  <p class="footer-text">CARBONATO PROXY · Cofrad.IA · 16 modelos · <a href="/api/admin" class="admin-link">⚙</a></p>
+  <p class="footer-text">CARBONATO PROXY · 16 modelos · <a href="/api/admin" class="admin-link">⚙</a></p>
   <p class="footer-sub">100% código libre</p>
 </div>
 

@@ -2,11 +2,13 @@ const querystring = require('querystring');
 const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
+const { MODELOS, MODEL_IDS } = require('./models-def.js');
 const DB_PATH = '/tmp';
 const GITHUB_OWNER = 'yeifer125';
 const GITHUB_REPO = 'proxi-datos';
 const GITHUB_PATH = 'health-db.json';
 const GITHUB_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
+const GITHUB_USAGE_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/usage-db.json`;
 
 function proxyBase(req) {
   const host = req.headers['host'] || 'carbonato-proxy.vercel.app';
@@ -70,6 +72,14 @@ module.exports = async (req, res) => {
     return handlePlaygroundChat(req, res);
   }
 
+  // --- VISITORS ---
+  if (pathname === '/api/visitors/page') {
+    return handleVisitorsPage(req, res);
+  }
+  if (pathname === '/api/visitors/reset' && method === 'POST') {
+    return handleVisitorsReset(req, res);
+  }
+
   res.status(404).json({ error: 'Not found', path: pathname });
 };
 
@@ -95,49 +105,31 @@ function html(res, str) {
 // ========================================================
 // SAVE results from bot (POST, no testing)
 async function handleHealthSave(req, res) {
-  let body = '';
-  req.on('data', c => body += c);
-  req.on('end', async () => {
-    try {
-      const { results } = JSON.parse(body);
-      if (!Array.isArray(results)) return res.status(400).json({ error: 'results array required' });
-      const { data: db, sha } = await getHealthDb();
-      results.forEach(r => {
-        db.push({
-          model: r.model,
-          latency: r.latency || 0,
-          timestamp: r.timestamp || new Date().toISOString(),
-          status: r.status || 'OK'
-        });
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = Buffer.concat(chunks).toString();
+    const { results } = JSON.parse(body);
+    if (!Array.isArray(results)) return res.status(400).json({ error: 'results array required' });
+    const { data: db, sha } = await getHealthDb();
+    results.forEach(r => {
+      db.push({
+        model: r.model,
+        latency: r.latency || 0,
+        timestamp: r.timestamp || new Date().toISOString(),
+        status: r.status || 'OK'
       });
-      if (db.length > 5000) db.splice(0, db.length - 5000);
-      const saved = await saveHealthDb(db, sha);
-      const ok = results.filter(r => r.status === 'OK').length;
-      const fail = results.filter(r => r.status !== 'OK').length;
-      res.json({ ok: true, saved: saved, summary: `${ok}/${results.length} OK, ${fail} FAIL` });
-    } catch(e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
+    });
+    if (db.length > 5000) db.splice(0, db.length - 5000);
+    const saved = await saveHealthDb(db, sha);
+    const ok = results.filter(r => r.status === 'OK').length;
+    const fail = results.filter(r => r.status !== 'OK').length;
+    res.json({ ok: true, saved: saved, summary: `${ok}/${results.length} OK, ${fail} FAIL` });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 }
-const MODELOS = [
-  {id:'modelo1',name:'Kilo Auto'},
-  {id:'modelo2',name:'Nemotron 3 Super 120B'},
-  {id:'modelo3',name:'Laguna M.1'},
-  {id:'modelo4',name:'Laguna XS.2'},
-  {id:'modelo5',name:'Nemotron Nano Omni 30B'},
-  {id:'modelo6',name:'Step-3.7-Flash'},
-  {id:'modelo7',name:'Nemotron Nano Omni 30B'},
-  {id:'modelo8',name:'OpenRouter'},
-  {id:'modelo9',name:'Smart Rotator'},
-  {id:'modelo10',name:'Pollinations HD'},
-  {id:'modelo11',name:'DeepSeek V4 Flash'},
-  {id:'modelo12',name:'MiniMax M3'},
-  {id:'modelo13',name:'OpenAI GPT OSS'},
-  {id:'modelo14',name:'Nemotron Super 120B'},
-  {id:'modelo15',name:'Gemma 4'},
-  {id:'modelo16',name:'GLM 4.5 Air MoE'},
-];
+// MODELOS ahora importado desde models-def.js
 
 async function handleHealthCheck(req, res) {
   const { data: db, sha } = await getHealthDb();
@@ -199,36 +191,35 @@ let ok=0,fail=0;
 // COMPETENCIA
 // ========================================================
 async function handleCompetencia(req, res) {
-  let body = '';
-  req.on('data', c => body += c);
-  req.on('end', async () => {
-    try {
-      const { prompt, models } = JSON.parse(body);
-      if (!prompt || !models || !Array.isArray(models) || models.length === 0) {
-        return res.status(400).json({ error: 'prompt y models[] requeridos' });
-      }
-      const results = await Promise.all(models.map(async (model) => {
-        const t0 = Date.now();
-        try {
-          const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
-          });
-          const latency = Date.now() - t0;
-          if (!r.ok) return { model, latency, error: r.status };
-          const data = await r.json();
-          const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
-          return { model, latency, content: content.slice(0, 1000), tokens: data.usage?.total_tokens || 0 };
-        } catch (e) {
-          return { model, latency: 99999, error: e.message };
-        }
-      }));
-      res.json({ ok: true, results });
-    } catch (e) {
-      res.status(400).json({ error: 'JSON inválido' });
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = Buffer.concat(chunks).toString();
+    const { prompt, models } = JSON.parse(body);
+    if (!prompt || !models || !Array.isArray(models) || models.length === 0) {
+      return res.status(400).json({ error: 'prompt y models[] requeridos' });
     }
-  });
+    const results = await Promise.all(models.map(async (model) => {
+      const t0 = Date.now();
+      try {
+        const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
+        });
+        const latency = Date.now() - t0;
+        if (!r.ok) return { model, latency, error: r.status };
+        const data = await r.json();
+        const content = data.choices?.[0]?.message?.content || data.choices?.[0]?.text || '';
+        return { model, latency, content: content.slice(0, 1000), tokens: data.usage?.total_tokens || 0 };
+      } catch (e) {
+        return { model, latency: 99999, error: e.message };
+      }
+    }));
+    res.json({ ok: true, results });
+  } catch (e) {
+    res.status(400).json({ error: 'JSON inválido' });
+  }
 }
 
 function handleCompetenciaPage(req, res) {
@@ -242,7 +233,7 @@ function handleCompetenciaPage(req, res) {
 <button onclick="competir()">⟫ COMPETIR ⟪</button>
 <div id="r"></div>
 <script>
-const mods = ['modelo1','modelo2','modelo3','modelo4','modelo5','modelo6','modelo7','modelo8','modelo9','modelo10','modelo11','modelo12','modelo13','modelo14','modelo15','modelo16'];
+const mods = ${JSON.stringify(MODEL_IDS)};
 function fill(s,i){s.innerHTML=mods.map((m,j)=>'<option value="'+m+'"'+(j===i?' selected':'')+'>'+m+'</option>').join('')}
 fill(document.getElementById('m1'),0);fill(document.getElementById('m2'),1);fill(document.getElementById('m3'),2);
 async function competir(){
@@ -265,20 +256,19 @@ function loadPrompts() { try { return JSON.parse(fs.readFileSync(PROMPTS_PATH,'u
 function savePrompts(a) { fs.writeFileSync(PROMPTS_PATH, JSON.stringify(a, null, 2)); }
 
 function handlePromptsList(req, res) { res.json(loadPrompts()); }
-function handlePromptsCreate(req, res) {
-  let body = '';
-  req.on('data', c => body += c);
-  req.on('end', () => {
-    try {
-      const { name, prompt } = JSON.parse(body);
-      if (!name || !prompt) return res.status(400).json({ error: 'name y prompt requeridos' });
-      const db = loadPrompts();
-      const tpl = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), name, prompt, created: Date.now() };
-      db.push(tpl);
-      savePrompts(db);
-      res.json({ ok: true, tpl });
-    } catch(e) { res.status(400).json({ error: 'JSON inválido' }); }
-  });
+async function handlePromptsCreate(req, res) {
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = Buffer.concat(chunks).toString();
+    const { name, prompt } = JSON.parse(body);
+    if (!name || !prompt) return res.status(400).json({ error: 'name y prompt requeridos' });
+    const db = loadPrompts();
+    const tpl = { id: Date.now().toString(36) + Math.random().toString(36).slice(2,5), name, prompt, created: Date.now() };
+    db.push(tpl);
+    savePrompts(db);
+    res.json({ ok: true, tpl });
+  } catch(e) { res.status(400).json({ error: 'JSON inválido' }); }
 }
 function handlePromptsDelete(req, res) {
   const id = req.url.split(/[?&]id=/).pop();
@@ -425,7 +415,7 @@ select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12)
 <div id="chat"></div>
 <div id="input-area">
   <select id="model">
-    <option>modelo1</option><option>modelo2</option><option>modelo3</option><option>modelo4</option><option>modelo5</option><option>modelo6</option><option>modelo7</option><option>modelo8</option><option>modelo9</option><option>modelo11</option><option>modelo12</option><option>modelo13</option><option>modelo14</option><option>modelo15</option><option>modelo16</option>
+    ${MODEL_IDS.filter(id => id !== 'modelo10').map(id => '<option>'+id+'</option>').join('')}
   </select>
   <textarea id="input" rows="1" placeholder="Escribe..." onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();enviar()}"></textarea>
   <button onclick="enviar()">Enviar</button>
@@ -451,26 +441,25 @@ async function enviar(){
 }
 
 async function handlePlaygroundChat(req, res) {
-  let body = '';
-  req.on('data', c => body += c);
-  req.on('end', async () => {
-    try {
-      const data = JSON.parse(body);
-      const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: data.model || 'modelo1',
-          messages: data.messages || [],
-          max_tokens: data.max_tokens || 2048
-        })
-      });
-      const d = await r.json();
-      res.json(d);
-    } catch (e) {
-      res.status(500).json({ error: e.message });
-    }
-  });
+  try {
+    const chunks = [];
+    for await (const chunk of req) chunks.push(chunk);
+    const body = Buffer.concat(chunks).toString();
+    const data = JSON.parse(body);
+    const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: data.model || 'modelo1',
+        messages: data.messages || [],
+        max_tokens: data.max_tokens || 2048
+      })
+    });
+    const d = await r.json();
+    res.json(d);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 }
 
 // ========================================================
@@ -542,4 +531,149 @@ async function saveHealthDb(db, sha) {
   try { fs.writeFileSync(path.join(DB_PATH, 'health-db.json'), JSON.stringify(db, null, 2)); } catch(e) {}
   // Push to GitHub
   await writeToGitHub(db, sha || '');
+}
+
+// ========================================================
+// VISITORS — IP Dashboard
+// ========================================================
+async function loadUsageDB() {
+  try {
+    const local = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8'));
+    if (local && Array.isArray(local.usages)) return local;
+  } catch(e) {}
+  try {
+    const token = getGithubToken();
+    if (!token) return { usages: [], stats: {} };
+    const r = await fetch(GITHUB_USAGE_URL, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (r.ok) {
+      const data = await r.json();
+      return JSON.parse(Buffer.from(data.content, 'base64').toString());
+    }
+  } catch(e) {}
+  return { usages: [], stats: {} };
+}
+
+async function saveUsageDB(db) {
+  try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(db, null, 2)); } catch(e) {}
+  const token = getGithubToken();
+  if (!token) return;
+  try {
+    const getRes = await fetch(GITHUB_USAGE_URL, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    let sha = '';
+    if (getRes.ok) {
+      const data = await getRes.json();
+      sha = data.sha || '';
+    }
+    await fetch(GITHUB_USAGE_URL, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `Update usage-db.json - ${new Date().toISOString().slice(0,10)}`,
+        content: Buffer.from(JSON.stringify(db, null, 2)).toString('base64'),
+        sha
+      })
+    });
+  } catch(e) {}
+}
+
+async function handleVisitorsReset(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
+  await saveUsageDB({ usages: [], stats: {} });
+  res.json({ ok: true, message: 'Usage DB reset to zero' });
+}
+
+function handleVisitorsPage(req, res) {
+  // Get IP data from usage DB synchronously for initial render
+  let db = { usages: [], stats: {} };
+  try { db = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
+  const usages = db.usages || [];
+  
+  // Group by IP
+  const ipMap = {};
+  usages.forEach(u => {
+    const ip = u.ip || 'unknown';
+    if (!ipMap[ip]) ipMap[ip] = { ip, count: 0, lastSeen: '', models: new Set(), tokens: 0 };
+    ipMap[ip].count++;
+    ipMap[ip].tokens += u.tokens || 0;
+    if (u.timestamp > ipMap[ip].lastSeen) ipMap[ip].lastSeen = u.timestamp;
+    if (u.model) ipMap[ip].models.add(u.model);
+  });
+  
+  const ips = Object.values(ipMap);
+  ips.sort((a, b) => b.count - a.count);
+  
+  // Exclude own IP from display (user's own requests)
+  const proxyOwnIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '';
+  const filteredIps = ips.filter(i => i.ip !== proxyOwnIp.split(',')[0].trim());
+
+  html(res, `<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VISITANTES — Carbonato Proxy</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}
+h1{font-size:14px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.6);margin-bottom:4px}
+.sub{font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:16px;font-family:'JetBrains Mono',monospace}
+table{width:100%;border-collapse:collapse;font-size:11px}
+th{text-align:left;padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px}
+td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'JetBrains Mono',monospace;font-size:10px;vertical-align:middle}
+tr:hover td{background:rgba(255,255,255,0.02)}
+.flag{font-size:16px}
+.loading{color:rgba(255,255,255,0.25)}
+.ip-cell{cursor:pointer;color:rgba(255,255,255,0.7)}
+.ip-cell:hover{color:#fff}
+.models{font-size:9px;color:rgba(255,255,255,0.3)}
+/* hidden reset button — esquina inferior derecha */
+#resetBtn{position:fixed;bottom:8px;right:8px;background:none;border:none;color:rgba(255,255,255,0.12);font-size:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:4px 8px;transition:color 0.3s;z-index:999}
+#resetBtn:hover{color:rgba(255,255,255,0.4)}
+#resetBtn.confirm{color:#ff4444}
+</style></head>
+<body>
+<h1>⟐ VISITANTES</h1>
+<div class="sub"><span id="totalIPs">${filteredIps.length}</span> IPs únicas · <span id="totalReqs">${usages.length}</span> requests</div>
+<table><thead><tr>
+  <th>#</th><th>IP</th><th>PAÍS</th><th>UBICACIÓN</th><th>ISP</th><th>REQS</th><th>ÚLT. VEZ</th><th>MODELOS</th>
+</tr></thead><tbody id="tbody"></tbody></table>
+<div id="status" style="font-size:10px;color:rgba(255,255,255,0.2);margin-top:8px;font-family:'JetBrains Mono',monospace"></div>
+<button id="resetBtn" onclick="if(this.classList.contains('confirm')){fetch('/api/visitors/reset',{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok)location.reload()})}else{this.textContent='¿SEGURO?';this.classList.add('confirm');setTimeout(()=>{this.textContent='●';this.classList.remove('confirm')},4000)}" title="reset stats">●</button>
+<script>
+const ips = ${JSON.stringify(filteredIps.map(i => ({ ip: i.ip, count: i.count, lastSeen: i.lastSeen, models: [...i.models], tokens: i.tokens })))};
+const tbody = document.getElementById('tbody');
+const status = document.getElementById('status');
+const API = 'https://ip-api.com/json/';
+
+ips.forEach((ip, idx) => {
+  const row = document.createElement('tr');
+  row.id = 'r-' + idx;
+  row.innerHTML = '<td>' + (idx+1) + '</td>' +
+    '<td class="ip-cell" onclick="navigator.clipboard.writeText(\'' + ip.ip + '\')">' + ip.ip + '</td>' +
+    '<td id="c-' + idx + '" class="loading">⟳</td>' +
+    '<td id="l-' + idx + '" class="loading">⟳</td>' +
+    '<td id="i-' + idx + '" class="loading">⟳</td>' +
+    '<td>' + ip.count + '</td>' +
+    '<td style="font-size:9px;color:rgba(255,255,255,0.3)">' + (ip.lastSeen ? new Date(ip.lastSeen).toLocaleString('es-CR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—') + '</td>' +
+    '<td class="models">' + (ip.models.slice(0,3).join(', ') + (ip.models.length > 3 ? '...' : '')) + '</td>';
+  tbody.appendChild(row);
+
+  // Fetch geolocation for each IP
+  fetch(API + ip.ip)
+    .then(r => r.json())
+    .then(d => {
+      const flag = d.countryCode ? String.fromCodePoint(...[...d.countryCode.toUpperCase()].map(c => 0x1F1E6 + c.charCodeAt(0) - 65)) : '';
+      document.getElementById('c-' + idx).innerHTML = (flag ? '<span class="flag">' + flag + '</span> ' : '') + (d.country || '—');
+      document.getElementById('l-' + idx).textContent = [d.regionName, d.city].filter(Boolean).join(', ') || '—';
+      document.getElementById('i-' + idx).textContent = d.isp || d.org || '—';
+    })
+    .catch(() => {
+      document.getElementById('c-' + idx).textContent = '—';
+      document.getElementById('l-' + idx).textContent = '—';
+      document.getElementById('i-' + idx).textContent = '—';
+    });
+});
+status.textContent = 'Enriqueciendo ' + ips.length + ' IPs vía ip-api.com...';
+</script></body></html>`);
 }

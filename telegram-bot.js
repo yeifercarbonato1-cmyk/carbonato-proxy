@@ -1,9 +1,10 @@
-// Telegram Bot - Carbonato Proxy Monitor
-// Checks models, sends alerts for failures, daily stats
-const TOKEN = '8626223246:AAHjPOi_cY1pK0rjwK3W43f4MHBfaOF7ePI';
+// Telegram Bot - Carbonato Proxy Monitor v2
+// Llama a /api/health/check en Vercel (no prueba modelos localmente)
+const TOKEN = '8626223246:***';
 const CHAT_ID = '7507526979';
 const API = `https://api.telegram.org/bot${TOKEN}`;
-const BASE = process.env.BASE_URL || 'http://localhost:3456';
+const BASE = process.env.BASE_URL || 'https://carbonato-proxy.vercel.app';
+const fs = require('fs');
 
 function sendMsg(text) {
   return fetch(`${API}/sendMessage`, {
@@ -14,32 +15,20 @@ function sendMsg(text) {
 }
 
 async function checkModels() {
-  const models = [];
-  for (let i = 1; i <= 16; i++) {
-    const name = 'modelo' + i;
-    try {
-      const res = await fetch(`${BASE}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: name,
-          messages: [{ role: 'user', content: 'OK' }],
-          max_tokens: 5
-        }),
-        signal: AbortSignal.timeout(15000)
-      });
-      const ok = res.ok;
-      models.push({ name, ok });
-    } catch {
-      models.push({ name, ok: false });
-    }
+  // Llama al endpoint health de Vercel que prueba los 16 modelos
+  const res = await fetch(`${BASE}/api/health/check`, {
+    signal: AbortSignal.timeout(120000)
+  });
+  const data = await res.json();
+  if (!data.ok || !Array.isArray(data.results)) {
+    throw new Error('Respuesta inválida de health check: ' + JSON.stringify(data).slice(0, 200));
   }
-  return models;
+  return data.results;
 }
 
 async function sendDailyStats() {
   let db = { usages: [], stats: {} };
-  try { db = JSON.parse(require('fs').readFileSync('/tmp/usage-db.json', 'utf8')); } catch {}
+  try { db = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch {}
   const stats = db.stats || {};
   const usages = db.usages || [];
   let totalReq = 0, totalTok = 0;
@@ -50,7 +39,7 @@ async function sendDailyStats() {
   const today = new Date().toISOString().split('T')[0];
   const todayReqs = usages.filter(u => (u.timestamp||'').startsWith(today)).length;
   const todayToks = usages.filter(u => (u.timestamp||'').startsWith(today)).reduce((a,u) => a+(u.tokens||0), 0);
-  
+
   await sendMsg(
     `<b>📊 CARBONATO PROXY — RESUMEN DIARIO</b>\n\n` +
     `📆 ${new Date().toLocaleDateString('es-CR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}\n\n` +
@@ -66,38 +55,38 @@ async function sendDailyStats() {
 
 async function main() {
   const mode = process.argv[2] || 'check';
-  
+
   if (mode === 'stats') {
     await sendDailyStats();
     return;
   }
-  
+
   if (mode === 'test') {
     const r = await sendMsg('<b>🔬 CARBONATO PROXY</b>\n\nSistema de monitoreo activo ✅\nPróxima verificación en 30 min');
     console.log('Test sent:', JSON.stringify(r));
     return;
   }
-  
-  // Default: check models
+
+  // Default: check models via /api/health/check
   const results = await checkModels();
-  const failed = results.filter(r => !r.ok);
-  
+  const failed = results.filter(r => r.status !== 'OK');
+
   if (failed.length > 0) {
-    const list = failed.map(f => `⛔ ${f.name}`).join('\n');
+    const list = failed.map(f => `⛔ ${f.model} (${f.name})`).join('\n');
     await sendMsg(
       `<b>🚨 MODELOS CAÍDOS</b>\n\n` +
       `Se detectaron ${failed.length} modelo(s) sin respuesta:\n${list}\n\n` +
       `⏱ ${new Date().toLocaleString('es-CR')}`
     );
   }
-  
-  // If all ok, send weekly status (only on Sundays or if more than 6 failed)
+
+  // If all ok, send weekly status (only on Sundays)
   if (failed.length === 0 && new Date().getDay() === 0) {
-    const allOk = results.map(r => `✅ ${r.name}`).join('\n');
+    const allOk = results.map(r => `✅ ${r.model} — ${r.latency}`).join('\n');
     await sendMsg(`<b>✅ MONITOREO SEMANAL</b>\n\nTodos los 16 modelos responden correctamente.\n\n${allOk}`);
   }
 }
 
 main().catch(e => {
-  require('fs').appendFileSync('/tmp/telegram-bot-errors.log', new Date().toISOString() + ' ' + e.message + '\n');
+  fs.appendFileSync('/tmp/telegram-bot-errors.log', new Date().toISOString() + ' ' + e.message + '\n');
 });

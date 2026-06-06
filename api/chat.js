@@ -6,7 +6,24 @@ let circuitBreaker = { failures: {}, lastFailures: {} };
 try {
   const cbData = fs.readFileSync('/tmp/model9-circuit.json', 'utf8');
   circuitBreaker = JSON.parse(cbData);
-} catch(e) {}
+} catch(e) {
+  // Cold start: seed circuit breaker desde health-db si existe
+  try {
+    const hdbRaw = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8'));
+    const hdb = Array.isArray(hdbRaw) ? hdbRaw : [];
+    const recent = hdb.slice(-200);
+    const failMap = {};
+    recent.forEach(e => {
+      if (e.latency >= 30000 || !e.latency) {
+        if (!failMap[e.model]) failMap[e.model] = [];
+        failMap[e.model].push(e.time || Date.now());
+      }
+    });
+    Object.entries(failMap).forEach(([m, times]) => {
+      if (times.length >= 2) circuitBreaker.failures[m] = times.slice(-3);
+    });
+  } catch(e) { /* sin health data, empezar limpio */ }
+}
 
 function saveCircuitBreaker() {
   try {
@@ -254,11 +271,22 @@ module.exports = async (req, res) => {
       // Orden dinámico: modelos más rápidos primero según health-db
       let rotatorOrder = ROTATION_ORDER;
       try {
-        const hdb = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8'));
-        const latencies = hdb.latencies || {};
+        const hdbRaw = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8'));
+        // Soportar formato nuevo (array) y legacy (objeto con latencies)
+        let hdb = Array.isArray(hdbRaw) ? hdbRaw : (hdbRaw.latencies ? [] : []);
+        // Tomar últimas 500 muestras
+        const recent = hdb.slice(-500);
+        const perModel = {};
+        ROTATION_ORDER.forEach(k => { perModel[k] = { latencies: [], fails: 0 }; });
+        recent.forEach(e => {
+          if (!perModel[e.model]) return;
+          if (e.latency < 30000) perModel[e.model].latencies.push(e.latency);
+          else perModel[e.model].fails++;
+        });
         const withScore = ROTATION_ORDER.map(k => {
-          const l = latencies[k] || { avg: 0, count: 0, fails: 0 };
-          const score = l.count > 0 ? l.avg + (l.fails / Math.max(l.count, 1)) * 5000 : 99999;
+          const d = perModel[k];
+          const avg = d.latencies.length > 0 ? d.latencies.reduce((a,b)=>a+b,0) / d.latencies.length : 99999;
+          const score = d.latencies.length > 0 ? avg + (d.fails / Math.max(d.latencies.length, 1)) * 5000 : 99999;
           return { key: k, score };
         });
         withScore.sort((a, b) => a.score - b.score);

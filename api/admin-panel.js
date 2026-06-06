@@ -252,6 +252,7 @@ td.time{color:var(--dim);font-size:9px}
   <a href="/api/rotator/page" class="nav-link">⟐ ROTADOR</a>
   <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>
   <a href="/api/playground" class="nav-link">⟐ PLAYGROUND</a>
+  <a href="/api/visitors/page" class="nav-link">⟐ VISITANTES</a>
 </nav>
 
 <!-- OVERVIEW -->
