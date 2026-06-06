@@ -28,6 +28,7 @@
     { "src": "/api/rotator(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/api/playground(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/api/visitors(.*)", "dest": "/api/admin-tools.js" },
+    { "src": "/api/usage/reset", "dest": "/api/admin-tools.js" },
     { "src": "/api/logs(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/api/config(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }

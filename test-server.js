@@ -38,6 +38,7 @@ const competenciaHandler = wrapHandler(require('./api/competencia.js'));
 const promptsHandler = wrapHandler(require('./api/prompts.js'));
 const rotatorHandler = wrapHandler(require('./api/rotator.js'));
 const playgroundHandler = wrapHandler(require('./api/playground.js'));
+const adminToolsHandler = wrapHandler(require('./api/admin-tools.js'));
 const fs = require('fs');
 const pathModule = require('path');
 
@@ -49,6 +50,8 @@ const server = http.createServer((req, res) => {
   
   const CHAT_ROUTES = ['/chat/completions','/v1/chat/completions','/models','/v1/models','/images/generations','/v1/images/generations'];
   if (CHAT_ROUTES.includes(path)) return chatHandler(req, res);
+  
+  if (path === '/api/usage/reset') return adminToolsHandler(req, res);
   
   const ADMIN_ROUTES = {
     '/api/admin': adminHandler,

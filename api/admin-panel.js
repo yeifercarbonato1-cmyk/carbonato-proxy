@@ -120,6 +120,8 @@ module.exports = async (req, res) => {
     `<div class="stats-section"><div class="section-title">ESTADÍSTICAS POR MODELO</div><div class="s-grid">${statsCards}</div></div>` +
     T.usageTableHTML(usages) +
     T.footHTML() +
-    T.chartScriptsHTML()
+    T.chartScriptsHTML() +
+    `<style>#resetBtn{position:fixed;bottom:8px;right:8px;background:none;border:none;color:rgba(255,255,255,0.12);font-size:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:4px 8px;transition:color 0.3s;z-index:999}#resetBtn:hover{color:rgba(255,255,255,0.4)}#resetBtn.confirm{color:#ff4444}</style>
+<button id="resetBtn" onclick="if(this.classList.contains('confirm')){fetch('/api/usage/reset',{method:'POST'}).then(r=>r.json()).then(d=>{if(d.ok)location.reload()}).catch(()=>{})}else{this.textContent='¿SEGURO?';this.classList.add('confirm');setTimeout(()=>{this.textContent='●';this.classList.remove('confirm')},4000)}" title="reset stats">●</button>`
   );
 };

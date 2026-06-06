@@ -80,6 +80,11 @@ module.exports = async (req, res) => {
     return handleVisitorsReset(req, res);
   }
 
+  // --- USAGE RESET (limpia todo: usage-db, health-db, logs, circuit) ---
+  if (pathname === '/api/usage/reset' && method === 'POST') {
+    return handleUsageReset(req, res);
+  }
+
   // --- ADMIN AUTH ---
   if (pathname === '/api/admin-auth' && method === 'POST') {
     return handleAdminAuth(req, res);
@@ -637,6 +642,61 @@ async function handleVisitorsReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
   await saveUsageDB({ usages: [], stats: {} });
   res.json({ ok: true, message: 'Usage DB reset to zero' });
+}
+
+async function handleUsageReset(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
+  const token = getGithubToken();
+  
+  // 1. Limpiar usage-db local
+  try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify({ usages: [], stats: {} }, null, 2)); } catch(e) {}
+  
+  // 2. Limpiar usage-db en GitHub
+  if (token) {
+    try {
+      let sha = '';
+      const getR = await fetch(GITHUB_USAGE_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+      if (getR.ok) { const d = await getR.json(); sha = d.sha || ''; }
+      await fetch(GITHUB_USAGE_URL, {
+        method: 'PUT',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Reset usage-db.json - limpieza manual',
+          content: Buffer.from(JSON.stringify({ usages: [], stats: {} }, null, 2)).toString('base64'),
+          sha
+        })
+      });
+    } catch(e) { console.log('[reset] Error GitHub usage:', e.message); }
+  }
+  
+  // 3. Limpiar health-db local
+  try { fs.writeFileSync(path.join(DB_PATH, 'health-db.json'), JSON.stringify({ latencies: {}, history: [], lastCheck: null }, null, 2)); } catch(e) {}
+  
+  // 4. Limpiar health-db en GitHub
+  if (token) {
+    try {
+      let sha = '';
+      const getR = await fetch(GITHUB_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+      if (getR.ok) { const d = await getR.json(); sha = d.sha || ''; }
+      await fetch(GITHUB_URL, {
+        method: 'PUT',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: 'Reset health-db.json - limpieza manual',
+          content: Buffer.from(JSON.stringify({ latencies: {}, history: [], lastCheck: null }, null, 2)).toString('base64'),
+          sha
+        })
+      });
+    } catch(e) { console.log('[reset] Error GitHub health:', e.message); }
+  }
+  
+  // 5. Limpiar logs locales
+  try { fs.writeFileSync(path.join(DB_PATH, 'proxy-logs.json'), '[]'); } catch(e) {}
+  
+  // 6. Limpiar circuit breaker
+  try { fs.writeFileSync(path.join(DB_PATH, 'model9-circuit.json'), JSON.stringify({ failures: {}, lastFailures: {} })); } catch(e) {}
+  
+  res.json({ ok: true, message: 'Todos los datos limpiados: usage-db, health-db, logs, circuit breaker' });
 }
 
 function handleVisitorsPage(req, res) {
