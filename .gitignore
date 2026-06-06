@@ -3,6 +3,7 @@
 node_modules/
 .env*
 .opencode/
-public/
+public/*
+!public/*.mp4
 *.jpg
 *.png
