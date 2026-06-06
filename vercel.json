@@ -12,11 +12,7 @@
     { "src": "api/models-check.js", "use": "@vercel/node" },
     { "src": "api/docs-ia.js", "use": "@vercel/node" },
     { "src": "api/index.js", "use": "@vercel/node" },
-    { "src": "api/health.js", "use": "@vercel/node" },
-    { "src": "api/competencia.js", "use": "@vercel/node" },
-    { "src": "api/prompts.js", "use": "@vercel/node" },
-    { "src": "api/rotator.js", "use": "@vercel/node" },
-    { "src": "api/playground.js", "use": "@vercel/node" }
+    { "src": "api/admin-tools.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/chat/completions", "dest": "/api/chat.js" },
@@ -34,17 +30,11 @@
     { "src": "/api/usage-save", "dest": "/api/usage-save.js" },
     { "src": "/api/admin-logout", "dest": "/api/admin-logout.js" },
     { "src": "/api/admin", "dest": "/api/admin.js" },
-    { "src": "/api/health", "dest": "/api/health.js" },
-    { "src": "/api/health/check", "dest": "/api/health.js" },
-    { "src": "/api/health/page", "dest": "/api/health.js" },
-    { "src": "/api/competencia", "dest": "/api/competencia.js" },
-    { "src": "/api/competencia/page", "dest": "/api/competencia.js" },
-    { "src": "/api/prompts", "dest": "/api/prompts.js" },
-    { "src": "/api/prompts/page", "dest": "/api/prompts.js" },
-    { "src": "/api/rotator/rank", "dest": "/api/rotator.js" },
-    { "src": "/api/rotator/page", "dest": "/api/rotator.js" },
-    { "src": "/api/playground", "dest": "/api/playground.js" },
-    { "src": "/api/playground/chat", "dest": "/api/playground.js" },
+    { "src": "/api/health(.*)", "dest": "/api/admin-tools.js" },
+    { "src": "/api/competencia(.*)", "dest": "/api/admin-tools.js" },
+    { "src": "/api/prompts(.*)", "dest": "/api/admin-tools.js" },
+    { "src": "/api/rotator(.*)", "dest": "/api/admin-tools.js" },
+    { "src": "/api/playground(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }
