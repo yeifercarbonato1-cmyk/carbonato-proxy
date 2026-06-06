@@ -27,6 +27,12 @@ function wrapHandler(fn) {
 
 const chatHandler = wrapHandler(require('./api/chat.js'));
 const indexHandler = wrapHandler(require('./api/index.js'));
+const adminHandler = wrapHandler(require('./api/admin.js'));
+const adminPanelHandler = wrapHandler(require('./api/admin-panel.js'));
+const adminAuthHandler = wrapHandler(require('./api/admin-auth.js'));
+const adminSaveHandler = wrapHandler(require('./api/admin-save.js'));
+const adminLogoutHandler = wrapHandler(require('./api/admin-logout.js'));
+const modelsCheckHandler = wrapHandler(require('./api/models-check.js'));
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -36,6 +42,16 @@ const server = http.createServer((req, res) => {
   
   const CHAT_ROUTES = ['/chat/completions','/v1/chat/completions','/models','/v1/models','/images/generations','/v1/images/generations'];
   if (CHAT_ROUTES.includes(path)) return chatHandler(req, res);
+  
+  const ADMIN_ROUTES = {
+    '/api/admin': adminHandler,
+    '/api/admin-panel': adminPanelHandler,
+    '/api/admin-auth': adminAuthHandler,
+    '/api/admin-save': adminSaveHandler,
+    '/api/admin-logout': adminLogoutHandler,
+    '/api/models-check': modelsCheckHandler
+  };
+  if (ADMIN_ROUTES[path]) return ADMIN_ROUTES[path](req, res);
   
   res.statusCode = 404;
   res.setHeader('Content-Type', 'application/json');

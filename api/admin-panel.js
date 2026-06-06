@@ -1,38 +1,22 @@
 const fs = require('fs');
 
-// DB functions - lee desde /tmp y refresca desde GitHub (server-side)
 async function loadDB() {
   let db;
-  try {
-    db = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8'));
-  } catch(e) {
-    db = { usages: [], stats: {} };
-  }
-  
+  try { db = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch(e) { db = { usages: [], stats: {} }; }
   const githubToken = process.env.GITHUB_TOKEN || '';
   if (githubToken) {
     try {
       const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
-      const getRes = await fetch(apiUrl, {
-        headers: { 'Authorization': `token ${githubToken}` }
-      });
-      
+      const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${githubToken}` } });
       if (getRes.ok) {
         const data = await getRes.json();
         const remoteDb = JSON.parse(Buffer.from(data.content, 'base64').toString());
-        
-        // Merge datos remotos con locales
         if (remoteDb.usages) db.usages = remoteDb.usages;
         if (remoteDb.stats) db.stats = remoteDb.stats;
-        
-        // Actualizar cache local
-        try {
-          fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2));
-        } catch(e) {}
+        try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2)); } catch(e) {}
       }
     } catch(e) {}
   }
-  
   return db;
 }
 
@@ -44,7 +28,6 @@ module.exports = async (req, res) => {
 
   const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'Desconocida').split(',')[0].trim();
 
-  // Cargar config desde /tmp (hot-reload) → config.json (deploy)
   let cfg = {};
   try { cfg = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8')); } catch(e) {}
   if (Object.keys(cfg).length === 0) {
@@ -55,198 +38,303 @@ module.exports = async (req, res) => {
   const stats = db.stats || {};
   const usages = db.usages || [];
 
+  // Build model cards HTML
+  const colors = ['#00fff5','#ff00e6','#7b2ff7','#00ff88','#ffd700','#ff4500','#00bfff','#ff69b4','#00ffff','#ff8c00','#8a2be2','#ff1493','#00ff7f','#da70d6','#ff6347','#7fff00'];
   let cards = '';
-  const colors = ['#ffd700','#ff69b4','#00d4ff','#9400d3','#ff4500','#00ff7f','#ff1493','#00ced1','#00ff00','#ff8c00','#8a2be2','#ff1493','#ff6347','#7fff00','#da70d6','#00bfff'];
   for (let i = 1; i <= 16; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || {};
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-    
-    if (name === 'modelo11') {
-      cards += `<div class="card" style="border-color:${colors[i-1]}"><h3 style="color:${colors[i-1]}">[ ${name} ] 🧠 ZEN DEEPSEEK</h3><label>BASE URL</label><input id="url${i}" value="${c.url||''}"><label>MODEL ID</label><input id="id${i}" value="${c.model||''}"><label>API KEY</label><input id="key${i}" value="${c.key||''}"><label>SYSTEM PROMPT</label><textarea id="sp${i}" rows="3">${c.system_prompt||''}</textarea><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><button class="btn-test" onclick="test('${name}',${i})">[ PROBAR ]</button><div id="r${i}" class="result"></div></div>`;
-    } else {
-      cards += `<div class="card" style="border-color:${colors[i-1]}"><h3 style="color:${colors[i-1]}">[ ${name} ]</h3><label>BASE URL</label><input id="url${i}" value="${c.url||''}"><label>MODEL ID</label><input id="id${i}" value="${c.model||''}"><label>API KEY</label><input id="key${i}" value="${c.key||''}"><label>SYSTEM PROMPT</label><textarea id="sp${i}" rows="3">${c.system_prompt||''}</textarea><div class="stats-mini"><span>📊 ${s.totalRequests} req</span><span>🔢 ${s.totalTokens.toLocaleString()} tokens</span><span>🌐 ${s.uniqueIPs.length} IPs</span></div><button class="btn-test" onclick="test('${name}',${i})">[ PROBAR ]</button><div id="r${i}" class="result"></div></div>`;
-    }
+    const color = colors[i-1];
+    cards += `<div class="m-card" style="--card-color:${color}">
+      <div class="m-head"><span class="m-icon">${['🌟','🌙','🚀','⚡','✨','🧠','💻','🌐','🔄','💎','🧬','🔮','🔥','🌀','💫','⚗️'][i-1]}</span><span class="m-name" style="color:${color}">${name}</span></div>
+      <div class="m-field"><span class="m-label">BASE URL</span><input class="m-inp" id="url${i}" value="${(c.url||'').replace(/"/g,'&quot;')}"></div>
+      <div class="m-field"><span class="m-label">MODEL ID</span><input class="m-inp" id="id${i}" value="${(c.model||'').replace(/"/g,'&quot;')}"></div>
+      <div class="m-field"><span class="m-label">API KEY</span><input class="m-inp" id="key${i}" value="${(c.key||'').replace(/"/g,'&quot;')}"></div>
+      <div class="m-field"><span class="m-label">SYSTEM PROMPT</span><textarea class="m-ta" id="sp${i}" rows="2">${(c.system_prompt||'').replace(/"/g,'&quot;')}</textarea></div>
+      <div class="m-stats"><span>📊 ${s.totalRequests}</span><span>🔢 ${s.totalTokens.toLocaleString()}</span><span>🌐 ${s.uniqueIPs.length}</span></div>
+      <button class="m-btn" onclick="test('${name}',${i})">⟫ PROBAR</button>
+      <div id="r${i}" class="m-result"></div>
+    </div>`;
   }
 
+  // Usage table
   const recentUsages = usages.slice(-20).reverse();
   let usageRows = '';
   recentUsages.forEach(u => {
     const time = new Date(u.timestamp).toLocaleString();
-    usageRows += `<tr><td>${u.model}</td><td>${u.ip}</td><td>${u.tokens}</td><td>${time}</td></tr>`;
+    usageRows += `<tr><td>${u.model}</td><td class="ip">${u.ip}</td><td>${u.tokens}</td><td class="time">${time}</td></tr>`;
   });
 
-  let statsCards = '';
-  for (let i = 1; i <= 16; i++) {
-    const name = 'modelo' + i;
-    const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-    const ipsList = s.uniqueIPs.slice(0,5).join(', ');
-    statsCards += `<div class="stat-card"><h4 style="color:${colors[i-1]}">${name}</h4><div class="stat-row"><span>Tokens</span><span class="val">${s.totalTokens.toLocaleString()}</span></div><div class="stat-row"><span>Requests</span><span class="val">${s.totalRequests}</span></div><div class="stat-row"><span>IPs</span><span class="val">${s.uniqueIPs.length}</span></div><div class="stat-row"><span>IPs list</span><span class="val ips">${ipsList||'-'}</span></div></div>`;
-  }
+  // Stats overview
+  let totalReq = 0, totalTok = 0, totalIps = new Set();
+  Object.values(stats).forEach(s => {
+    totalReq += s.totalRequests || 0;
+    totalTok += s.totalTokens || 0;
+    (s.uniqueIPs || []).forEach(ip => totalIps.add(ip));
+  });
 
   res.setHeader('Content-Type', 'text/html');
-  res.status(200).send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>🌟 ADMIN CASTLE 🌟</title>
+  res.status(200).send(`<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>⎈ CARBONATO — PANEL ⎈</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
-body{
-  font-family:'Press Start 2P',monospace;
-  background:#5c94fc;
-  color:#fff;
-  min-height:100vh;
-  padding:20px;
-  image-rendering:pixelated;
-  background-image:
-    radial-gradient(circle at 10% 20%, #fff 2px, transparent 3px),
-    radial-gradient(circle at 90% 80%, #fff 2px, transparent 3px),
-    linear-gradient(180deg, #5c94fc 0%, #87ceeb 40%, #228b22 40%, #228b22 100%);
-  background-size: 200px 200px, 300px 300px, 100% 100%;
-}
-.clouds{
-  position:absolute;
-  width:100%;
-  height:150px;
-  top:10px;
-  z-index:0;
-}
-.cloud{
-  position:absolute;
-  background:#fff;
-  border-radius:50%;
-  opacity:0.9;
-}
-.cloud1{width:100px;height:40px;top:20px;left:10%;border-radius:50% 50% 0 0}
-.cloud2{width:80px;height:35px;top:40px;left:25%;}
-.cloud3{width:120px;height:45px;top:10px;left:40%;}
-.cloud4{width:90px;height:38px;top:30px;left:60%;}
-.cloud5{width:110px;height:42px;top:15px;left:75%;}
-.ground{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  height:60px;
-  background:#8b4513;
-  border-top:4px solid #d2691e;
-  z-index:0;
-}
-.header{position:relative;z-index:1;text-align:center;margin-bottom:20px;padding:20px;border:3px double #ffd700;background:#8b451380}
-h1{font-size:14px;color:#ffd700;text-shadow:3px 3px 0 #b8860b;letter-spacing:4px}
-.sub{font-size:6px;color:#fff;margin-top:8px;text-shadow:1px 1px 0 #000}
-.info-bar{position:relative;z-index:1;display:flex;justify-content:space-between;padding:10px 15px;background:#8b4513;border:2px solid #d2691e;margin-bottom:20px;font-size:6px;color:#ffd700}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px;position:relative;z-index:1}
-.card{background:#8b4513cc;border:3px solid #d2691e;padding:20px;box-shadow:5px 5px 0 #5d2906}
-.card::before{content:"🧱";position:absolute;top:-15px;left:10px;background:#8b4513;padding:0 8px;font-size:12px}
-h3{font-size:9px;margin-bottom:15px}
-label{display:block;font-size:6px;color:#ffd700;margin:8px 0 4px;text-shadow:1px 1px 0 #000}
-input,textarea{width:100%;padding:8px;background:#000;border:2px solid #d2691e;color:#ffd700;font-family:'Press Start 2P',monospace;font-size:7px;outline:none}
-textarea{resize:vertical;min-height:50px}
-.stats-mini{display:flex;gap:10px;margin-top:8px;font-size:5px;color:#ffd700;flex-wrap:wrap}
-.btn-test{width:100%;padding:8px;background:#8b4513;border:2px solid #ffd700;color:#ffd700;font-family:'Press Start 2P',monospace;font-size:7px;cursor:pointer;margin-top:10px}
-.btn-test:hover{background:#ffd700;color:#000}
-.result{margin-top:8px;padding:8px;font-size:6px;word-break:break-all;display:none}
-.result.ok{display:block;background:#8b4513;border:1px solid #ffd700;color:#ffd700}
-.result.err{display:block;background:#2a0a0a;border:1px solid #ff4444;color:#ff4444}
-.save-btn{position:relative;z-index:1;display:block;width:100%;max-width:400px;margin:30px auto;padding:14px;background:#ffd700;border:4px solid #8b4513;color:#8b4513;font-family:'Press Start 2P',monospace;font-size:10px;cursor:pointer;text-shadow:1px 1px 0 #fff;box-shadow:6px 6px 0 #5d2906}
-.save-btn:hover{background:#8b4513;color:#ffd700;box-shadow:0 0 15px #ffd700}
-.logout{position:fixed;top:15px;right:15px;z-index:10;padding:8px 12px;background:#8b4513;border:2px solid #ff4444;color:#ff4444;font-family:'Press Start 2P',monospace;font-size:7px;cursor:pointer;text-decoration:none}
-.logout:hover{background:#ff4444;color:#fff}
-#status{position:relative;z-index:1;text-align:center;margin-top:15px;font-size:7px;min-height:20px}
-.ok-msg{color:#00ff00}
-.footer{position:relative;z-index:1;text-align:center;margin-top:30px;padding:15px;font-size:6px;color:#ffd700;border-top:1px solid #d2691e}
-.stats-section{position:relative;z-index:1;margin-top:30px}
-.stats-section h2{font-size:10px;color:#ffd700;margin-bottom:15px;text-shadow:1px 1px 0 #000}
-.stat-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:15px}
-.stat-card{background:#8b4513cc;border:2px solid #d2691e;padding:15px;box-shadow:3px 3px 0 #5d2906}
-.stat-card h4{font-size:8px;margin-bottom:10px}
-.stat-row{display:flex;justify-content:space-between;font-size:6px;padding:5px 0;border-bottom:1px solid #000}
-.stat-row span{color:#ffd700}
-.stat-row .val{color:#00ff00}
-.stat-row .ips{font-size:5px;color:#00d4ff;word-break:break-all}
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:2px solid #d2691e;padding:8px;font-size:6px;text-align:left}
-th{background:#8b4513;color:#ffd700}
-td{color:#ffd700}
-.check-btn{position:relative;z-index:1;display:block;width:100%;max-width:200px;margin:20px auto;padding:10px;background:#8b4513;border:2px solid #00ff00;color:#00ff00;font-family:'Press Start 2P',monospace;font-size:8px;cursor:pointer}
-.check-btn:hover{background:#00ff00;color:#000}
-</style></head><body>
-<div class="clouds">
-  <div class="cloud cloud1"></div>
-  <div class="cloud cloud2"></div>
-  <div class="cloud cloud3"></div>
-  <div class="cloud cloud4"></div>
-  <div class="cloud cloud5"></div>
+:root{--bg:#0a0a0f;--surface:#12121a;--card:rgba(18,18,30,0.6);--border:rgba(0,255,255,0.1);--cyan:#00fff5;--magenta:#ff00e6;--purple:#7b2ff7;--green:#00ff88;--gold:#ffd700;--text:#e0e0e0;--dim:#6666aa}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,255,0.025) 1px,transparent 1px);background-size:60px 60px;z-index:0;pointer-events:none}
+.glow{position:fixed;border-radius:50%;filter:blur(100px);pointer-events:none;z-index:0;animation:orb 25s ease-in-out infinite}
+.g1{width:500px;height:500px;background:radial-gradient(circle,rgba(123,47,247,0.12),transparent);top:-200px;left:-200px}
+.g2{width:400px;height:400px;background:radial-gradient(circle,rgba(0,255,245,0.08),transparent);bottom:-150px;right:-150px;animation-delay:-10s}
+@keyframes orb{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(40px,-40px) scale(1.1)}66%{transform:translate(-30px,30px) scale(0.9)}}
+.container{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:20px}
+/* TOP BAR */
+.top-bar{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:var(--card);border:1px solid var(--border);border-radius:12px;backdrop-filter:blur(12px);margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.top-bar .brand{font-size:18px;font-weight:800;background:linear-gradient(135deg,#fff,var(--cyan),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.top-bar .meta{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.top-bar .meta-item{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim);display:flex;align-items:center;gap:6px}
+.top-bar .meta-item .dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse-dot 2s ease-in-out infinite;display:inline-block}
+.top-bar .meta-item .val{color:var(--cyan)}
+.logout-btn{padding:6px 14px;border:1px solid rgba(255,0,0,0.3);border-radius:6px;color:#ff4444;font-family:'JetBrains Mono',monospace;font-size:10px;text-decoration:none;transition:all 0.2s;background:rgba(255,0,0,0.05)}
+.logout-btn:hover{background:rgba(255,0,0,0.15);border-color:#ff4444}
+/* STATS OVERVIEW */
+.overview{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:20px}
+.ov-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;backdrop-filter:blur(12px);transition:all 0.3s}
+.ov-card:hover{border-color:rgba(0,255,245,0.25);transform:translateY(-1px)}
+.ov-card .ov-label{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:6px}
+.ov-card .ov-value{font-size:24px;font-weight:700;color:#fff;font-family:'JetBrains Mono',monospace}
+.ov-card .ov-value span{font-size:14px;color:var(--dim);font-weight:400}
+.ov-card:nth-child(1) .ov-value{color:var(--cyan)}
+.ov-card:nth-child(2) .ov-value{color:var(--magenta)}
+.ov-card:nth-child(3) .ov-value{color:var(--green)}
+.ov-card:nth-child(4) .ov-value{color:var(--gold)}
+/* SECTION */
+.section-title{font-size:14px;font-weight:700;color:var(--cyan);margin-bottom:14px;display:flex;align-items:center;gap:8px;font-family:'JetBrains Mono',monospace;letter-spacing:1px}
+.section-title::before{content:'◆';font-size:10px;color:var(--magenta)}
+/* MODEL GRID */
+.m-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px;margin-bottom:24px}
+.m-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;backdrop-filter:blur(12px);position:relative;overflow:hidden;transition:all 0.3s}
+.m-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--card-color),transparent);opacity:0;transition:opacity 0.3s}
+.m-card:hover{border-color:rgba(0,255,245,0.2);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,255,245,0.05)}
+.m-card:hover::before{opacity:1}
+.m-head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.m-icon{font-size:20px}
+.m-name{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.m-field{margin-bottom:8px}
+.m-label{display:block;font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:3px}
+.m-inp,.m-ta{width:100%;padding:8px 10px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:11px;outline:none;transition:all 0.2s}
+.m-inp:focus,.m-ta:focus{border-color:rgba(0,255,245,0.3);box-shadow:0 0 15px rgba(0,255,245,0.04);background:rgba(0,0,0,0.5)}
+.m-ta{resize:vertical;min-height:40px}
+.m-stats{display:flex;gap:12px;margin:10px 0;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);flex-wrap:wrap}
+.m-btn{padding:7px 16px;border:1px solid var(--border);border-radius:6px;background:transparent;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;transition:all 0.2s;width:100%}
+.m-btn:hover{background:rgba(0,255,245,0.08);border-color:rgba(0,255,245,0.3)}
+.m-result{margin-top:8px;padding:8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:9px;word-break:break-all;display:none;line-height:1.5}
+.m-result.ok{display:block;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);color:var(--green)}
+.m-result.err{display:block;background:rgba(255,0,0,0.05);border:1px solid rgba(255,0,0,0.15);color:#ff4444}
+/* ACTIONS */
+.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:20px 0}
+.action-btn{padding:12px 24px;border:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.3s;letter-spacing:2px;text-transform:uppercase;position:relative;overflow:hidden}
+.action-btn::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);transition:left 0.5s}
+.action-btn:hover::after{left:100%}
+.action-btn.save{background:linear-gradient(135deg,var(--cyan),var(--purple));color:#000}
+.action-btn.save:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,255,245,0.2)}
+.action-btn.check{background:transparent;border:1px solid var(--green);color:var(--green)}
+.action-btn.check:hover{background:rgba(0,255,136,0.08);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,255,136,0.1)}
+.action-btn.logout{border:1px solid rgba(255,0,0,0.3);color:#ff4444;background:transparent}
+.action-btn.logout:hover{background:rgba(255,0,0,0.08)}
+/* STATUS */
+#status{text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;min-height:24px;margin:10px 0}
+#status .ok{color:var(--green)}
+#status .err{color:#ff4444}
+#status .info{color:var(--cyan)}
+/* STATS SECTION */
+.stats-section{margin-top:24px}
+.s-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:20px}
+.s-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;backdrop-filter:blur(12px)}
+.s-card h4{font-family:'JetBrains Mono',monospace;font-size:11px;margin-bottom:10px}
+.s-row{display:flex;justify-content:space-between;padding:6px 0;font-family:'JetBrains Mono',monospace;font-size:9px;border-bottom:1px solid rgba(255,255,255,0.03)}
+.s-row .l{color:var(--dim)}
+.s-row .r{color:var(--text)}
+.s-row .ips{font-size:8px;color:var(--cyan);word-break:break-all;max-width:120px;text-align:right}
+/* TABLE */
+.table-wrap{overflow-x:auto;margin-top:10px}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px 12px;text-align:left;font-family:'JetBrains Mono',monospace;font-size:10px;border-bottom:1px solid var(--border)}
+th{color:var(--cyan);font-size:9px;letter-spacing:1px;text-transform:uppercase;font-weight:700}
+td{color:var(--dim)}
+tr:hover td{background:rgba(0,255,245,0.02);color:var(--text)}
+td.ip{color:var(--magenta);font-size:9px}
+td.time{color:var(--dim);font-size:9px}
+/* FOOTER */
+.footer{text-align:center;padding:20px 0;margin-top:30px;border-top:1px solid var(--border)}
+.footer p{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim)}
+@keyframes pulse-dot{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+@media(max-width:768px){.top-bar{flex-direction:column;align-items:flex-start}.m-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="glow g1"></div><div class="glow g2"></div>
+<div class="container">
+
+<!-- TOP BAR -->
+<div class="top-bar">
+  <div class="brand">CARBONATO PROXY</div>
+  <div class="meta">
+    <span class="meta-item"><span class="dot"></span> SISTEMA ACTIVO</span>
+    <span class="meta-item">IP: <span class="val">${userIp}</span></span>
+    <span class="meta-item" id="clock">⏱ <span class="val">${new Date().toLocaleString()}</span></span>
+    <a href="/api/admin-logout" class="logout-btn">⛙ SALIR</a>
+  </div>
 </div>
-<div class="ground"></div>
-<a href="/api/admin-logout" class="logout">[ SALIR CASTLE ]</a>
-<div class="header"><h1>🌟 ADMIN CASTLE 🌟</h1><div class="sub">/// MUSHROOM KINGDOM CONTROL /// v5.0</div></div>
-<div class="info-bar"><span>📡 TU IP: ${userIp}</span><span>🕐 ${new Date().toLocaleString()}</span></div>
-<div class="cards">${cards}</div>
-<button class="save-btn" onclick="save()">[ GUARDAR CAMBIOS ]</button>
-<button class="check-btn" onclick="checkModels()">[ VERIFICAR MODELOS KILO ]</button>
+
+<!-- OVERVIEW -->
+<div class="overview">
+  <div class="ov-card"><div class="ov-label">Total Requests</div><div class="ov-value">${totalReq.toLocaleString()}<span></span></div></div>
+  <div class="ov-card"><div class="ov-label">Tokens Consumidos</div><div class="ov-value">${totalTok.toLocaleString()}<span></span></div></div>
+  <div class="ov-card"><div class="ov-label">IPs Únicas</div><div class="ov-value">${totalIps.size}<span></span></div></div>
+  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">16<span> / 16 activos</span></div></div>
+</div>
+
+<!-- ACTION BUTTONS -->
+<div class="actions">
+  <button class="action-btn save" onclick="saveAll()">⟫ GUARDAR CAMBIOS</button>
+  <button class="action-btn check" onclick="checkAll()">⟫ VERIFICAR MODELOS</button>
+  <a href="/api/admin-logout" class="action-btn logout">⛙ CERRAR SESIÓN</a>
+</div>
+
 <div id="status"></div>
-<div class="stats-section"><h2>📊 ESTADISTICAS</h2><div class="stat-cards">${statsCards}</div></div>
-<div class="stats-section"><h2>📋 USO RECIENTE</h2><table><tr><th>Modelo</th><th>IP</th><th>Tokens</th><th>Fecha</th></tr>${usageRows||'<tr><td colspan="4" style="text-align:center">Sin datos</td></tr>'}</table></div>
-<div class="footer">CARBONATO NET // MUSHROOM KINGDOM // 100% CODIGO LIBRE</div>
+
+<!-- MODELS -->
+<div class="section-title">GESTIÓN DE MODELOS</div>
+<div class="m-grid">${cards}</div>
+
+<!-- STATS -->
+<div class="stats-section">
+  <div class="section-title">ESTADÍSTICAS POR MODELO</div>
+  <div class="s-grid">
+    ${(() => {
+      let sc = '';
+      for (let i = 1; i <= 16; i++) {
+        const name = 'modelo' + i;
+        const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+        const ipsList = (s.uniqueIPs || []).slice(0,5).join(', ');
+        const color = colors[i-1];
+        sc += `<div class="s-card"><h4 style="color:${color}">${['🌟','🌙','🚀','⚡','✨','🧠','💻','🌐','🔄','💎','🧬','🔮','🔥','🌀','💫','⚗️'][i-1]} ${name}</h4><div class="s-row"><span class="l">Tokens</span><span class="r">${s.totalTokens.toLocaleString()}</span></div><div class="s-row"><span class="l">Requests</span><span class="r">${s.totalRequests}</span></div><div class="s-row"><span class="l">IPs</span><span class="r">${s.uniqueIPs.length}</span></div><div class="s-row"><span class="l">IPs</span><span class="r ips">${ipsList || '-'}</span></div></div>`;
+      }
+      return sc;
+    })()}
+  </div>
+</div>
+
+<!-- USAGE TABLE -->
+<div class="stats-section">
+  <div class="section-title">USO RECIENTE</div>
+  <div class="table-wrap">
+    <table>
+      <tr><th>Modelo</th><th>IP</th><th>Tokens</th><th>Fecha</th></tr>
+      ${usageRows || '<tr><td colspan="4" style="text-align:center;color:var(--dim)">Sin datos de uso aún</td></tr>'}
+    </table>
+  </div>
+</div>
+
+<div class="footer">
+  <p>CARBONATO PROXY · <span style="color:var(--cyan)">Cofrad.IA</span> · Panel de Control v6.0</p>
+  <p style="margin-top:4px;opacity:0.4">⚡ Costa Rica · 100% código libre ⚡</p>
+</div>
+
+</div>
+
 <script>
 function test(m,n){
-var d=document.getElementById('r'+n);
-d.className='result';
-d.style.display='block';
-d.textContent='PROBANDO...';
-var h={'Content-Type':'application/json'};
-var msgs=[];
-var sp=document.getElementById('sp'+n).value;
-if(sp)msgs.push({role:'system',content:sp});
-msgs.push({role:'user',content:'Responde solo OK'});
-fetch('/chat/completions',{method:'POST',headers:h,body:JSON.stringify({model:m,messages:msgs})})
-.then(r=>r.text())
-.then(x=>{
-try{var js=JSON.parse(x);
-if(js.error){d.className='result err';d.textContent=JSON.stringify(js.error,null,2)}
-else{var cont=js.choices?.[0]?.message?.content||JSON.stringify(js,null,2);d.className='result ok';d.textContent=cont.substring(0,500)}
-}catch(e){d.className='result ok';d.textContent=x.substring(0,500)}
-})
-.catch(e=>{d.className='result err';d.textContent='Error: '+e.message})}
+  var d=document.getElementById('r'+n);
+  d.className='m-result';
+  d.style.display='block';
+  d.textContent='⟫ CONECTANDO...';
+  var h={'Content-Type':'application/json'};
+  var msgs=[];
+  var sp=document.getElementById('sp'+n).value;
+  if(sp) msgs.push({role:'system',content:sp});
+  msgs.push({role:'user',content:'Responde solo OK'});
+  fetch('/chat/completions',{method:'POST',headers:h,body:JSON.stringify({model:m,messages:msgs})})
+  .then(r=>r.text())
+  .then(x=>{
+    try{
+      var js=JSON.parse(x);
+      if(js.error){d.className='m-result err';d.textContent='⛔ '+(js.error.message||JSON.stringify(js.error)).substring(0,500)}
+      else{
+        var cont=js.choices?.[0]?.message?.content||JSON.stringify(js,null,2);
+        d.className='m-result ok';
+        d.textContent='✓ '+cont.substring(0,500);
+      }
+    }catch(e){
+      d.className='m-result ok';
+      d.textContent='✓ '+x.substring(0,500);
+    }
+  })
+  .catch(e=>{d.className='m-result err';d.textContent='⛔ Error: '+e.message});
+}
 
-function save(){
-var c={};
-for(var i=1;i<=16;i++){
-      c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value}
+function saveAll(){
+  var c={};
+  for(var i=1;i<=16;i++){
+    c['modelo'+i]={
+      url:document.getElementById('url'+i).value,
+      model:document.getElementById('id'+i).value,
+      key:document.getElementById('key'+i).value,
+      system_prompt:document.getElementById('sp'+i).value
+    };
+  }
+  var st=document.getElementById('status');
+  st.innerHTML='<span class="info">⟫ GUARDANDO CONFIGURACIÓN...</span>';
+  fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
+  .then(r=>r.json())
+  .then(x=>{
+    st.innerHTML=x.success
+      ? '<span class="ok">✓ CONFIGURACIÓN GUARDADA</span>'
+      : '<span class="err">⛔ ERROR AL GUARDAR</span>';
+    setTimeout(()=>st.innerHTML='',3000);
+  })
+  .catch(e=>{st.innerHTML='<span class="err">⛔ '+e.message+'</span>';});
 }
-fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
-.then(r=>r.json())
-.then(x=>{
-document.getElementById('status').innerHTML=x.success?'<span class="ok-msg">GUARDADO EN EL CASTILLO</span>':'<span style="color:#ff4444">ERROR</span>';
-setTimeout(()=>document.getElementById('status').innerHTML='',3000)
-})}
 
-function checkModels(){
-document.getElementById('status').innerHTML='<span style="color:#00d4ff">CONSULTANDO KILO.AI...</span>';
-fetch('/api/models-check')
-.then(r=>r.json())
-.then(x=>{
-if(x.models){
-var html='<div style="margin-top:10px">';
-x.models.forEach(m=>{
-html+='<div style="font-size:6px;margin:3px 0;color:'+(m.status=='active'? '#00ff00':'#ff4444')+'">[ '+m.model+' ] '+m.status.toUpperCase()+'</div>';
-});
-html+='</div>';
-document.getElementById('status').innerHTML+='<br>MODELOS ENCONTRADOS: '+x.active;
-if(x.config_update){
-for(var i=1;i<=10;i++){
-if(x.config_update['modelo'+i]){
-document.getElementById('id'+i).value=x.config_update['modelo'+i].model;
+function checkAll(){
+  var st=document.getElementById('status');
+  st.innerHTML='<span class="info">⟫ CONSULTANDO MODELOS EN KILO.AI...</span>';
+  fetch('/api/models-check')
+  .then(r=>r.json())
+  .then(x=>{
+    if(x.models){
+      var html='';
+      x.models.forEach(m=>{
+        html+='<div style="font-family:JetBrains Mono,monospace;font-size:9px;margin:2px 0;color:'+(m.status=='active'?'var(--green)':'#ff4444')+'">'+(m.status=='active'?'✓':'⛔')+' '+m.model+' — '+m.status+'</div>';
+      });
+      st.innerHTML='<span class="ok">✓ MODELOS ENCONTRADOS: '+x.active+'</span><br>'+html;
+      if(x.config_update){
+        for(var i=1;i<=10;i++){
+          if(x.config_update['modelo'+i]){
+            document.getElementById('id'+i).value=x.config_update['modelo'+i].model;
+          }
+        }
+        st.innerHTML+='<br><span class="ok">✓ MODELOS ACTUALIZADOS EN FORMULARIO</span>';
+      }
+    } else {
+      st.innerHTML='<span class="err">⛔ ERROR AL CONSULTAR</span>';
+    }
+    setTimeout(()=>st.innerHTML='',8000);
+  })
+  .catch(e=>{st.innerHTML='<span class="err">⛔ ERROR: '+e.message+'</span>';});
 }
-}
-document.getElementById('status').innerHTML+='<br><span class="ok-msg">MODELOS ACTUALIZADOS EN FORMULARIO</span>';
-}
-}else{
-document.getElementById('status').innerHTML='<span style="color:#ff4444">ERROR AL CONSULTAR</span>';
-}
-setTimeout(()=>document.getElementById('status').innerHTML='',5000)
-})
-.catch(e=>{document.getElementById('status').innerHTML='<span style="color:#ff4444">ERROR: '+e.message+'</span>';})
-}
-</script></body></html>`);
+
+// Clock
+setInterval(()=>{
+  var c=document.getElementById('clock');
+  if(c) c.innerHTML='⏱ <span class="val">'+new Date().toLocaleString()+'</span>';
+},1000);
+</script>
+</body>
+</html>`);
 };
