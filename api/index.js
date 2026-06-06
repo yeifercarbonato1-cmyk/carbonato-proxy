@@ -1,4 +1,14 @@
 module.exports = async (req, res) => {
+  // Serve static video from public/
+  if (req.url === '/hero-bg.mp4') {
+    const fs = require('fs');
+    const p = require('path').join(__dirname, '..', 'public', 'hero-bg.mp4');
+    if (fs.existsSync(p)) {
+      res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': fs.statSync(p).size });
+      fs.createReadStream(p).pipe(res);
+      return;
+    }
+  }
   const modelos = [
     {icon:'🌟',name:'modelo1',desc:'Modelo estrella — alto rendimiento'},
     {icon:'🌙',name:'modelo2',desc:'Razonamiento profundo — tareas complejas'},
