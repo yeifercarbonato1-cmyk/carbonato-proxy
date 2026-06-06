@@ -199,6 +199,7 @@ async function handleHealthCheck(req, res) {
 }
 
 async function handleHealthPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   html(res, `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HEALTH — Carbonato Proxy</title>
@@ -234,6 +235,7 @@ let ok=0,fail=0;
 // COMPETENCIA
 // ========================================================
 async function handleCompetencia(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   try {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
@@ -266,6 +268,7 @@ async function handleCompetencia(req, res) {
 }
 
 function handleCompetenciaPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   html(res, `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>COMPETENCIA — Carbonato Proxy</title>
@@ -298,8 +301,9 @@ const PROMPTS_PATH = path.join(DB_PATH, 'prompt-templates.json');
 function loadPrompts() { try { return JSON.parse(fs.readFileSync(PROMPTS_PATH,'utf8')); } catch(e) { return []; } }
 function savePrompts(a) { fs.writeFileSync(PROMPTS_PATH, JSON.stringify(a, null, 2)); }
 
-function handlePromptsList(req, res) { res.json(loadPrompts()); }
+function handlePromptsList(req, res) { if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' }); res.json(loadPrompts()); }
 async function handlePromptsCreate(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   try {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
@@ -314,6 +318,7 @@ async function handlePromptsCreate(req, res) {
   } catch(e) { res.status(400).json({ error: 'JSON inválido' }); }
 }
 function handlePromptsDelete(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   const id = req.url.split(/[?&]id=/).pop();
   if (!id) return res.status(400).json({ error: 'id requerido' });
   let db = loadPrompts();
@@ -323,6 +328,7 @@ function handlePromptsDelete(req, res) {
 }
 
 function handlePromptsPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   const db = loadPrompts();
   let rows = db.map(t => `<div class="card" data-id="${t.id}">
     <b>${esc(t.name)}</b> <span style="font-size:10px;color:rgba(255,255,255,0.25)">${new Date(t.created).toLocaleString()}</span>
@@ -355,6 +361,7 @@ async function crear(){
 // ROTATOR
 // ========================================================
 async function handleRotatorRank(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   const { data: healthDb } = await getHealthDb();
   const scores = {};
 
@@ -379,6 +386,7 @@ async function handleRotatorRank(req, res) {
 }
 
 function handleRotatorPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   html(res, `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>ROTADOR — Carbonato Proxy</title>
@@ -435,6 +443,7 @@ loadRank();
 // PLAYGROUND
 // ========================================================
 function handlePlaygroundPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   html(res, `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>PLAYGROUND — Carbonato Proxy</title>
@@ -484,6 +493,7 @@ async function enviar(){
 }
 
 async function handlePlaygroundChat(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   try {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
@@ -630,6 +640,7 @@ async function handleVisitorsReset(req, res) {
 }
 
 function handleVisitorsPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   // Get IP data from usage DB synchronously for initial render
   let db = { usages: [], stats: {} };
   try { db = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
@@ -836,8 +847,8 @@ renderTable();
 // ========================================================
 // ADMIN AUTH (merged from admin-auth.js)
 // ========================================================
-const ADMIN_USER = process.env.ADMIN_USER || 'admin';
-const ADMIN_PASS = process.env.ADMIN_PASS || 'carbonato2026';
+const ADMIN_USER = process.env.ADMIN_USER;
+const ADMIN_PASS = process.env.ADMIN_PASS;
 
 async function handleAdminAuth(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: "Method not allowed" });
@@ -855,6 +866,7 @@ async function handleAdminAuth(req, res) {
 // ADMIN SAVE (merged from admin-save.js, optimized)
 // ========================================================
 async function handleAdminSave(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   let body = '';
   for await (const chunk of req) body += chunk;
   try {
@@ -893,6 +905,7 @@ function handleAdminLogout(req, res) {
 // UPLOAD (merged from upload.js)
 // ========================================================
 async function handleUpload(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   if (req.method !== 'POST') return res.status(405).json({ error: 'Método no permitido' });
   let body = '';
   for await (const chunk of req) body += chunk;
@@ -986,6 +999,7 @@ function handleDocsIA(req, res) {
 // LOGS PAGE — historial de errores del proxy
 // ========================================================
 function handleLogsPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   let logs = [];
   try { logs = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'proxy-logs.json'), 'utf8')); } catch(e) {}
   const total = logs.length;
@@ -1021,6 +1035,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 // CONFIG PAGE — editor de config.json con persistencia GitHub
 // ========================================================
 async function handleConfigPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   let configData = { error: 'No config loaded' };
   let sha = '';
   const token = getGithubToken();
@@ -1071,6 +1086,7 @@ async function saveConfig(){
 // CONFIG SAVE — guarda config.json a GitHub
 // ========================================================
 async function handleConfigSave(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   let body = '';
   for await (const chunk of req) body += chunk;
   try {
