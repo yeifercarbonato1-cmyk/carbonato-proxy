@@ -107,24 +107,55 @@ function loadUsageDB() {
   try { return JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch(e) { return { usages: [], stats: {} }; }
 }
 
-async function saveUsageDB(db) {
-  try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2)); } catch(e) {}
-  if (!shouldSyncToGitHub()) return; // Rate limit: solo cada 30s
+async function saveUsageDB(localDb) {
+  try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(localDb, null, 2)); } catch(e) {}
+  if (!shouldSyncToGitHub()) return;
   let token = process.env.GITHUB_TOKEN;
   if (!token) { console.log('GITHUB_TOKEN no configurado'); return; }
   try {
-    const content = JSON.stringify(db, null, 2);
     const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
-    const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}` } });
-    if (!getRes.ok) { console.log('Error obteniendo archivo GitHub:', getRes.status); return; }
-    const fileData = await getRes.json();
+    // 1. Fetch current data from GitHub (source of truth)
+    let remoteDb = { usages: [], stats: {} };
+    let sha = '';
+    const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+    if (getRes.ok) {
+      const fileData = await getRes.json();
+      sha = fileData.sha || '';
+      remoteDb = JSON.parse(Buffer.from(fileData.content, 'base64').toString());
+    } else if (getRes.status !== 404) {
+      console.log('Error obteniendo archivo GitHub:', getRes.status);
+      return;
+    }
+    // 2. MERGE: local + remote, dedup por timestamp+model+ip
+    const mergedDb = { usages: [], stats: {} };
+    const seen = new Set();
+    for (const u of (remoteDb.usages || [])) {
+      const k = u.timestamp + '|' + u.model + '|' + u.ip;
+      if (!seen.has(k)) { seen.add(k); mergedDb.usages.push(u); }
+    }
+    for (const u of (localDb.usages || [])) {
+      const k = u.timestamp + '|' + u.model + '|' + u.ip;
+      if (!seen.has(k)) { seen.add(k); mergedDb.usages.push(u); }
+    }
+    // Rebuild stats desde merged usages
+    for (const u of mergedDb.usages) {
+      if (!mergedDb.stats[u.model]) mergedDb.stats[u.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+      mergedDb.stats[u.model].totalTokens += u.tokens || 0;
+      mergedDb.stats[u.model].totalRequests += 1;
+      if (!mergedDb.stats[u.model].uniqueIPs.includes(u.ip)) mergedDb.stats[u.model].uniqueIPs.push(u.ip);
+    }
+    if (mergedDb.usages.length > 1000) mergedDb.usages = mergedDb.usages.slice(-1000);
+    // 3. Write merged data a GitHub
+    const content = JSON.stringify(mergedDb, null, 2);
     const putRes = await fetch(apiUrl, {
       method: 'PUT',
       headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: 'Update usage stats', content: Buffer.from(content).toString('base64'), sha: fileData.sha })
+      body: JSON.stringify({ message: `Update usage stats - ${mergedDb.usages.length} records`, content: Buffer.from(content).toString('base64'), sha })
     });
-    if (!putRes.ok) { console.log('Error guardando en GitHub:', putRes.status); }
-    else { console.log('Usage guardado en GitHub OK'); }
+    if (!putRes.ok) { const e = await putRes.text(); console.log('Error guardando en GitHub:', putRes.status, e.substring(0,200)); }
+    else { console.log('Usage guardado en GitHub OK -', mergedDb.usages.length, 'registros'); }
+    // Actualizar /tmp con merged (refleja GitHub)
+    try { fs.writeFileSync('/tmp/usage-db.json', content); } catch(e) {}
   } catch(e) { console.log('Error GitHub:', e.message); }
 }
 

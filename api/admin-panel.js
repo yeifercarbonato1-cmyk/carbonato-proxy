@@ -1,22 +1,35 @@
 const fs = require('fs');
 
 async function loadDB() {
-  let db;
-  try { db = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch(e) { db = { usages: [], stats: {} }; }
   const githubToken = process.env.GITHUB_TOKEN || '';
+  let db = { usages: [], stats: {} };
   if (githubToken) {
     try {
       const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
-      const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${githubToken}` } });
+      const getRes = await fetch(apiUrl, { headers: { 'Authorization': `token ${githubToken}`, 'Accept': 'application/vnd.github.v3+json' } });
       if (getRes.ok) {
         const data = await getRes.json();
-        const remoteDb = JSON.parse(Buffer.from(data.content, 'base64').toString());
-        if (remoteDb.usages) db.usages = remoteDb.usages;
-        if (remoteDb.stats) db.stats = remoteDb.stats;
-        try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2)); } catch(e) {}
+        db = JSON.parse(Buffer.from(data.content, 'base64').toString());
       }
     } catch(e) {}
   }
+  let localDb = null;
+  try { localDb = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch(e) {}
+  if (localDb && localDb.usages && localDb.usages.length > 0) {
+    const remoteKeys = new Set(db.usages.map(u => u.timestamp + '|' + u.model + '|' + u.ip));
+    const nuevos = localDb.usages.filter(u => !remoteKeys.has(u.timestamp + '|' + u.model + '|' + u.ip));
+    if (nuevos.length > 0) {
+      db.usages.push(...nuevos);
+      db.stats = {};
+      for (const u of db.usages) {
+        if (!db.stats[u.model]) db.stats[u.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+        db.stats[u.model].totalTokens += u.tokens || 0;
+        db.stats[u.model].totalRequests += 1;
+        if (!db.stats[u.model].uniqueIPs.includes(u.ip)) db.stats[u.model].uniqueIPs.push(u.ip);
+      }
+    }
+  }
+  try { fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(db, null, 2)); } catch(e) {}
   return db;
 }
 
