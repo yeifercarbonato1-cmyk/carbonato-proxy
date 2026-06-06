@@ -321,12 +321,50 @@ function handleRotatorPage(req, res) {
 <title>ROTADOR — Carbonato Proxy</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}h1{font-size:14px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.6);margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:11px}th{text-align:left;padding:8px;border-bottom:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;font-size:9px}td{padding:8px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'JetBrains Mono',monospace}tr:hover td{background:rgba(255,255,255,0.02)}</style></head>
 <body><h1>⟐ ROTADOR — Ranking de modelos</h1>
-<table id="t"><thead><tr><th>#</th><th>MODELO</th><th>LATENCIA</th><th>UPTIME</th><th>SCORE</th><th>MUESTRAS</th></tr></thead><tbody></tbody></table>
+<div id="status" style="font-size:10px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.3);margin-bottom:12px">Cargando...</div>
+<table id="t"><thead><tr><th>#</th><th>MODELO</th><th>LATENCIA</th><th>UPTIME</th><th>SCORE</th><th>MUESTRAS</th></tr></thead><tbody id="tbody"></tbody></table>
 <script>
-(async function(){
+const mods=${JSON.stringify(MODELOS)};
+const st=document.getElementById('status');
+const tb=document.getElementById('tbody');
+
+async function loadRank(){
   const r=await fetch('/api/rotator/rank');const d=await r.json();
-  document.querySelector('#t tbody').innerHTML=(d.ranking||[]).map((x,i)=>'<tr'+(i===0?' style="opacity:1"':'')+'><td>'+(i+1)+'</td><td>'+(i===0?'🏆 ':'')+x.id+'</td><td>'+x.avg+'</td><td>'+x.uptime+'</td><td>'+x.score+'</td><td>'+x.samples+'</td></tr>').join('');
-})();
+  const rank=d.ranking||[];
+  // If no real data (all scores=999999), run live check
+  if(rank.every(x=>x.score==='999999'||x.uptime==='—%')){
+    st.textContent='● LIVE — Sin datos históricos, probando modelos...';
+    tb.innerHTML=mods.map(m=>'<tr id="r-'+m.id+'"><td id="p-'+m.id+'">?</td><td>'+m.id+'</td><td id="l-'+m.id+'">...</td><td id="u-'+m.id+'">...</td><td id="s-'+m.id+'">...</td><td id="n-'+m.id+'">0</td></tr>').join('');
+    const results=[];
+    for(const m of mods){
+      const t0=performance.now();
+      try{
+        const r2=await fetch('/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:m.id,messages:[{role:'user',content:'ping'}],max_tokens:5})});
+        const lat=(performance.now()-t0).toFixed(0);
+        const ok=r2.ok;
+        results.push({id:m.id,lat:ok?lat+'ms':'FAIL',ok,score:ok?parseInt(lat):999999});
+        document.getElementById('l-'+m.id).textContent=ok?lat+'ms':'FAIL';
+        document.getElementById('u-'+m.id).textContent=ok?'100%':'0%';
+        document.getElementById('s-'+m.id).textContent=ok?lat:'999999';
+        document.getElementById('n-'+m.id).textContent='1';
+      }catch(e){
+        results.push({id:m.id,lat:'FAIL',ok:false,score:999999});
+        document.getElementById('l-'+m.id).textContent='FAIL';
+        document.getElementById('u-'+m.id).textContent='0%';
+        document.getElementById('s-'+m.id).textContent='999999';
+        document.getElementById('n-'+m.id).textContent='1';
+      }
+      st.textContent='● LIVE — Probando... '+(results.filter(x=>x.lat!=='...').length)+'/'+mods.length;
+    }
+    const sorted=results.sort((a,b)=>a.score-b.score);
+    sorted.forEach((x,i)=>{document.getElementById('p-'+x.id).textContent=i+1;if(i===0)document.getElementById('r-'+x.id).style.opacity='1'});
+    st.textContent='● LIVE — ✓ Completo';
+  } else {
+    tb.innerHTML=rank.map((x,i)=>'<tr class="'+(i===0?'fastest':'')+'"><td>'+(i+1)+'</td><td>'+(i===0?'🏆 ':'')+x.id+'</td><td>'+x.avg+'</td><td>'+x.uptime+'</td><td>'+x.score+'</td><td>'+x.samples+'</td></tr>').join('');
+    st.textContent='📊 Datos históricos — '+rank.reduce((a,x)=>a+(parseInt(x.samples)||0),0)+' muestras';
+  }
+}
+loadRank();
 </script></body></html>`);
 }
 
