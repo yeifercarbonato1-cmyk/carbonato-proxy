@@ -32,6 +32,9 @@ module.exports = async (req, res) => {
   if (pathname === '/api/health/page') {
     return handleHealthPage(req, res);
   }
+  if (pathname === '/api/health/save' && method === 'POST') {
+    return handleHealthSave(req, res);
+  }
 
   // --- COMPETENCIA ---
   if (pathname === '/api/competencia' && method === 'POST') {
@@ -90,6 +93,33 @@ function html(res, str) {
 // ========================================================
 // HEALTH
 // ========================================================
+// SAVE results from bot (POST, no testing)
+async function handleHealthSave(req, res) {
+  let body = '';
+  req.on('data', c => body += c);
+  req.on('end', async () => {
+    try {
+      const { results } = JSON.parse(body);
+      if (!Array.isArray(results)) return res.status(400).json({ error: 'results array required' });
+      const { data: db, sha } = await getHealthDb();
+      results.forEach(r => {
+        db.push({
+          model: r.model,
+          latency: r.latency || 0,
+          timestamp: r.timestamp || new Date().toISOString(),
+          status: r.status || 'OK'
+        });
+      });
+      if (db.length > 5000) db.splice(0, db.length - 5000);
+      const saved = await saveHealthDb(db, sha);
+      const ok = results.filter(r => r.status === 'OK').length;
+      const fail = results.filter(r => r.status !== 'OK').length;
+      res.json({ ok: true, saved: saved, summary: `${ok}/${results.length} OK, ${fail} FAIL` });
+    } catch(e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+}
 const MODELOS = [
   {id:'modelo1',name:'Kilo Auto'},
   {id:'modelo2',name:'Nemotron 3 Super 120B'},
