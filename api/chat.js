@@ -240,13 +240,31 @@ module.exports = async (req, res) => {
       return res.status(400).json({ error: { message: "Modelo no configurado: " + userModel, type: "invalid_request_error" }});
     }
     
-    //Modelo9: Smart Rotator con circuit breaker
+    //Modelo9: Smart Rotator con circuit breaker + ranking dinámico
     if (cfg.isRotator) {
       const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
       let lastError = null;
       let usedModel = null;
       
-      for (const modelKey of ROTATION_ORDER) {
+      // Orden dinámico: modelos más rápidos primero según health-db
+      let rotatorOrder = ROTATION_ORDER;
+      try {
+        const hdb = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8'));
+        const latencies = hdb.latencies || {};
+        const withScore = ROTATION_ORDER.map(k => {
+          const l = latencies[k] || { avg: 0, count: 0, fails: 0 };
+          const score = l.count > 0 ? l.avg + (l.fails / Math.max(l.count, 1)) * 5000 : 99999;
+          return { key: k, score };
+        });
+        withScore.sort((a, b) => a.score - b.score);
+        // Filtrar modelo10 (Pollinations - imágenes) y solo texto
+        rotatorOrder = withScore.map(m => m.key).filter(k => k !== 'modelo10');
+      } catch(e) {
+        // Sin health data, usar orden fijo (filtrar modelo10 imágenes)
+        rotatorOrder = ROTATION_ORDER.filter(k => k !== 'modelo10');
+      }
+      
+      for (const modelKey of rotatorOrder) {
         const targetCfg = CONFIG[modelKey];
         if (!targetCfg) continue;
         
@@ -277,6 +295,13 @@ module.exports = async (req, res) => {
           const resultText = await upstreamRes.text();
           
           if (upstreamRes.ok) {
+            // Validar que sea JSON válido (no binario como modelo10)
+            const contentType = upstreamRes.headers.get('content-type') || '';
+            if (!contentType.includes('application/json') && !contentType.includes('text/')) {
+              console.log(`[rotator] ${modelKey} respuesta no JSON (${contentType}), siguiente...`);
+              continue;
+            }
+            
             // Éxito - cerrar circuito
             recordSuccess(modelKey);
             usedModel = modelKey;

@@ -79,6 +79,34 @@ module.exports = async (req, res) => {
     usageRows += `<tr><td>${u.model}</td><td class="ip">${u.ip}</td><td>${u.tokens}</td><td class="time">${time}</td></tr>`;
   });
 
+  // Chart data: daily tokens
+  const dailyMap = {};
+  usages.forEach(u => {
+    const day = (u.timestamp || '').split('T')[0] || (u.timestamp || '').split(' ')[0];
+    if (!day) return;
+    if (!dailyMap[day]) dailyMap[day] = 0;
+    dailyMap[day] += u.tokens || 0;
+  });
+  const dailyLabels = Object.keys(dailyMap).sort();
+  const dailyData = dailyLabels.map(d => dailyMap[d]);
+
+  // Chart data: top models
+  const modelRank = Object.entries(stats)
+    .map(([m, s]) => ({ model: m, requests: s.totalRequests || 0 }))
+    .sort((a, b) => b.requests - a.requests)
+    .slice(0, 10);
+  const topModelsLabels = modelRank.map(r => r.model);
+  const topModelsData = modelRank.map(r => r.requests);
+
+  // Chart data: top IPs
+  const ipCount = {};
+  usages.forEach(u => { if (u.ip) ipCount[u.ip] = (ipCount[u.ip] || 0) + 1; });
+  const topIPs = Object.entries(ipCount)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10);
+  const topIPsLabels = topIPs.map(r => r[0]);
+  const topIPsData = topIPs.map(r => r[1]);
+
   // Stats overview
   let totalReq = 0, totalTok = 0, totalIps = new Set();
   Object.values(stats).forEach(s => {
@@ -95,6 +123,7 @@ module.exports = async (req, res) => {
 <title>⎈ CARBONATO — PANEL ⎈</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0a0f;--surface:#12121a;--card:rgba(18,18,30,0.6);--border:rgba(0,255,255,0.1);--cyan:#00fff5;--magenta:#ff00e6;--purple:#7b2ff7;--green:#00ff88;--gold:#ffd700;--text:#e0e0e0;--dim:#6666aa}
@@ -159,6 +188,17 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .action-btn.check:hover{background:rgba(0,255,136,0.08);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,255,136,0.1)}
 .action-btn.logout{border:1px solid rgba(255,0,0,0.3);color:#ff4444;background:transparent}
 .action-btn.logout:hover{background:rgba(255,0,0,0.08)}
+.nav{display:flex;gap:4px;flex-wrap:wrap;margin:12px 0 20px}
+.nav-link{padding:6px 14px;border:1px solid var(--border);border-radius:6px;font-family:JetBrains Mono,monospace;font-size:9px;color:var(--dim);text-decoration:none;transition:all 0.2s}
+.nav-link:hover{color:var(--cyan);border-color:var(--cyan);background:rgba(0,255,245,0.04)}
+/* CHARTS */
+.charts-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin-bottom:24px}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;backdrop-filter:blur(12px)}
+.chart-card h4{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cyan);margin-bottom:10px}
+.chart-card canvas{max-height:200px;max-width:100%}
+.chart-card .c-info{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);margin-top:8px;text-align:center}
+.csv-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:1px solid var(--gold);border-radius:6px;background:transparent;color:var(--gold);font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;transition:all 0.2s}
+.csv-btn:hover{background:rgba(255,215,0,0.08);transform:translateY(-1px)}
 /* STATUS */
 #status{text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;min-height:24px;margin:10px 0}
 #status .ok{color:var(--green)}
@@ -204,6 +244,16 @@ td.time{color:var(--dim);font-size:9px}
   </div>
 </div>
 
+<!-- NAV -->
+<nav class="nav">
+  <a href="/api/admin-panel" class="nav-link">⟐ DASHBOARD</a>
+  <a href="/api/health/page" class="nav-link">⟐ HEALTH</a>
+  <a href="/api/competencia/page" class="nav-link">⟐ COMPETENCIA</a>
+  <a href="/api/rotator/page" class="nav-link">⟐ ROTADOR</a>
+  <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>
+  <a href="/api/playground" class="nav-link">⟐ PLAYGROUND</a>
+</nav>
+
 <!-- OVERVIEW -->
 <div class="overview">
   <div class="ov-card"><div class="ov-label">Total Requests</div><div class="ov-value">${totalReq.toLocaleString()}<span></span></div></div>
@@ -212,10 +262,38 @@ td.time{color:var(--dim);font-size:9px}
   <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">16<span> / 16 activos</span></div></div>
 </div>
 
+<!-- CHARTS -->
+<div class="section-title">📈 ANALÍTICA</div>
+<div class="charts-row">
+  <div class="chart-card">
+    <h4>Tokens por Día</h4>
+    <canvas id="chartDaily"></canvas>
+    <div class="c-info">${dailyLabels.length} días registrados</div>
+  </div>
+  <div class="chart-card">
+    <h4>Modelos Más Usados</h4>
+    <canvas id="chartModels"></canvas>
+    <div class="c-info">${topModelsLabels.length} modelos</div>
+  </div>
+  <div class="chart-card">
+    <h4>Top IPs</h4>
+    <canvas id="chartIPs"></canvas>
+    <div class="c-info">${topIPsLabels.length} IPs principales</div>
+  </div>
+</div>
+
+<script>
+const CHART_DATA = ${JSON.stringify({dailyLabels,dailyData,topModelsLabels,topModelsData,topIPsLabels,topIPsData, _raw: usages})};
+</script>
+
+<!-- ACTION BUTTONS -->
+
 <!-- ACTION BUTTONS -->
 <div class="actions">
   <button class="action-btn save" onclick="saveAll()">⟫ GUARDAR CAMBIOS</button>
   <button class="action-btn check" onclick="checkAll()">⟫ VERIFICAR MODELOS</button>
+  <button class="csv-btn" onclick="exportCSV()">⬇ EXPORTAR CSV</button>
+  
   <a href="/api/admin-logout" class="action-btn logout">⛙ CERRAR SESIÓN</a>
 </div>
 
@@ -347,6 +425,58 @@ setInterval(()=>{
   var c=document.getElementById('clock');
   if(c) c.innerHTML='⏱ <span class="val">'+new Date().toLocaleString()+'</span>';
 },1000);
+
+// Charts
+Chart.defaults.color='rgba(255,255,255,0.4)';
+Chart.defaults.font.family='JetBrains Mono,monospace';
+const chartOpts=extra=>Object.assign({
+  responsive:true,maintainAspectRatio:false,
+  plugins:{legend:{labels:{color:'rgba(255,255,255,0.5)',font:{size:9}}}},
+  scales:{x:{ticks:{color:'rgba(255,255,255,0.3)',font:{size:8}},grid:{color:'rgba(0,255,245,0.06)'}},y:{ticks:{color:'rgba(255,255,255,0.3)',font:{size:8}},grid:{color:'rgba(0,255,245,0.06)'}}}
+},extra);
+
+if(CHART_DATA.dailyLabels.length){
+  new Chart(document.getElementById('chartDaily'),{
+    type:'line',
+    data:{labels:CHART_DATA.dailyLabels,datasets:[{label:'Tokens',data:CHART_DATA.dailyData,borderColor:'#00fff5',backgroundColor:'rgba(0,255,245,0.1)',fill:true,tension:0.4,pointRadius:3,pointBackgroundColor:'#00fff5',borderWidth:2}]},
+    options:chartOpts({plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,ticks:{callback:v=>v>=1000?(v/1000).toFixed(1)+'k':v}}}})
+  });
+}
+
+if(CHART_DATA.topModelsLabels.length){
+  const c=['#00fff5','#ff00e6','#7b2ff7','#00ff88','#ffd700','#ff4500','#00bfff','#ff69b4','#00ffff','#ff8c00'];
+  new Chart(document.getElementById('chartModels'),{
+    type:'doughnut',
+    data:{labels:CHART_DATA.topModelsLabels,datasets:[{data:CHART_DATA.topModelsData,backgroundColor:c,borderColor:'rgba(10,10,15,0.8)',borderWidth:2}]},
+    options:chartOpts({plugins:{legend:{position:'right',labels:{font:{size:8},padding:4}}}})
+  });
+}
+
+if(CHART_DATA.topIPsLabels.length){
+  new Chart(document.getElementById('chartIPs'),{
+    type:'bar',
+    data:{labels:CHART_DATA.topIPsLabels,datasets:[{label:'Requests',data:CHART_DATA.topIPsData,backgroundColor:'rgba(123,47,247,0.6)',borderColor:'#7b2ff7',borderWidth:1,borderRadius:4}]},
+    options:chartOpts({indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true},y:{ticks:{font:{size:7}}}}})
+  });
+}
+
+// Export CSV
+function exportCSV(){
+  const usageData = CHART_DATA._raw;
+  if(!usageData||!usageData.length){alert('Sin datos de uso');return;}
+  let csv='Modelo,IP,Tokens,Fecha\
+';
+  usageData.forEach(u=>{
+    csv+='"'+(u.model||'')+'","'+(u.ip||'')+'","'+(u.tokens||0)+'","'+(u.timestamp||'')+'"\
+';
+  });
+  const b=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(b);
+  a.download='carbonato-usage-'+new Date().toISOString().split('T')[0]+'.csv';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
 </script>
 </body>
 </html>`);
