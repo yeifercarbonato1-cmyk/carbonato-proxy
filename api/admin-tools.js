@@ -4,6 +4,11 @@ const path = require('path');
 const { URL } = require('url');
 const DB_PATH = '/tmp';
 
+function proxyBase(req) {
+  const host = req.headers['host'] || 'carbonato-proxy.vercel.app';
+  return (host.includes('localhost') || host.includes('127.0.0.1')) ? `http://${host}` : `https://${host}`;
+}
+
 // ========================================================
 // admin-tools.js — ROUTER UNIFICADO
 // ========================================================
@@ -105,7 +110,7 @@ async function handleHealthCheck(req, res) {
   const results = await Promise.all(MODELOS.map(async (m) => {
     const t0 = Date.now();
     try {
-      const r = await fetch('https://carbonato-proxy.vercel.app/v1/chat/completions', {
+      const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: m.id, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 })
@@ -168,7 +173,7 @@ async function handleCompetencia(req, res) {
       const results = await Promise.all(models.map(async (model) => {
         const t0 = Date.now();
         try {
-          const r = await fetch('https://carbonato-proxy.vercel.app/v1/chat/completions', {
+          const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }] })
@@ -376,7 +381,7 @@ async function handlePlaygroundChat(req, res) {
   req.on('end', async () => {
     try {
       const data = JSON.parse(body);
-      const r = await fetch('https://carbonato-proxy.vercel.app/v1/chat/completions', {
+      const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -397,8 +402,22 @@ async function handlePlaygroundChat(req, res) {
 // HEALTH DB (shared)
 // ========================================================
 function getHealthDb() {
-  try { return JSON.parse(fs.readFileSync(path.join(DB_PATH, 'health-db.json'), 'utf8')); }
-  catch (e) { return []; }
+  try {
+    const raw = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'health-db.json'), 'utf8'));
+    // Convert old format {latencies: {modelo1: {avg,count,...}}} to array [{model,latency,time,ip}]
+    if (!Array.isArray(raw) && raw.latencies) {
+      const arr = [];
+      Object.entries(raw.latencies).forEach(([model, v]) => {
+        if (v.avg && v.count > 0) {
+          for (let i = 0; i < Math.min(v.count, 10); i++) {
+            arr.push({ model, latency: v.avg, time: Date.now() - 60000, ip: 'legacy' });
+          }
+        }
+      });
+      return arr;
+    }
+    return Array.isArray(raw) ? raw : [];
+  } catch (e) { return []; }
 }
 function saveHealthDb(db) {
   const max = 10000;
