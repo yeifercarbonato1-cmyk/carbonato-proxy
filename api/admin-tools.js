@@ -699,11 +699,27 @@ async function handleUsageReset(req, res) {
   res.json({ ok: true, message: 'Todos los datos limpiados: usage-db, health-db, logs, circuit breaker' });
 }
 
-function handleVisitorsPage(req, res) {
+async function handleVisitorsPage(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
-  // Get IP data from usage DB synchronously for initial render
+  
+  // Cargar desde GitHub primero (persistente), mergear con local /tmp
   let db = { usages: [], stats: {} };
-  try { db = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
+  const token = getGithubToken();
+  if (token) {
+    try {
+      const r = await fetch(GITHUB_USAGE_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+      if (r.ok) { const d = await r.json(); db = JSON.parse(Buffer.from(d.content, 'base64').toString()); }
+    } catch(e) {}
+  }
+  // Mergear datos locales de /tmp (si hay algo más reciente)
+  let localDb = null;
+  try { localDb = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
+  if (localDb && localDb.usages && localDb.usages.length > 0) {
+    const remoteKeys = new Set(db.usages.map(u => u.timestamp + '|' + u.model + '|' + u.ip));
+    const nuevos = localDb.usages.filter(u => !remoteKeys.has(u.timestamp + '|' + u.model + '|' + u.ip));
+    if (nuevos.length > 0) db.usages.push(...nuevos);
+  }
+  
   const usages = db.usages || [];
   
   // Group by IP
