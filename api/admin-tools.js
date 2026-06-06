@@ -130,32 +130,35 @@ async function handleHealthCheck(req, res) {
 }
 
 async function handleHealthPage(req, res) {
-  const db = getHealthDb();
-  const stats = {};
-  MODELOS.forEach(m => { stats[m.id] = { ok: 0, fail: 0, latencies: [] }; });
-  const recent = db.slice(-2000);
-  recent.forEach(e => {
-    if (!stats[e.model]) return;
-    if (e.latency < 30000) { stats[e.model].ok++; stats[e.model].latencies.push(e.latency); }
-    else { stats[e.model].fail++; }
-  });
-
-  let rows = MODELOS.map(m => {
-    const s = stats[m.id];
-    const total = s.ok + s.fail;
-    const pct = total > 0 ? (s.ok / total * 100).toFixed(0) : '—';
-    const avg = s.latencies.length > 0 ? (s.latencies.reduce((a,b)=>a+b,0) / s.latencies.length).toFixed(0) + 'ms' : '—';
-    return `<tr><td>${m.id}</td><td>${esc(m.name)}</td><td style="color:${s.ok > 0 ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)'}">${pct}%</td><td>${avg}</td><td>${s.ok}</td><td>${s.fail}</td></tr>`;
-  }).join('');
-
   html(res, `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HEALTH — Carbonato Proxy</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}h1{font-family:'JetBrains Mono',monospace;font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px}td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'JetBrains Mono',monospace;font-size:11px}tr:hover td{background:rgba(255,255,255,0.02)}</style></head>
-<body><h1>⟐ HEALTH DASHBOARD</h1>
-<table><thead><tr><th>MODELO</th><th>NOMBRE</th><th>UPTIME</th><th>LATENCIA</th><th>OK</th><th>FAIL</th></tr></thead><tbody>${rows}</tbody></table>
-<p style="margin-top:16px;font-size:10px;color:rgba(255,255,255,0.25);font-family:'JetBrains Mono',monospace">${recent.length} registros</p>
-</body></html>`);
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}h1{font-family:'JetBrains Mono',monospace;font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px}td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'JetBrains Mono',monospace;font-size:11px}tr:hover td{background:rgba(255,255,255,0.02)}#status{font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.4);margin-bottom:12px}.live{color:rgba(255,255,255,0.3);font-size:9px}.ok{color:rgba(255,255,255,0.7)}.fail{color:rgba(255,255,255,0.25)}</style></head>
+<body><h1>⟐ HEALTH DASHBOARD <span class="live">● LIVE</span></h1>
+<div id="status">Probando 16 modelos...</div>
+<table><thead><tr><th>MODELO</th><th>NOMBRE</th><th>LATENCIA</th><th>STATUS</th></tr></thead><tbody id="tbody"></tbody></table>
+<script>
+const tbody=document.getElementById('tbody');
+const status=document.getElementById('status');
+const mods=${JSON.stringify(MODELOS)};
+mods.forEach(m=>{
+  tbody.innerHTML+='<tr id="r-'+m.id+'"><td>'+m.id+'</td><td>'+m.name+'</td><td id="l-'+m.id+'">...</td><td id="s-'+m.id+'">⟳</td></tr>';
+});
+let ok=0,fail=0;
+(async()=>{
+  for(const m of mods){
+    const t0=performance.now();
+    try{
+      const r=await fetch('/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:m.id,messages:[{role:'user',content:'ping'}],max_tokens:5})});
+      const lat=(performance.now()-t0).toFixed(0);
+      if(r.ok){ok++;document.getElementById('l-'+m.id).textContent=lat+'ms';document.getElementById('s-'+m.id).textContent='✓';document.getElementById('r-'+m.id).className='ok';}
+      else{fail++;document.getElementById('l-'+m.id).textContent=lat+'ms';document.getElementById('s-'+m.id).textContent='✗';document.getElementById('r-'+m.id).className='fail';}
+    }catch(e){fail++;document.getElementById('l-'+m.id).textContent='—';document.getElementById('s-'+m.id).textContent='✗';document.getElementById('r-'+m.id).className='fail';}
+    status.textContent='Probando... '+ok+' OK '+fail+' FAIL ('+mods.filter(x=>document.getElementById('s-'+x.id).textContent!=='⟳').length+'/'+mods.length+')';
+  }
+  status.textContent='✓ Completo — '+ok+' OK · '+fail+' FAIL';
+})();
+</script></body></html>`);
 }
 
 // ========================================================
