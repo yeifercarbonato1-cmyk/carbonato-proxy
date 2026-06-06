@@ -3,6 +3,10 @@ const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 const DB_PATH = '/tmp';
+const GITHUB_OWNER = 'yeifer125';
+const GITHUB_REPO = 'proxi-datos';
+const GITHUB_PATH = 'health-db.json';
+const GITHUB_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
 
 function proxyBase(req) {
   const host = req.headers['host'] || 'carbonato-proxy.vercel.app';
@@ -106,7 +110,7 @@ const MODELOS = [
 ];
 
 async function handleHealthCheck(req, res) {
-  const db = getHealthDb();
+  const { data: db, sha } = await getHealthDb();
   const results = await Promise.all(MODELOS.map(async (m) => {
     const t0 = Date.now();
     try {
@@ -125,7 +129,7 @@ async function handleHealthCheck(req, res) {
       return { model: m.id, name: m.name, status: 'FAIL', latency: '-' };
     }
   }));
-  saveHealthDb(db);
+  await saveHealthDb(db, sha);
   res.json({ ok: true, results });
 }
 
@@ -287,8 +291,8 @@ async function crear(){
 // ========================================================
 // ROTATOR
 // ========================================================
-function handleRotatorRank(req, res) {
-  const healthDb = getHealthDb();
+async function handleRotatorRank(req, res) {
+  const { data: healthDb } = await getHealthDb();
   const scores = {};
 
   MODELOS.forEach(m => { scores[m.id] = { key: m.id, ok: 0, fail: 0, latencies: [] }; });
@@ -402,12 +406,52 @@ async function handlePlaygroundChat(req, res) {
 }
 
 // ========================================================
-// HEALTH DB (shared)
+// HEALTH DB (GitHub-backed persistence)
 // ========================================================
-function getHealthDb() {
+function getGithubToken() { return process.env.GITHUB_TOKEN || ''; }
+
+async function readFromGitHub() {
+  const token = getGithubToken();
+  if (!token) return null;
+  try {
+    const r = await fetch(GITHUB_URL, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return { content: JSON.parse(Buffer.from(data.content, 'base64').toString()), sha: data.sha || '' };
+  } catch(e) { return null; }
+}
+
+async function writeToGitHub(content, sha) {
+  const token = getGithubToken();
+  if (!token) return false;
+  try {
+    const r = await fetch(GITHUB_URL, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${token}`,
+        'Accept': 'application/vnd.github.v3+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `Update health-db.json - ${new Date().toISOString().slice(0,10)}`,
+        content: Buffer.from(JSON.stringify(content, null, 2)).toString('base64'),
+        sha: sha
+      })
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+async function getHealthDb() {
+  // Try GitHub first
+  const gh = await readFromGitHub();
+  if (gh && Array.isArray(gh.content)) return { data: gh.content, sha: gh.sha || '' };
+  // Fallback to /tmp
   try {
     const raw = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'health-db.json'), 'utf8'));
-    // Convert old format {latencies: {modelo1: {avg,count,...}}} to array [{model,latency,time,ip}]
+    // Convert old format
     if (!Array.isArray(raw) && raw.latencies) {
       const arr = [];
       Object.entries(raw.latencies).forEach(([model, v]) => {
@@ -417,13 +461,17 @@ function getHealthDb() {
           }
         }
       });
-      return arr;
+      return { data: arr, sha: '' };
     }
-    return Array.isArray(raw) ? raw : [];
-  } catch (e) { return []; }
+    return { data: Array.isArray(raw) ? raw : [], sha: '' };
+  } catch (e) { return { data: [], sha: '' }; }
 }
-function saveHealthDb(db) {
-  const max = 10000;
+
+async function saveHealthDb(db, sha) {
+  const max = 5000;
   if (db.length > max) db = db.slice(db.length - max);
-  fs.writeFileSync(path.join(DB_PATH, 'health-db.json'), JSON.stringify(db, null, 2));
+  // Always save to /tmp
+  try { fs.writeFileSync(path.join(DB_PATH, 'health-db.json'), JSON.stringify(db, null, 2)); } catch(e) {}
+  // Push to GitHub
+  await writeToGitHub(db, sha || '');
 }
