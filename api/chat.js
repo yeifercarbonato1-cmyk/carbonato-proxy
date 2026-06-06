@@ -352,7 +352,14 @@ module.exports = async (req, res) => {
             // Registrar uso
             try {
               let tokens = 0;
-              try { tokens = JSON.parse(resultText).usage?.total_tokens || 0; } catch(e) {}
+              try {
+                const parsed = JSON.parse(resultText);
+                tokens = parsed.usage?.total_tokens || 0;
+                if (tokens === 0) {
+                  const content = parsed.choices?.[0]?.message?.content || '';
+                  tokens = Math.max(1, Math.round(content.length / 4));
+                }
+              } catch(e) {}
               const db = loadUsageDB();
               db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString(), rotatorModel: modelKey });
               if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -432,13 +439,37 @@ module.exports = async (req, res) => {
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
         res.setHeader('X-Accel-Buffering', 'no');
+        // Buffer para análisis de uso
+        const streamChunks = [];
         for await (const chunk of upstreamRes.body) {
           res.write(chunk);
+          streamChunks.push(chunk);
         }
         res.end();
         try {
+          const fullBody = Buffer.concat(streamChunks).toString();
+          let tokens = 0;
+          // Buscar usage total_tokens en SSE (OpenAI format)
+          const usageMatch = fullBody.match(/"usage"\s*:\s*\{[^}]*"total_tokens"\s*:\s*(\d+)/);
+          if (usageMatch) {
+            tokens = parseInt(usageMatch[1]);
+          } else {
+            // Estimar desde delta.content en SSE events
+            let contentLen = 0;
+            const sseLines = fullBody.split('\n');
+            for (const line of sseLines) {
+              if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                try {
+                  const parsed = JSON.parse(line.slice(6));
+                  const delta = parsed.choices?.[0]?.delta?.content || '';
+                  contentLen += delta.length;
+                } catch(e) {}
+              }
+            }
+            tokens = Math.max(1, Math.round(contentLen / 4));
+          }
           const db = loadUsageDB();
-          db.usages.push({ model: userModel, ip: userIp, tokens: 0, timestamp: new Date().toISOString() });
+          db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
           if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
           db.stats[userModel].totalRequests += 1;
           if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
@@ -476,7 +507,14 @@ module.exports = async (req, res) => {
       // Registrar uso
       try {
         let tokens = 0;
-        try { tokens = JSON.parse(result).usage?.total_tokens || 0; } catch(e) {}
+        try {
+          const parsed = JSON.parse(result);
+          tokens = parsed.usage?.total_tokens || 0;
+          if (tokens === 0) {
+            const content = parsed.choices?.[0]?.message?.content || '';
+            tokens = Math.max(1, Math.round(content.length / 4));
+          }
+        } catch(e) {}
         
         const db = loadUsageDB();
         db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
