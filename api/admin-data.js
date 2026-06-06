@@ -2,6 +2,12 @@ const fs = require('fs');
 
 module.exports = async (req, res) => {
   try {
+    // Auth check
+    const cookies = req.headers.cookie || '';
+    if (!cookies.includes('admin_sess=ok')) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+    
     // Leer de /tmp primero (cache local)
     let db;
     try {

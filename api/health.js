@@ -8,7 +8,7 @@ function loadDB() {
 }
 
 function saveDB(db) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+  try { fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2)); } catch(e) { console.log('[health] Error saveDB:', e.message); }
 }
 
 module.exports = async (req, res) => {
@@ -21,18 +21,24 @@ module.exports = async (req, res) => {
     const db = loadDB();
     const results = [];
     const now = Date.now();
+    const ac = new AbortController();
+    req.on('close', () => { try { ac.abort(); } catch(e) {} });
     
     for (let i = 1; i <= 16; i++) {
+      if (ac.signal.aborted) break;
       const name = 'modelo' + i;
       const start = Date.now();
       let ok = false, latency = 0, error = null;
       try {
-        const res2 = await fetch(`${BASE}/chat/completions`, {
+        const fetchOpts = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ model: name, messages: [{ role: 'user', content: 'OK' }], max_tokens: 5 }),
-          signal: AbortSignal.timeout(15000)
-        });
+          body: JSON.stringify({ model: name, messages: [{ role: 'user', content: 'OK' }], max_tokens: 5 })
+        };
+        if (!ac.signal.aborted) {
+          fetchOpts.signal = AbortSignal.any([AbortSignal.timeout(15000), ac.signal]);
+        }
+        const res2 = await fetch(`${BASE}/chat/completions`, fetchOpts);
         ok = res2.ok;
         latency = Date.now() - start;
       } catch(e) {
@@ -112,7 +118,8 @@ module.exports = async (req, res) => {
     }
     const histDataJson = JSON.stringify(modelHistData);
     
-    return res.setHeader('Content-Type', 'text/html').status(200).send(`<!DOCTYPE html>
+    res.setHeader('Content-Type', 'text/html');
+    return res.status(200).send(`<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>⎈ HEALTH — CARBONATO ⎈</title>

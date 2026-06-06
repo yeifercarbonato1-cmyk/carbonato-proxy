@@ -13,7 +13,8 @@ module.exports = async (req, res) => {
   }
   const modelos = MODELOS.map(m => ({icon:m.icon, name:m.id, desc:m.desc}));
   const cardsJS = JSON.stringify(modelos);
-  return res.setHeader('Content-Type', 'text/html').status(200).send(`<!DOCTYPE html>
+  res.setHeader('Content-Type', 'text/html');
+  return res.status(200).send(`<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
