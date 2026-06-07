@@ -283,7 +283,12 @@ module.exports = async (req, res) => {
       try {
         const hdbRaw = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8'));
         // Soportar formato nuevo (array) y legacy (objeto con latencies)
-        let hdb = Array.isArray(hdbRaw) ? hdbRaw : (hdbRaw.latencies ? [] : []);
+        let hdb = Array.isArray(hdbRaw) ? hdbRaw : [];
+        if (hdbRaw && hdbRaw.latencies) {
+          hdb = Object.entries(hdbRaw.latencies).map(([model, data]) => ({
+            model, latency: data.avg || 99999, time: hdbRaw.lastCheck || Date.now(), ip: 'legacy'
+          }));
+        }
         // Tomar últimas 500 muestras
         const recent = hdb.slice(-500);
         const perModel = {};
@@ -501,7 +506,7 @@ module.exports = async (req, res) => {
     
     const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
     try {
-      const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body) });
+      const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) });
       const result = await upstreamRes.text();
       
       // Registrar uso
