@@ -45,6 +45,7 @@
     { "src": "/api/logs(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/api/config(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/api/telegram/webhook", "dest": "/api/admin-tools.js" },
+    { "src": "/api/skynet(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/v1/skynet(.*)", "dest": "/api/skynet.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
