@@ -1056,6 +1056,134 @@ async function handleSkynetData(req, res) {
   }
 }
 
+// ─── SKYNET LOGS PAGE ────────────────────────────────────
+
+function handleSkynetLogsPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
+  html(res, `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SKYNET LOGS — Carbonato Proxy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#050510;--surface:#0a0a18;--card:rgba(10,10,30,0.7);--cyber:#00fff5;--magenta:#ff00e6;--purple:#7b2ff7;--red:#ff0044;--green:#00ff88;--text:#c0c0d0;--dim:#444466}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,255,0.03) 1px,transparent 1px);background-size:40px 40px;z-index:0;pointer-events:none}
+.glow{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;animation:orb 20s ease-in-out infinite}
+.g1{width:600px;height:600px;background:radial-gradient(circle,rgba(123,47,247,0.08),transparent);top:-300px;left:-200px}
+.g2{width:500px;height:500px;background:radial-gradient(circle,rgba(0,255,245,0.05),transparent);bottom:-200px;right:-200px;animation-delay:-8s}
+@keyframes orb{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(50px,-40px) scale(1.1)}66%{transform:translate(-40px,30px) scale(0.9)}}
+.container{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:16px}
+.header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--card);border:1px solid rgba(0,255,245,0.15);border-radius:10px;backdrop-filter:blur(16px);margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.header .brand{font-size:16px;font-weight:800;background:linear-gradient(135deg,#fff,var(--cyber),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:4px}
+.header .status{display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+.header .status .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s ease-in-out infinite;display:inline-block}
+@keyframes pulse-dot{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+.controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
+.controls button{padding:6px 14px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;background:var(--card);color:var(--text);font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer;backdrop-filter:blur(8px);transition:all 0.2s}
+.controls button:hover{border-color:var(--cyber);color:var(--cyber)}
+.controls .count{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+.controls .refresh-btn{background:rgba(0,255,245,0.05);border-color:rgba(0,255,245,0.2);color:var(--cyber)}
+.controls .refresh-btn:hover{background:rgba(0,255,245,0.1)}
+.controls .clear-btn{border-color:rgba(255,0,68,0.2);color:rgba(255,0,68,0.6)}
+.controls .clear-btn:hover{background:rgba(255,0,68,0.1);border-color:var(--red);color:var(--red)}
+.controls .limit-select{background:var(--card);border:1px solid rgba(255,255,255,0.1);border-radius:4px;padding:6px 8px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:9px;outline:none}
+table{width:100%;border-collapse:collapse;font-size:10px}
+th{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.08);color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:8px;letter-spacing:2px}
+td{padding:6px 10px;border-bottom:1px solid rgba(255,255,255,0.03);font-family:'JetBrains Mono',monospace;font-size:9px;vertical-align:middle}
+tr:hover td{background:rgba(0,255,245,0.02)}
+.status-ok{color:var(--green)}
+.status-error{color:var(--red)}
+.status-404{color:var(--dim)}
+.model-tag{color:var(--cyber);background:rgba(0,255,245,0.06);padding:1px 6px;border-radius:3px}
+.ip-cell{color:rgba(255,255,255,0.5)}
+.timestamp-cell{color:var(--dim);font-size:8px}
+.empty-state{padding:40px;text-align:center;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim)}
+.empty-state .icon{font-size:32px;margin-bottom:8px;opacity:0.3}
+@media(max-width:640px){table,thead,tbody,tr,td,th{display:block}th{display:none}td{padding:6px 8px;border-bottom:1px solid rgba(255,255,255,0.04)}}
+</style>
+</head>
+<body>
+<div class="glow g1"></div>
+<div class="glow g2"></div>
+<div class="container">
+<div class="header">
+  <div class="brand">⟐ SKYNET — REGISTRO DE ACCESOS</div>
+  <div class="status">
+    <span class="dot"></span>
+    <span id="lastUpdate">CARGANDO...</span>
+    <a href="/api/skynet/page" class="btn" style="padding:6px 14px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:10px;text-decoration:none">← SKYNET</a>
+  </div>
+</div>
+<div class="controls">
+  <button class="refresh-btn" onclick="cargarLogs()">⟳ REFRESCAR</button>
+  <select class="limit-select" id="limit" onchange="cargarLogs()">
+    <option value="25">25</option>
+    <option value="50" selected>50</option>
+    <option value="100">100</option>
+    <option value="200">200</option>
+  </select>
+  <span class="count" id="logCount">— registros</span>
+  <span style="flex:1"></span>
+  <button class="clear-btn" id="clearBtn" onclick="limpiarLogs()">✕ LIMPIAR</button>
+</div>
+<div id="tabla"><div class="empty-state"><div class="icon">⟐</div>Cargando registros...</div></div>
+<div class="status" style="font-size:9px;font-family:'JetBrains Mono',monospace;color:var(--dim);margin-top:8px" id="statusMsg"></div>
+</div>
+<script>
+async function cargarLogs(){
+  const tabla=document.getElementById('tabla');
+  const count=document.getElementById('logCount');
+  const status=document.getElementById('statusMsg');
+  const limit=document.getElementById('limit').value;
+  tabla.innerHTML='<div class="empty-state"><div class="icon">⟳</div>Consultando...</div>';
+  try{
+    const r=await fetch('/v1/skynet/logs?limit='+limit);
+    const d=await r.json();
+    const logs=d.logs||[];
+    if(!logs.length){
+      tabla.innerHTML='<div class="empty-state"><div class="icon">∅</div>Sin registros de acceso</div><p style="text-align:center;font-size:9px;color:var(--dim);font-family:JetBrains Mono,monospace">Los accesos a endpoints /v1/skynet/* aparecen aquí automáticamente</p>';
+      count.textContent='0 registros';
+      status.textContent='';
+      return;
+    }
+    let html='<table><thead><tr><th>TIMESTAMP</th><th>IP</th><th>ENDPOINT</th><th>METHOD</th><th>STATUS</th><th>MODELO</th><th>LATENCIA</th></tr></thead><tbody>';
+    logs.forEach(e=>{
+      const st=e.status||'ok';
+      const stCls=st==='ok'?'status-ok':st==='error'?'status-error':'status-404';
+      const icon=st==='ok'?'✓':st==='error'?'✗':'—';
+      const model=e.model?'<span class="model-tag">'+e.model+'</span>':'—';
+      const lat=e.latency_ms?e.latency_ms+'ms':'—';
+      const time=e.timestamp?new Date(e.timestamp).toLocaleString('es-CR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'}):'—';
+      html+='<tr><td class="timestamp-cell">'+time+'</td><td class="ip-cell">'+(e.ip||'—')+'</td><td>'+(e.endpoint||'—')+'</td><td>'+(e.method||'—')+'</td><td class="'+stCls+'">'+icon+' '+st+'</td><td>'+model+'</td><td>'+lat+'</td></tr>';
+    });
+    html+='</tbody></table>';
+    tabla.innerHTML=html;
+    count.textContent=logs.length+' registros';
+    status.textContent='Última actualización: '+new Date().toLocaleString('es-CR');
+  }catch(e){
+    tabla.innerHTML='<div class="empty-state"><div class="icon">⚠</div>Error al cargar: '+e.message+'</div>';
+    status.textContent='';
+  }
+}
+async function limpiarLogs(){
+  if(!confirm('¿Limpiar todos los registros de acceso Skynet?')) return;
+  try{
+    const r=await fetch('/v1/skynet/logs/clear',{method:'POST'});
+    const d=await r.json();
+    if(d.ok) cargarLogs();
+  }catch(e){alert('Error: '+e.message);}
+}
+cargarLogs();
+setInterval(cargarLogs,15000);
+</script>
+</body>
+</html>`);
+}
+
 function handleSkynetPage(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   html(res, `<!DOCTYPE html>
@@ -1142,6 +1270,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
   <div class="status">
     <span class="dot"></span>
     <span id="lastUpdate">INICIALIZANDO...</span>
+    <a href="/api/skynet/logs/page" class="back-btn" style="margin-left:4px">⟐ LOGS</a>
     <a href="/api/admin-panel" class="back-btn">← PANEL</a>
   </div>
 </div>
@@ -1290,5 +1419,6 @@ module.exports = {
   handleUpload, handleModelsCheck, handleDocsIA,
   handleLogsPage, handleConfigPage, handleConfigSave,
   handleTelegramWebhook,
-  handleSkynetPage, handleSkynetData
+  handleSkynetPage, handleSkynetData,
+  handleSkynetLogsPage
 };

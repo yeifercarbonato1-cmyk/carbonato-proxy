@@ -4,6 +4,14 @@
 const fs = require('fs');
 const MEMORY_PATH = '/tmp/skynet-memory.json';
 const ACTIVITY_PATH = '/tmp/skynet-activity.json';
+const ACCESS_LOG_PATH = '/tmp/skynet-access-log.json';
+
+// GitHub persistence (same pattern as admin/db.js)
+const GITHUB_OWNER = 'yeifer125';
+const GITHUB_REPO = 'proxi-datos';
+const GITHUB_ACCESS_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/skynet-access-log.json`;
+
+let _lastAccessSync = 0;
 
 function getMemory() {
   try {
@@ -120,6 +128,94 @@ function clearActivity() {
   } catch (e) {}
 }
 
+// ─── Access Log — registro de quién usa Skynet ────────
+// Persiste a GitHub con merge dedup (mismo patrón que usage-db)
+
+async function readAccessLogFromGitHub() {
+  const token = process.env.GITHUB_TOKEN || '';
+  if (!token) return null;
+  try {
+    const r = await fetch(GITHUB_ACCESS_URL, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    return { entries: JSON.parse(Buffer.from(data.content, 'base64').toString()), sha: data.sha || '' };
+  } catch(e) { return null; }
+}
+
+async function writeAccessLogToGitHub(entries, sha) {
+  const token = process.env.GITHUB_TOKEN || '';
+  if (!token) return false;
+  try {
+    const r = await fetch(GITHUB_ACCESS_URL, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `Update skynet-access-log - ${new Date().toISOString().slice(0,10)}`,
+        content: Buffer.from(JSON.stringify(entries, null, 2)).toString('base64'),
+        sha
+      })
+    });
+    return r.ok;
+  } catch(e) { return false; }
+}
+
+function getLocalAccessLog() {
+  try { return JSON.parse(fs.readFileSync(ACCESS_LOG_PATH, 'utf8')); } catch(e) { return []; }
+}
+
+function saveLocalAccessLog(entries) {
+  try { fs.writeFileSync(ACCESS_LOG_PATH, JSON.stringify(entries, null, 2)); } catch(e) {}
+}
+
+// Registra un acceso a Skynet
+// entry: { timestamp, ip, endpoint, method, status, model, latency_ms, error? }
+async function logAccess(entry) {
+  // Siempre guardar local primero
+  const local = getLocalAccessLog();
+  local.push(entry);
+  if (local.length > 1000) local.splice(0, local.length - 1000);
+  saveLocalAccessLog(local);
+  
+  // Sync a GitHub cada 30s (rate limit)
+  const now = Date.now();
+  if (now - _lastAccessSync < 30000) return;
+  _lastAccessSync = now;
+  
+  const gh = await readAccessLogFromGitHub();
+  let merged = [];
+  let sha = '';
+  if (gh && Array.isArray(gh.entries)) { merged = gh.entries; sha = gh.sha || ''; }
+  
+  // Merge dedup por timestamp+ip+endpoint
+  const seen = new Set(merged.map(e => e.timestamp + '|' + e.ip + '|' + e.endpoint));
+  for (const e of local) {
+    const k = e.timestamp + '|' + e.ip + '|' + e.endpoint;
+    if (!seen.has(k)) { seen.add(k); merged.push(e); }
+  }
+  if (merged.length > 2000) merged = merged.slice(-2000);
+  
+  // Guardar merged local + GitHub
+  saveLocalAccessLog(merged);
+  await writeAccessLogToGitHub(merged, sha);
+}
+
+// Obtiene los accesos (GitHub source of truth, fallback /tmp)
+async function getAccessLogs(limit = 50) {
+  const gh = await readAccessLogFromGitHub();
+  if (gh && Array.isArray(gh.entries) && gh.entries.length > 0) {
+    saveLocalAccessLog(gh.entries);
+    return gh.entries.slice(-limit).reverse();
+  }
+  return getLocalAccessLog().slice(-limit).reverse();
+}
+
+// Clear local
+function clearAccessLogs() {
+  try { fs.writeFileSync(ACCESS_LOG_PATH, JSON.stringify([])); } catch(e) {}
+}
+
 module.exports = {
   recordFailure,
   recordSuccess,
@@ -130,5 +226,8 @@ module.exports = {
   getMemory,
   logActivity,
   getActivity,
-  clearActivity
+  clearActivity,
+  logAccess,
+  getAccessLogs,
+  clearAccessLogs
 };

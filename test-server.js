@@ -66,6 +66,12 @@ const server = http.createServer((req, res) => {
   if (path === '/api/admin') return adminHandler(req, res);
   if (path === '/api/admin-panel') return adminPanelHandler(req, res);
 
+  // SEE routes
+  if (path.startsWith('/api/see')) {
+    const seeHandler = wrapHandler(require('./api/see.js'));
+    return seeHandler(req, res);
+  }
+
   // Static files from public/
   const publicPath = pathModule.join(__dirname, 'public', path === '/' ? 'index.html' : path);
   if (fs.existsSync(publicPath) && fs.statSync(publicPath).isFile()) {

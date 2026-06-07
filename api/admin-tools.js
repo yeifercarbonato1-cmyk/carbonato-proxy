@@ -68,6 +68,13 @@ module.exports = async (req, res) => {
   // --- SKYNET ---
   if (pathname === '/api/skynet/page') return h.handleSkynetPage(req, res);
   if (pathname === '/api/skynet/data') return h.handleSkynetData(req, res);
+  if (pathname === '/api/skynet/logs/page') return h.handleSkynetLogsPage(req, res);
+
+  // --- SEE (Skynet Evolution Engine) ---
+  if (pathname.startsWith('/api/see')) {
+    const seeHandler = require('./see.js');
+    return seeHandler(req, res);
+  }
 
   res.status(404).json({ error: 'Not found', path: pathname });
 };

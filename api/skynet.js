@@ -11,10 +11,17 @@ const {
   getMemoryStats,
   getModelHealth,
   logActivity,
-  getActivity
+  getActivity,
+  logAccess,
+  getAccessLogs,
+  clearAccessLogs
 } = require('./skynet-memory.js');
 
 // ─── Helpers ─────────────────────────────────────────────
+
+function getClientIp(req) {
+  return req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.headers['x-real-ip'] || 'unknown';
+}
 
 function resolveKey(cfg) {
   if (!cfg.key) return '';
@@ -437,11 +444,60 @@ async function handleDataHub(req, res) {
   });
 }
 
+// ─── 6.5 SEE INTEGRATION: Diagnose & Evolve ──────────────
+
+async function handleSeeDiagnose(req, res) {
+  try {
+    const diagnose = require('../see/diagnose.js');
+    const result = await diagnose.fullDiagnose();
+    return json(res, 200, { ok: true, ...result });
+  } catch(e) {
+    console.log(`[skynet] Diagnose error: ${e.message}`);
+    return json(res, 500, { ok: false, error: e.message });
+  }
+}
+
+async function handleSeeEvolve(req, res) {
+  try {
+    const worker = require('../see/see-worker.js');
+    const result = await worker.runCycle();
+    return json(res, 200, { ok: true, ...result });
+  } catch(e) {
+    console.log(`[skynet] Evolve error: ${e.message}`);
+    return json(res, 500, { ok: false, error: e.message });
+  }
+}
+
+// ─── 6. LOGS ENDPOINT ────────────────────────────────────
+
+async function handleLogs(req, res) {
+  const url = new URL(req.url, 'http://localhost');
+  const method = req.method;
+  const pathname = url.pathname;
+
+  // GET /v1/skynet/logs ↗ devuelve JSON
+  if (method === 'GET') {
+    const limit = parseInt(url.searchParams.get('limit') || '50', 10);
+    const logs = await getAccessLogs(Math.min(limit, 200));
+    return json(res, 200, { ok: true, total: logs.length, logs });
+  }
+
+  // POST /v1/skynet/logs/clear — limpia logs
+  if (method === 'POST' && pathname.endsWith('/clear')) {
+    clearAccessLogs();
+    return json(res, 200, { ok: true, message: 'Access logs cleared' });
+  }
+
+  return json(res, 404, { error: { message: 'Not found', type: 'not_found' } });
+}
+
 // ─── Router principal ────────────────────────────────────
 
 module.exports = async (req, res) => {
-  const url = (req.url || '').split('?')[0];
+  const urlPath = (req.url || '').split('?')[0];
   const method = req.method;
+  const ip = getClientIp(req);
+  const t0 = Date.now();
 
   // CORS headers básicos
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -452,27 +508,74 @@ module.exports = async (req, res) => {
     return res.status(204).end();
   }
 
+  // Interceptar res.json para capturar modelo y status
+  const _origJson = res.json.bind(res);
+  let _respStatus = 200;
+  let _respModel = '';
+  res.json = function(data) {
+    _respModel = data?.skynet?.router || data?.model || data?.skynet?.fallback || '';
+    return _origJson(data);
+  };
+
   try {
-    if (url === '/v1/skynet/chat' && method === 'POST') {
-      return await handleRouter(req, res);
+    // Logs endpoint (antes del routing normal)
+    if (urlPath.startsWith('/v1/skynet/logs')) {
+      const result = await handleLogs(req, res);
+      _respStatus = 200;
+      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: urlPath, method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      return result;
     }
-    if (url === '/v1/skynet/chain' && method === 'POST') {
-      return await handleChain(req, res);
+
+    if (urlPath === '/v1/skynet/chat' && method === 'POST') {
+      const result = await handleRouter(req, res);
+      _respStatus = 200;
+      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/chat', method, status: 'ok', model: _respModel, latency_ms: Date.now() - t0 }).catch(() => {});
+      return result;
     }
-    if (url === '/v1/skynet/scan' && (method === 'POST' || method === 'GET')) {
-      return await handleScan(req, res);
+    if (urlPath === '/v1/skynet/chain' && method === 'POST') {
+      const result = await handleChain(req, res);
+      _respStatus = 200;
+      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/chain', method, status: 'ok', model: _respModel || '', latency_ms: Date.now() - t0 }).catch(() => {});
+      return result;
     }
-    if (url === '/v1/skynet/memory' && method === 'GET') {
-      return handleMemoryStats(req, res);
+    if (urlPath === '/v1/skynet/scan' && (method === 'POST' || method === 'GET')) {
+      const result = await handleScan(req, res);
+      _respStatus = 200;
+      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/scan', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      return result;
     }
-    if (url === '/v1/skynet/data' && (method === 'GET' || method === 'POST')) {
-      return await handleDataHub(req, res);
+    if (urlPath === '/v1/skynet/memory' && method === 'GET') {
+      const result = handleMemoryStats(req, res);
+      _respStatus = 200;
+      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/memory', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      return result;
+    }
+    if (urlPath === '/v1/skynet/data' && (method === 'GET' || method === 'POST')) {
+      const result = await handleDataHub(req, res);
+      _respStatus = 200;
+      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/data', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      return result;
+    }
+    // ─── 7. SEE INTEGRATION ────────────────────────────────
+    if (urlPath === '/v1/skynet/diagnose' && (method === 'GET' || method === 'POST')) {
+      const result = await handleSeeDiagnose(req, res);
+      _respStatus = 200;
+      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/diagnose', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      return result;
+    }
+    if (urlPath === '/v1/skynet/evolve' && method === 'POST') {
+      const result = await handleSeeEvolve(req, res);
+      _respStatus = 200;
+      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/evolve', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      return result;
     }
   } catch (e) {
     console.log(`[skynet] Error global: ${e.message}`);
+    logAccess({ timestamp: new Date().toISOString(), ip, endpoint: urlPath, method, status: 'error', model: '', latency_ms: Date.now() - t0, error: e.message.slice(0, 200) }).catch(() => {});
     return json(res, 500, { error: { message: `Skynet error: ${e.message}`, type: 'skynet_error' } });
   }
 
+  logAccess({ timestamp: new Date().toISOString(), ip, endpoint: urlPath, method, status: '404', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
   return json(res, 404, { error: { message: 'Skynet endpoint not found', type: 'not_found' } });
 };
 
