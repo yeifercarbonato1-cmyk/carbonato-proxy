@@ -745,7 +745,7 @@ async function handleConfigSave(req, res) {
   try {
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
     const body = Buffer.concat(chunks).toString();
-    const { config } = JSON.parse(body);
+    const config = JSON.parse(body);
     if (!config || typeof config !== 'object') return res.status(400).json({ error: 'config object required' });
 
     const token = getGithubToken();
@@ -771,7 +771,7 @@ async function handleConfigSave(req, res) {
 // ========================================================
 // TELEGRAM WEBHOOK
 // ========================================================
-const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8626223246:AAFngGPP7b5C6FqS8ZqSg32Zx9WLw3PQaR0';
+const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TG_API = `https://api.telegram.org/bot${TG_TOKEN}`;
 const ALLOWED_CHAT = '7507526979';
 

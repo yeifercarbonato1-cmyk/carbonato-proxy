@@ -2,35 +2,25 @@ const fs = require('fs');
 const path = require('path');
 const { MODELOS } = require('./models-def.js');
 const { loadUsageDB, saveUsageDB } = require('./admin/db.js');
+const { 
+  recordFailure: skynetFail, 
+  recordSuccess: skynetSuccess, 
+  isModelBlocked, 
+  resetIfAllBlocked 
+} = require('./skynet-memory.js');
 
-// Circuit breaker para modelo9 - persiste en /tmp
-let circuitBreaker = { failures: {}, lastFailures: {} };
-try {
-  const cbData = fs.readFileSync('/tmp/model9-circuit.json', 'utf8');
-  circuitBreaker = JSON.parse(cbData);
-} catch(e) {
-  // Cold start: seed circuit breaker desde health-db si existe
-  try {
-    const hdbRaw = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8'));
-    const hdb = Array.isArray(hdbRaw) ? hdbRaw : [];
-    const recent = hdb.slice(-200);
-    const failMap = {};
-    recent.forEach(e => {
-      if (e.latency >= 30000 || !e.latency) {
-        if (!failMap[e.model]) failMap[e.model] = [];
-        failMap[e.model].push(e.time || Date.now());
-      }
-    });
-    Object.entries(failMap).forEach(([m, times]) => {
-      if (times.length >= 2) circuitBreaker.failures[m] = times.slice(-3);
-    });
-  } catch(e) { /* sin health data, empezar limpio */ }
+// Circuit breaker con SkynetMemory — persistencia y aprendizaje
+// Reemplaza el viejo sistema de 30s con bloqueo inteligente de 5 min
+function isCircuitOpen(modelKey) {
+  return isModelBlocked(modelKey);
 }
 
-function saveCircuitBreaker() {
-  try {
-    fs.writeFileSync('/tmp/model9-circuit.json', JSON.stringify(circuitBreaker));
-  } catch(e) {}
+function recordFailure(modelKey) {
+  skynetFail(modelKey);
+}
+
+function recordSuccess(modelKey) {
+  skynetSuccess(modelKey);
 }
 
 function saveLog(model, ip, status, latency, error) {
@@ -41,29 +31,6 @@ function saveLog(model, ip, status, latency, error) {
     if (logs.length > 1000) logs = logs.slice(-1000);
     fs.writeFileSync('/tmp/proxy-logs.json', JSON.stringify(logs));
   } catch(e) {}
-}
-
-function isCircuitOpen(modelKey) {
-  const failures = circuitBreaker.failures[modelKey] || [];
-  const now = Date.now();
-  // Filtrar fallos de los últimos 30s
-  const recent = failures.filter(t => now - t < 30000);
-  circuitBreaker.failures[modelKey] = recent;
-  saveCircuitBreaker();
-  return recent.length >= 2;
-}
-
-function recordFailure(modelKey) {
-  if (!circuitBreaker.failures[modelKey]) {
-    circuitBreaker.failures[modelKey] = [];
-  }
-  circuitBreaker.failures[modelKey].push(Date.now());
-  saveCircuitBreaker();
-}
-
-function recordSuccess(modelKey) {
-  circuitBreaker.failures[modelKey] = [];
-  saveCircuitBreaker();
 }
 
 // Transform message content for vision models
@@ -332,6 +299,7 @@ module.exports = async (req, res) => {
       
       // Todos fallaron
       console.log('[rotator] Todos los modelos agotados');
+      resetIfAllBlocked(ROTATION_ORDER);
       saveLog(userModel, userIp, 503, 0, 'Todos los modelos agotados');
       return res.status(503).json({
         error: {

@@ -17,7 +17,8 @@
     { "src": "api/admin.js", "use": "@vercel/node" },
     { "src": "api/admin-panel.js", "use": "@vercel/node" },
     { "src": "api/index.js", "use": "@vercel/node" },
-    { "src": "api/admin-tools.js", "use": "@vercel/node" }
+    { "src": "api/admin-tools.js", "use": "@vercel/node" },
+    { "src": "api/skynet.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/chat/completions", "dest": "/api/chat.js" },
@@ -44,6 +45,7 @@
     { "src": "/api/logs(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/api/config(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/api/telegram/webhook", "dest": "/api/admin-tools.js" },
+    { "src": "/v1/skynet(.*)", "dest": "/api/skynet.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }
