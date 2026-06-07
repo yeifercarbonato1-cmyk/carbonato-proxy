@@ -165,7 +165,9 @@ td{padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:12px}
 </div>
 
 <div style="text-align:center;margin-top:20px">
-  <a href="/api/see/run" style="display:inline-block;padding:10px 24px;background:linear-gradient(135deg,#00fff5,#7b2ff7);color:#000;border-radius:6px;text-decoration:none;font-weight:700;font-size:14px" onclick="return confirm('¿Ejecutar ciclo SEE ahora?')">▶ EJECUTAR CICLO</a>
+  <form action="/api/see/run" method="POST" style="display:inline" onsubmit="return confirm('¿Ejecutar ciclo SEE ahora? Esto puede tomar 30-60s.')">
+    <button type="submit" style="cursor:pointer;padding:10px 24px;background:linear-gradient(135deg,#00fff5,#7b2ff7);color:#000;border:none;border-radius:6px;font-weight:700;font-size:14px">▶ EJECUTAR CICLO</button>
+  </form>
 </div>
 <p style="text-align:center;margin-top:10px;font-size:11px;color:rgba(255,255,255,0.2)">Skynet Evolution Engine v1 · ${d.timestamp}</p>
 </body></html>`;
