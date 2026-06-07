@@ -403,8 +403,7 @@ async function handleVisitorsPage(req, res) {
     if (u.model) ipMap[ip].models.add(u.model);
   });
   const ips = Object.values(ipMap).sort((a, b) => b.count - a.count);
-  const proxyOwnIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || '';
-  const filteredIps = ips.filter(i => i.ip !== proxyOwnIp.split(',')[0].trim());
+  const filteredIps = ips;
 
   html(res, `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -447,7 +446,7 @@ tr:hover td{background:rgba(255,255,255,0.02)}
   <input type="date" id="dateTo" onchange="applyFilters()">
   <button onclick="exportCSV()" title="Exportar CSV">⬇ CSV</button>
 </div>
-<table><thead><tr><th>#</th><th>IP</th><th>PAÍS</th><th>UBICACIÓN</th><th>ISP</th><th>REQS</th><th>ÚLT. VEZ</th><th>MODELOS</th></tr></thead><tbody id="tbody"></tbody></table>
+<table><thead><tr><th>#</th><th>IP</th><th>PAÍS</th><th>UBICACIÓN</th><th>ISP</th><th>REQS</th><th>TOKENS</th><th>ÚLT. VEZ</th><th>MODELOS</th></tr></thead><tbody id="tbody"></tbody></table>
 <div class="pagination">
   <button id="prevBtn" onclick="changePage(-1)">◀ Anterior</button>
   <span id="pageInfo">Página 1 / 1</span>
@@ -486,7 +485,7 @@ function renderTable(){
   pageIps.forEach((e,idx)=>{
     const gi=allIps.indexOf(e);const row=document.createElement('tr');row.id='r-'+gi;
     const geo=geoCache[e.ip];
-    row.innerHTML='<td>'+(start+idx+1)+'</td><td class="ip-cell" onclick="navigator.clipboard.writeText(\\''+e.ip+'\\')">'+e.ip+'</td><td id="c-'+gi+'">'+(geo?geo.flag:'<span class="loading">⟳</span>')+'</td><td id="l-'+gi+'">'+(geo?geo.location:'<span class="loading">⟳</span>')+'</td><td id="i-'+gi+'">'+(geo?geo.isp:'<span class="loading">⟳</span>')+'</td><td>'+e.count+'</td><td style="font-size:9px;color:rgba(255,255,255,0.3)">'+(e.lastSeen?new Date(e.lastSeen).toLocaleString('es-CR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td><td class="models">'+(e.models.slice(0,3).join(', ')+(e.models.length>3?'...':''))+'</td>';
+    row.innerHTML='<td>'+(start+idx+1)+'</td><td class="ip-cell" onclick="navigator.clipboard.writeText(\\''+e.ip+'\\')">'+e.ip+'</td><td id="c-'+gi+'">'+(geo?geo.flag:'<span class="loading">⟳</span>')+'</td><td id="l-'+gi+'">'+(geo?geo.location:'<span class="loading">⟳</span>')+'</td><td id="i-'+gi+'">'+(geo?geo.isp:'<span class="loading">⟳</span>')+'</td><td>'+e.count+'</td><td style="font-size:10px;color:rgba(255,255,255,0.5)">'+(e.tokens?e.tokens.toLocaleString('es-CR'):'0')+'</td><td style="font-size:9px;color:rgba(255,255,255,0.3)">'+(e.lastSeen?new Date(e.lastSeen).toLocaleString('es-CR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'—')+'</td><td class="models">'+(e.models.slice(0,3).join(', ')+(e.models.length>3?'...':''))+'</td>';
     tbody.appendChild(row);
     if(!geoCache[e.ip]){const API='/api/visitors/geo?ip=';fetch(API+e.ip).then(r=>r.json()).then(d=>{const f=d.countryCode?String.fromCodePoint(...[...d.countryCode.toUpperCase()].map(c=>0x1F1E6+c.charCodeAt(0)-65)):'';geoCache[e.ip]={flag:(f?'<span class="flag">'+f+'</span> ':'')+(d.country||'—'),location:[d.regionName,d.city].filter(Boolean).join(', ')||'—',isp:d.isp||d.org||'—'};const cEl=document.getElementById('c-'+gi),lEl=document.getElementById('l-'+gi),iEl=document.getElementById('i-'+gi);if(cEl)cEl.innerHTML=geoCache[e.ip].flag;if(lEl)lEl.textContent=geoCache[e.ip].location;if(iEl)iEl.textContent=geoCache[e.ip].isp;}).catch(()=>{geoCache[e.ip]={flag:'—',location:'—',isp:'—'};const cEl=document.getElementById('c-'+gi),lEl=document.getElementById('l-'+gi),iEl=document.getElementById('i-'+gi);if(cEl)cEl.textContent='—';if(lEl)lEl.textContent='—';if(iEl)iEl.textContent='—';});}
   });
