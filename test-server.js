@@ -34,6 +34,13 @@ const adminPanelHandler = wrapHandler(require('./api/admin-panel.js'));
 const adminToolsHandler = wrapHandler(require('./api/admin-tools.js'));
 
 const server = http.createServer((req, res) => {
+  // Security headers todas las respuestas
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-DNS-Prefetch-Control', 'off');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self'; img-src 'self' data: https:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const path = url.pathname;
 
