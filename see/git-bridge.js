@@ -32,7 +32,9 @@ const ALLOWED_FILES = [
 const PROTECTED = [
   'api/auth.js',
   '.env',
-  'telegram-bot.js'
+  'telegram-bot.js',
+  'api/admin-panel.js',
+  'api/chat.js'
 ];
 
 const PUSH_ENABLED = false; // CAMBIAR a true para activar push

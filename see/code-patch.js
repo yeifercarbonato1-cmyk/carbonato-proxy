@@ -10,93 +10,14 @@ const PROXY_DIR = path.resolve(__dirname, '..');
 // ─── Definiciones de bugs conocidos ───
 
 const KNOWN_PATTERNS = [
-  {
-    id: 'silent-catch',
-    description: 'Catch silencioso sin logging',
-    severity: 'improvement',
-    detect: (file, content) => {
-      if (!file.endsWith('.js')) return null;
-      const matches = [];
-      const lines = content.split('\n');
-      let inCatch = false;
-      let catchLine = 0;
-      let depth = 0;
-
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        if (line.match(/catch\s*\([^)]+\)\s*\{/)) {
-          inCatch = true;
-          catchLine = i + 1;
-          depth = 1;
-          continue;
-        }
-        if (inCatch) {
-          const opens = (line.match(/\{/g) || []).length;
-          const closes = (line.match(/\}/g) || []).length;
-          depth += opens - closes;
-
-          const trimmed = line.trim();
-          if (depth <= 0) {
-            // Llegamos al final del catch
-            if (trimmed === '}' || trimmed === '})' || trimmed === '});') {
-              inCatch = false;
-              continue;
-            }
-          }
-
-          // Si el catch tiene solo comentarios o está vacío
-          if (depth <= 0 || (depth === 0 && trimmed === '}')) {
-            const bodyEnd = i;
-            const catchBody = lines.slice(catchLine, bodyEnd).join('\n').trim();
-            if (!catchBody || catchBody.match(/^\/\/.*$/) || catchBody === '{}') {
-              matches.push({
-                line: catchLine,
-                code: lines.slice(catchLine - 1, i + 1).join('\n').slice(0, 80),
-                file
-              });
-            }
-            inCatch = false;
-          }
-        }
-      }
-      return matches.length > 0 ? matches : null;
-    },
-    fix: (file, content, match) => {
-      const lines = content.split('\n');
-      const lineIdx = match.line - 1;
-      const line = lines[lineIdx];
-
-      // Buscar la variable del catch
-      const varMatch = line.match(/catch\s*\((\w+)\)/);
-      const varName = varMatch ? varMatch[1] : 'e';
-
-      // Agregar console.error dentro del catch
-      const indent = line.match(/^(\s*)/)[1];
-      const insertLine = `  ${indent}console.log('[see:fix] catch en línea ${match.line}:', ${varName}.message);`;
-
-      // Encontrar dónde insertar (después de { )
-      const openBrace = line.indexOf('{');
-      if (openBrace > -1) {
-        // El { está en la misma línea que catch
-        const before = line.substring(0, openBrace + 1);
-        const after = line.substring(openBrace + 1);
-        lines[lineIdx] = before + '\n' + indent + insertLine + after;
-        return { ok: true, lines: lines.join('\n') };
-      }
-
-      // Buscar la línea después (catch en línea separada)
-      if (lineIdx + 1 < lines.length && lines[lineIdx + 1].includes('{')) {
-        const nextLine = lineIdx + 1;
-        const indent2 = lines[nextLine].match(/^(\s*)/)[1];
-        const before = lines[nextLine].substring(0, lines[nextLine].indexOf('{') + 1);
-        const after = lines[nextLine].substring(lines[nextLine].indexOf('{') + 1);
-        lines[nextLine] = before + '\n' + indent2 + insertLine + after;
-        return { ok: true, lines: lines.join('\n') };
-      }
-
-      return { ok: false, error: 'formato de catch no reconocido' };
-    }
-  },
+  // ⚠️ silent-catch DESHABILITADO — detecta mal líneas y corrompe código
+  // Ver https://github.com/yeifer125/carbonato-proxy/issues/SEE-bug
+  // {
+  //   id: 'silent-catch',
+  //   description: 'Catch silencioso sin logging',
+  //   severity: 'improvement',
+  //   ...
+  // },
   {
     id: 'console-log-debug',
     description: 'console.log de debug sin propósito',
