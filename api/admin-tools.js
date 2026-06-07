@@ -30,7 +30,7 @@ module.exports = async (req, res) => {
   if (pathname === '/api/rotator/page') return h.handleRotatorPage(req, res);
 
   // --- PLAYGROUND ---
-  if (pathname === '/api/playground') return h.handlePlaygroundPage(req, res);
+  if (pathname === '/api/playground' || pathname === '/api/playground/page') return h.handlePlaygroundPage(req, res);
   if (pathname === '/api/playground/chat') return h.handlePlaygroundChat(req, res);
 
   // --- VISITORS ---
