@@ -1,23 +1,25 @@
 // Servidor de test local para carbonato-proxy
+// Solo importa funciones activas — legacy removido Junio 2026
 const http = require('http');
+const fs = require('fs');
+const pathModule = require('path');
 
 function wrapHandler(fn) {
   return (req, res) => {
-    const origWriteHead = res.writeHead.bind(res);
     res.status = (code) => { res.statusCode = code; return res; };
     res.json = (data) => {
       res.setHeader('Content-Type', 'application/json');
-      origWriteHead(res.statusCode || 200);
+      res.writeHead(res.statusCode || 200);
       res.end(JSON.stringify(data));
     };
     res.send = (body) => {
       if (typeof body === 'object') {
         res.setHeader('Content-Type', 'application/json');
-        origWriteHead(res.statusCode || 200);
+        res.writeHead(res.statusCode || 200);
         res.end(JSON.stringify(body));
       } else {
         if (!res.getHeader('Content-Type')) res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        origWriteHead(res.statusCode || 200);
+        res.writeHead(res.statusCode || 200);
         res.end(String(body));
       }
     };
@@ -29,48 +31,34 @@ const chatHandler = wrapHandler(require('./api/chat.js'));
 const indexHandler = wrapHandler(require('./api/index.js'));
 const adminHandler = wrapHandler(require('./api/admin.js'));
 const adminPanelHandler = wrapHandler(require('./api/admin-panel.js'));
-const adminAuthHandler = wrapHandler(require('./api/admin-auth.js'));
-const adminSaveHandler = wrapHandler(require('./api/admin-save.js'));
-const adminLogoutHandler = wrapHandler(require('./api/admin-logout.js'));
-const modelsCheckHandler = wrapHandler(require('./api/models-check.js'));
-const healthHandler = wrapHandler(require('./api/health.js'));
-const competenciaHandler = wrapHandler(require('./api/competencia.js'));
-const promptsHandler = wrapHandler(require('./api/prompts.js'));
-const rotatorHandler = wrapHandler(require('./api/rotator.js'));
-const playgroundHandler = wrapHandler(require('./api/playground.js'));
 const adminToolsHandler = wrapHandler(require('./api/admin-tools.js'));
-const fs = require('fs');
-const pathModule = require('path');
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const path = url.pathname;
-  
+
   if (path === '/') return indexHandler(req, res);
-  
+
+  // Chat routes
   const CHAT_ROUTES = ['/chat/completions','/v1/chat/completions','/models','/v1/models','/images/generations','/v1/images/generations'];
   if (CHAT_ROUTES.includes(path)) return chatHandler(req, res);
-  
-  if (path === '/api/usage/reset') return adminToolsHandler(req, res);
-  
-  const ADMIN_ROUTES = {
-    '/api/admin': adminHandler,
-    '/api/admin-panel': adminPanelHandler,
-    '/api/admin-auth': adminAuthHandler,
-    '/api/admin-save': adminSaveHandler,
-    '/api/admin-logout': adminLogoutHandler,
-    '/api/models-check': modelsCheckHandler
-  };
-  if (ADMIN_ROUTES[path]) return ADMIN_ROUTES[path](req, res);
-  
-  // New feature routes
-  const NEW_ROUTES = ['/api/health','/api/health/check','/api/health/page','/api/competencia','/api/competencia/page','/api/prompts','/api/prompts/page','/api/rotator/rank','/api/rotator/page','/api/playground','/api/playground/chat'];
-  if (path === '/api/health' || path === '/api/health/check' || path === '/api/health/page' || path.startsWith('/api/health/')) return healthHandler(req, res);
-  if (path === '/api/competencia' || path === '/api/competencia/page') return competenciaHandler(req, res);
-  if (path === '/api/prompts' || path === '/api/prompts/page' || path.startsWith('/api/prompts/')) return promptsHandler(req, res);
-  if (path === '/api/rotator/rank' || path === '/api/rotator/page') return rotatorHandler(req, res);
-  if (path === '/api/playground' || path === '/api/playground/chat') return playgroundHandler(req, res);
-  
+
+  // Admin routes — todas por admin-tools.js (router unificado)
+  const ADMIN_TOOLS_PREFIXES = [
+    '/api/health', '/api/competencia', '/api/prompts',
+    '/api/rotator', '/api/playground', '/api/visitors',
+    '/api/usage/reset', '/api/admin-auth', '/api/admin-save',
+    '/api/admin-logout', '/api/upload', '/api/models-check',
+    '/api/docs-ia', '/api/logs', '/api/config'
+  ];
+  if (ADMIN_TOOLS_PREFIXES.some(p => path.startsWith(p) || path === p)) {
+    return adminToolsHandler(req, res);
+  }
+
+  // Admin pages
+  if (path === '/api/admin') return adminHandler(req, res);
+  if (path === '/api/admin-panel') return adminPanelHandler(req, res);
+
   // Static files from public/
   const publicPath = pathModule.join(__dirname, 'public', path === '/' ? 'index.html' : path);
   if (fs.existsSync(publicPath) && fs.statSync(publicPath).isFile()) {
@@ -82,7 +70,7 @@ const server = http.createServer((req, res) => {
     stream.pipe(res);
     return;
   }
-  
+
   res.statusCode = 404;
   res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify({ error: 'Not found' }));

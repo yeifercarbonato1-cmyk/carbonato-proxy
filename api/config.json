@@ -37,7 +37,7 @@
   },
   "modelo7": {
     "url": "https://api.kilo.ai/api/gateway/chat/completions",
-    "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "model": "google/gemini-2.0-flash-exp:free",
     "key": "",
     "system_prompt": ""
   },
