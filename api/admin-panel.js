@@ -14,14 +14,7 @@ async function loadDB() {
     try {
       const r = await fetch(GITHUB_USAGE_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
       if (r.ok) { const d = await r.json(); db = JSON.parse(Buffer.from(d.content, 'base64').toString()); loadedFromGitHub = true; }
-    } catch(e) {
-          console.log('[see:fix] catch en línea 17:', e.message);
-          console.log('[see:fix] catch en línea 17:', e.message);
-          console.log('[see:fix] catch en línea 17:', e.message);
-          console.log('[see:fix] catch en línea 17:', e.message);
-          console.log('[see:fix] catch en línea 17:', e.message);
-          console.log('[see:fix] catch en línea 17:', e.message);
-          console.log('[see:fix] catch en línea 17:', e.message);}
+    } catch(e) {}
   }
   // Si GitHub devolvió datos vacíos (reset), NO mergear local (datos obsoletos de otra instancia)
   if (!loadedFromGitHub || (db.usages && db.usages.length > 0)) {
