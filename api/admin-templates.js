@@ -149,6 +149,7 @@ function navHTML() {
   <a href="/api/logs/page" class="nav-link">⟐ LOGS</a>
   <a href="/api/config/page" class="nav-link">⟐ CONFIG</a>
   <a href="/api/skynet/page" class="nav-link" style="color:var(--magenta);border:1px solid rgba(255,0,230,0.2);background:rgba(255,0,230,0.04);font-weight:700">⟐ SKYNET</a>
+  <a href="/api/see/page" class="nav-link" style="color:var(--cyan);border:1px solid rgba(0,255,245,0.2);background:rgba(0,255,245,0.04);font-weight:700">🧬 SEE</a>
 </nav>`;
 }
 
