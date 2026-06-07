@@ -99,14 +99,24 @@ async function handleSeeStatus(req, res) {
 }
 
 async function handleSeeRun(req, res) {
+  // En Vercel serverless no podemos ejecutar ciclo completo (timeout)
+  // Ejecutamos diagnóstico rápido en su lugar
   try {
-    const worker = require('../see/see-worker.js');
-    const result = await worker.runCycle();
+    const diag = require('../see/diagnose.js');
+    const result = await diag.fullDiagnose();
     res.setHeader('Content-Type', 'application/json');
-    return res.status(200).json(result);
+    return res.status(200).json({
+      ok: true,
+      mode: 'quick-diagnose',
+      timestamp: result.timestamp,
+      duration: result.duration,
+      models: result.models,
+      stats: result.stats,
+      findings: result.findings.filter(f => f.severity === 'critical' || f.severity === 'warning').slice(0, 10)
+    });
   } catch(e) {
     res.setHeader('Content-Type', 'application/json');
-    return res.status(500).json({ ok: false, error: e.message });
+    return res.status(500).json({ ok: false, error: e.message, note: 'El ciclo completo solo funciona desde el cron local. Usa POST /v1/skynet/diagnose para diagnóstico remoto.' });
   }
 }
 
