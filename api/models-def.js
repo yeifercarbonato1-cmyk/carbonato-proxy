@@ -12,7 +12,7 @@ const MODELOS = [
   { id: 'modelo9',  name: 'Smart Rotator',             icon: '🔄', desc: 'Failover inteligente — siempre activo' },
   { id: 'modelo10', name: 'Pollinations HD',           icon: '💎', desc: 'Generación de imágenes HD' },
   { id: 'modelo11', name: 'DeepSeek V4 Flash',         icon: '🧬', desc: 'Tool calling avanzado' },
-  { id: 'modelo12', name: 'MiniMax M3',                icon: '🔮', desc: 'Ligero y eficiente' },
+  { id: 'modelo12', name: 'MiMo V2.5',                icon: '🔮', desc: 'Ligero y eficiente' },
   { id: 'modelo13', name: 'OpenAI GPT OSS',            icon: '🔥', desc: 'Potencia open-source' },
   { id: 'modelo14', name: 'Nemotron Super 120B',       icon: '🌀', desc: 'Alta capacidad de proceso' },
   { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
