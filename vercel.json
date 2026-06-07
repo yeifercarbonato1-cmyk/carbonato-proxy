@@ -18,7 +18,8 @@
     { "src": "api/admin-panel.js", "use": "@vercel/node" },
     { "src": "api/index.js", "use": "@vercel/node" },
     { "src": "api/admin-tools.js", "use": "@vercel/node" },
-    { "src": "api/skynet.js", "use": "@vercel/node" }
+    { "src": "api/skynet.js", "use": "@vercel/node" },
+    { "src": "api/see.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/chat/completions", "dest": "/api/chat.js" },
