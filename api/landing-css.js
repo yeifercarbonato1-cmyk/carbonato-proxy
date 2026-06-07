@@ -88,6 +88,21 @@ h3{font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(255,255,255,
 .footer-sub{font-size:9px;color:rgba(255,255,255,0.15);font-family:'JetBrains Mono',monospace;margin:2px 0}
 .admin-link{color:rgba(255,255,255,0.25);text-decoration:none;transition:all 0.2s;font-size:11px}
 .admin-link:hover{color:rgba(255,255,255,0.6)}
+.disclaimer{margin:16px 0 12px -80px;padding:12px 16px 12px 96px;max-width:680px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;display:flex;align-items:flex-start;gap:10px;font-size:13px;line-height:1.5;color:rgba(255,255,255,0.45);font-family:'JetBrains Mono',monospace}
+.disclaimer-icon{font-size:14px;flex-shrink:0;margin-top:2px}
+.disclaimer-text strong{color:rgba(255,255,255,0.6)}
+
+.skyne-line{margin:0 0 24px -80px;padding:4px 0 4px 96px;font-size:13px;line-height:1;animation:skyneDisappear 6s ease-in-out infinite}
+@keyframes skyneDisappear{0%,100%{opacity:1}25%{opacity:0}50%{opacity:1}75%{opacity:0}}
+.skyne-text{font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:6px;color:rgba(255,255,255,0.2);position:relative;display:inline-block;animation:skyneFlicker 4s ease-in-out infinite}
+.skyne-text::before{content:attr(data-text);position:absolute;top:0;left:0;width:100%;height:100%;color:rgba(255,0,230,0.15);animation:skyneShift 3s ease-in-out infinite;pointer-events:none}
+.skyne-text::after{content:attr(data-text);position:absolute;top:0;left:0;width:100%;height:100%;color:rgba(0,255,245,0.12);animation:skyneShift 3s ease-in-out infinite reverse;pointer-events:none}
+.skyne-glitch{position:relative;display:inline-block;color:rgba(255,255,255,0.25)}
+.skyne-glitch::before{content:'SKYNET';position:absolute;top:0;left:0;width:100%;height:100%;color:#ff0044;opacity:0;animation:glitchFlash 1.5s steps(1) infinite;clip-path:inset(40% 0 0 0);transform:translate(-2px,0);pointer-events:none}
+.skyne-glitch::after{content:'SKYNET';position:absolute;top:0;left:0;width:100%;height:100%;color:#00fff5;opacity:0;animation:glitchFlash 1.5s steps(1) infinite;clip-path:inset(0 0 60% 0);transform:translate(2px,0);pointer-events:none}
+@keyframes skyneFlicker{0%,95%,100%{opacity:0.5}96%{opacity:0}97%{opacity:0.7}98%{opacity:0}99%{opacity:0.9}}
+@keyframes skyneShift{0%,100%{transform:translate(0,0);opacity:0}10%{transform:translate(-3px,2px);opacity:0.6}20%{transform:translate(3px,-1px);opacity:0.3}30%{transform:translate(-1px,3px);opacity:0.7}40%{transform:translate(5px,-3px);opacity:0}50%{transform:translate(-4px,0);opacity:0.5}60%{transform:translate(0,2px);opacity:0}70%{transform:translate(2px,-4px);opacity:0.4}80%{transform:translate(-3px,1px);opacity:0}90%{transform:translate(1px,-2px);opacity:0.3}}
+@keyframes glitchFlash{0%,100%{opacity:0}5%{opacity:0.8}10%{opacity:0}15%{opacity:0.6}20%{opacity:0}25%{opacity:0.9}30%{opacity:0}45%{opacity:0.4}50%{opacity:0}65%{opacity:0.7}70%{opacity:0}85%{opacity:0.3}90%{opacity:0}}
 .cursor-blink::after{content:'▋';animation:blink 1s step-end infinite;color:rgba(255,255,255,0.6)}
 @keyframes blink{50%{opacity:0}}
 .cta-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:24px 0}

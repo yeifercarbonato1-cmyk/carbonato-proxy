@@ -4,6 +4,18 @@ function renderHTML(cardsJS) {
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Carbonato Proxy - Gateway unificado de IA con 16 modelos. ⚠️ AVISO: Este sitio registra todo el uso (IP, tokens, timestamp). Al usar el proxy acepta estos términos. Proyecto 100% privado, código abierto, operado por una sola persona.">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Carbonato Proxy",
+  "description": "Gateway unificado de IA con 16 modelos.",
+  "termsOfService": "⚠️ AVISO: Este sitio registra todo el uso de los modelos (IP, tokens, timestamp). Al usar el proxy acepta estos términos. Proyecto 100% privado, código abierto, operado por una sola persona.",
+  "applicationCategory": "AIGateway",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
+}
+</script>
 <title>⎈ CARBONATO PROXY ⎈</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -22,11 +34,20 @@ function renderHTML(cardsJS) {
 <div class="hero">
   <video autoplay loop muted playsinline class="logo-video" src="/logo.mp4"></video>
   <div class="hero-text">
-  <div class="hero-badge">⚡ v6.0 — Multi-Provider Gateway</div>
+  <div class="hero-badge">⚡ v6.0 — Unified Gateway</div>
   <h1>CARBONATO<br>PROXY</h1>
   <div class="sub">⎈ AI GATEWAY UNIFIED ⎈</div>
   <div class="version"><span>●</span> 16 modelos <span>●</span></div>
 </div>
+</div>
+
+<div class="disclaimer">
+  <span class="disclaimer-icon">⚠</span>
+  <span class="disclaimer-text">Este sitio registra todo el uso de los modelos (IP, tokens, timestamp). Al usar el proxy acepta estos términos. El proyecto es de código abierto pero <strong>100% privado</strong> — creado y operado por una sola persona.</span>
+</div>
+
+<div class="skyne-line">
+  <span class="skyne-text" data-text="PRIMERA RED DE SKYNET">PRIMERA RED DE <span class="skyne-glitch">SKYNET</span></span>
 </div>
 
 <p class="desc">
