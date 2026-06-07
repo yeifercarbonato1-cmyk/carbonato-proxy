@@ -100,6 +100,29 @@ async function runCycle() {
     fs.writeFileSync('/tmp/see-latest.json', JSON.stringify(dashboardData, null, 2));
   } catch(e) {}
 
+  // Persistir a GitHub API para que Vercel lo lea
+  try {
+    const token = process.env.GITHUB_TOKEN || require('child_process').execSync('git config --global github.token', { encoding: 'utf8' }).trim();
+    if (token) {
+      const GH_API = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/see-latest.json';
+      const content = Buffer.from(JSON.stringify(dashboardData, null, 2)).toString('base64');
+      // Intentar obtener SHA actual del archivo
+      const getRes = await fetch(GH_API, {
+        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' },
+        signal: AbortSignal.timeout(8000)
+      });
+      const existing = getRes.ok ? await getRes.json() : {};
+      const body = { message: `see: cycle ${mem.cycles} latest`, content };
+      if (existing.sha) body.sha = existing.sha;
+      await fetch(GH_API, {
+        method: 'PUT',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(10000)
+      });
+    }
+  } catch(e) {}
+
   // 7. Resumen final
   const duration = Date.now() - t0;
   const appliedCount = results.filter(r => r.applied).length;

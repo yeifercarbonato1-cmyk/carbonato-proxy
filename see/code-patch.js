@@ -177,19 +177,28 @@ function applyFix(finding) {
   for (const pattern of KNOWN_PATTERNS) {
     if (pattern.id !== finding.id) continue;
 
-    const filePath = path.join(PROXY_DIR, finding.file);
+    // Sanitizar: "api/admin-panel.js:~17" → path="api/admin-panel.js", line=17
+    let filePathRaw = finding.file || '';
+    let lineNum = finding.line || 0;
+    const tildeMatch = filePathRaw.match(/^(.*):~(\d+)$/);
+    if (tildeMatch) {
+      filePathRaw = tildeMatch[1];
+      lineNum = parseInt(tildeMatch[2], 10);
+    }
+
+    const filePath = path.join(PROXY_DIR, filePathRaw);
     const content = fs.readFileSync(filePath, 'utf8');
 
     const match = {
-      line: finding.line,
-      file: finding.file,
+      line: lineNum,
+      file: filePathRaw,
       code: finding.code
     };
 
-    const result = pattern.fix(finding.file, content, match);
+    const result = pattern.fix(filePathRaw, content, match);
     if (result.ok) {
       fs.writeFileSync(filePath, result.lines);
-      return { ok: true, file: finding.file, line: finding.line, fix: pattern.id };
+      return { ok: true, file: filePathRaw, line: lineNum, fix: pattern.id };
     }
     return result;
   }
