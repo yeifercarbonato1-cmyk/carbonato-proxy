@@ -62,5 +62,8 @@ module.exports = async (req, res) => {
   if (pathname === '/api/config/page') return h.handleConfigPage(req, res);
   if (pathname === '/api/config/save' && method === 'POST') return h.handleConfigSave(req, res);
 
+  // --- TELEGRAM WEBHOOK ---
+  if (pathname === '/api/telegram/webhook' && method === 'POST') return h.handleTelegramWebhook(req, res);
+
   res.status(404).json({ error: 'Not found', path: pathname });
 };

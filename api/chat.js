@@ -433,7 +433,7 @@ module.exports = async (req, res) => {
     
     const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
     try {
-      const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) });
+      const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
       const result = await upstreamRes.text();
       
       // Registrar uso

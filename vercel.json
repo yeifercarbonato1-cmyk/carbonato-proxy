@@ -43,6 +43,7 @@
     { "src": "/api/usage/reset", "dest": "/api/admin-tools.js" },
     { "src": "/api/logs(.*)", "dest": "/api/admin-tools.js" },
     { "src": "/api/config(.*)", "dest": "/api/admin-tools.js" },
+    { "src": "/api/telegram/webhook", "dest": "/api/admin-tools.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }

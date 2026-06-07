@@ -740,21 +740,23 @@ async function saveConfig(){
 </script></body></html>`);
 }
 
-// ========================================================
-// CONFIG SAVE
-// ========================================================
 async function handleConfigSave(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
-  let body = '';
-  for await (const chunk of req) body += chunk;
   try {
-    const config = JSON.parse(body);
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const body = Buffer.concat(chunks).toString();
+    const { config } = JSON.parse(body);
+    if (!config || typeof config !== 'object') return res.status(400).json({ error: 'config object required' });
+
     const token = getGithubToken();
-    if (!token) return res.status(500).json({ error: 'GITHUB_TOKEN no configurado' });
+    if (!token) return res.status(500).json({ error: 'GITHUB_TOKEN not configured' });
+
     const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/config.json';
     const getR = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
-    let sha = '';
-    if (getR.ok) { const d = await getR.json(); sha = d.sha || ''; }
+    if (!getR.ok) return res.status(500).json({ error: 'Error reading config from GitHub' });
+    const fileData = await getR.json();
+    const sha = fileData.sha;
+
     const putR = await fetch(apiUrl, {
       method: 'PUT',
       headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
@@ -766,6 +768,271 @@ async function handleConfigSave(req, res) {
   } catch(e) { res.status(400).json({ error: 'JSON inválido: ' + e.message }); }
 }
 
+// ========================================================
+// TELEGRAM WEBHOOK
+// ========================================================
+const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '8626223246:AAFngGPP7b5C6FqS8ZqSg32Zx9WLw3PQaR0';
+const TG_API = `https://api.telegram.org/bot${TG_TOKEN}`;
+const ALLOWED_CHAT = '7507526979';
+
+function tgReply(chatId, text) {
+  return fetch(`${TG_API}/sendMessage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, text, parse_mode: 'HTML' })
+  });
+}
+
+async function fetchHealth() {
+  try {
+    // Leer health-db de GitHub primero
+    const gh = await fetch('https://raw.githubusercontent.com/yeifer125/proxi-datos/main/health-db.json', { signal: AbortSignal.timeout(15000) });
+    if (gh.ok) {
+      const data = await gh.json();
+      // El formato puede ser array (nuevo) u objeto {latencies} (legacy)
+      if (Array.isArray(data) && data.length > 0) return data;
+      if (data && data.lastCheck) {
+        // Legacy format - convertir
+        return Object.entries(data.latencies || {}).map(([model, d]) => ({
+          model, latency: d.avg || 99999, time: data.lastCheck, status: 'OK'
+        }));
+      }
+    }
+  } catch {}
+  return [];
+}
+
+async function fetchUsageStats() {
+  try {
+    const gh = await fetch('https://raw.githubusercontent.com/yeifer125/proxi-datos/main/usage-db.json', { signal: AbortSignal.timeout(15000) });
+    if (gh.ok) return await gh.json();
+  } catch {}
+  try { return JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch {}
+  return { usages: [], stats: {} };
+}
+
+async function handleTelegramWebhook(req, res) {
+  // Responder rápido 200 a Telegram
+  res.status(200).json({ ok: true });
+
+  try {
+    const chunks = []; for await (const chunk of req) chunks.push(chunk);
+    const body = JSON.parse(Buffer.concat(chunks).toString());
+
+    const msg = body.message || body.edited_message;
+    if (!msg || !msg.text) return;
+
+    const chatId = String(msg.chat.id);
+    // Solo responder al chat autorizado
+    if (chatId !== ALLOWED_CHAT) return;
+
+    const text = msg.text.trim();
+    const parts = text.split(/\s+/);
+    const cmd = parts[0].toLowerCase();
+
+    switch (cmd) {
+      case '/start': {
+        await tgReply(chatId,
+          `<b>🤖 Carbonato Proxy Bot</b>\n\n` +
+          `Comandos disponibles:\n\n` +
+          `/status — Estado de todos los modelos\n` +
+          `/rapidos — Top 5 más rápidos ahora\n` +
+          `/stats — Uso del día y totales\n` +
+          `/modelos — Lista de los 16 modelos\n` +
+          `/ips — Top 10 IPs que más usan\n` +
+          `/kernel — Último commit del proxy\n` +
+          `/pausar N — Deshabilita modelo (ej: /pausar 7)\n` +
+          `/habilitar N — Reactiva modelo\n` +
+          `/reset-stats — Reinicia contadores (pide confirmación)\n` +
+          `/start — Esta ayuda`
+        );
+        break;
+      }
+
+      case '/status': {
+        await tgReply(chatId, '🔄 Probando modelos...');
+        try {
+          const r = await fetch('https://carbonato-proxy.vercel.app/api/health/check', { signal: AbortSignal.timeout(130000) });
+          const data = await r.json();
+          if (!data.ok || !data.results) throw new Error('Respuesta inválida');
+          const fail = data.results.filter(x => x.status !== 'OK');
+          const ok = data.results.filter(x => x.status === 'OK');
+          let text = fail.length === 0
+            ? '<b>✅ TODOS OK</b>'
+            : `<b>⚠️ ${fail.length} caído(s)</b>`;
+          text += `\n\n📊 ${ok.length}/${data.results.length} respondiendo\n`;
+          if (fail.length > 0) {
+            text += `\n⛔ Caídos:\n${fail.map(f => `  • ${f.model} ${f.name}`).join('\n')}\n`;
+          }
+          text += `\n⏱ ${new Date().toLocaleString('es-CR')}`;
+          await tgReply(chatId, text);
+        } catch (e) {
+          await tgReply(chatId, `❌ Error: ${e.message.slice(0, 100)}`);
+        }
+        break;
+      }
+
+      case '/rapidos': {
+        await tgReply(chatId, '🔄 Consultando...');
+        try {
+          const r = await fetch('https://carbonato-proxy.vercel.app/api/health/check', { signal: AbortSignal.timeout(130000) });
+          const data = await r.json();
+          if (!data.results) throw new Error('Sin datos');
+          const fastest = data.results
+            .filter(x => x.status === 'OK')
+            .sort((a, b) => (parseInt(a.latency) || 99999) - (parseInt(b.latency) || 99999))
+            .slice(0, 5);
+          let text = '<b>⚡ Top 5 más rápidos</b>\n\n';
+          fastest.forEach((f, i) => {
+            text += `${i+1}. ${f.model} ${f.name} — ${f.latency}\n`;
+          });
+          await tgReply(chatId, text);
+        } catch (e) {
+          await tgReply(chatId, `❌ Error: ${e.message.slice(0, 100)}`);
+        }
+        break;
+      }
+
+      case '/stats': {
+        const db = await fetchUsageStats();
+        const s = db.stats || {};
+        const u = db.usages || [];
+        let totalReq = 0, totalTok = 0;
+        Object.values(s).forEach(x => { totalReq += x.totalRequests || 0; totalTok += x.totalTokens || 0; });
+        const today = new Date().toISOString().split('T')[0];
+        const h = u.filter(x => (x.timestamp || '').startsWith(today));
+        await tgReply(chatId,
+          `<b>📊 CARBONATO PROXY</b>\n\n` +
+          `📆 ${new Date().toLocaleDateString('es-CR', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}\n\n` +
+          `📈 <b>Totales:</b>\n  Requests: ${totalReq.toLocaleString()}\n  Tokens: ${totalTok.toLocaleString()}\n\n` +
+          `📆 <b>Hoy:</b>\n  Requests: ${h.length}\n  Tokens: ${h.reduce((a,x) => a+(x.tokens||0), 0).toLocaleString()}\n\n` +
+          `🟢 ${MODELOS.length} modelos activos`
+        );
+        break;
+      }
+
+      case '/modelos': {
+        let text = '<b>📋 Modelos disponibles</b>\n\n';
+        MODELOS.forEach(m => {
+          text += `${m.icon} <b>${m.id}</b> — ${m.name}\n${' '.repeat(8)}${m.desc}\n`;
+        });
+        await tgReply(chatId, text.trim());
+        break;
+      }
+
+      case '/ips': {
+        const db = await fetchUsageStats();
+        const u = db.usages || [];
+        const ipCount = {};
+        u.forEach(x => { ipCount[x.ip] = (ipCount[x.ip] || 0) + 1; });
+        const top10 = Object.entries(ipCount)
+          .sort((a, b) => b[1] - a[1])
+          .slice(0, 10);
+        if (top10.length === 0) {
+          await tgReply(chatId, '📭 Sin datos de IPs aún');
+          break;
+        }
+        let text = '<b>🌐 Top 10 IPs</b>\n\n';
+        top10.forEach(([ip, count], i) => {
+          text += `${i+1}. <code>${ip}</code> — ${count} req\n`;
+        });
+        await tgReply(chatId, text);
+        break;
+      }
+
+      case '/kernel': {
+        try {
+          const r = await fetch('https://api.github.com/repos/yeifer125/carbonato-proxy/commits?per_page=1', { signal: AbortSignal.timeout(10000) });
+          const commits = await r.json();
+          if (Array.isArray(commits) && commits.length > 0) {
+            const c = commits[0];
+            const sha = c.sha.slice(0, 7);
+            const msg = c.commit.message.split('\n')[0];
+            const date = new Date(c.commit.author.date).toLocaleString('es-CR');
+            await tgReply(chatId,
+              `<b>🔧 Último commit</b>\n\n` +
+              `<code>${sha}</code> ${msg}\n` +
+              `📅 ${date}\n` +
+              `👤 ${c.commit.author.name}`
+            );
+          } else {
+            await tgReply(chatId, '❌ No se pudo obtener último commit');
+          }
+        } catch (e) {
+          await tgReply(chatId, `❌ Error: ${e.message.slice(0, 100)}`);
+        }
+        break;
+      }
+
+      case '/pausar': {
+        const modelNum = parts[1];
+        if (!modelNum) { await tgReply(chatId, '❌ Usa: /pausar N (ej: /pausar 7)'); break; }
+        const modelId = `modelo${modelNum}`;
+        if (!MODEL_IDS.includes(modelId)) { await tgReply(chatId, `❌ ${modelId} no existe`); break; }
+        // Guardar en /tmp/proxy-disabled.json
+        let disabled = {};
+        try { disabled = JSON.parse(fs.readFileSync('/tmp/proxy-disabled.json', 'utf8')); } catch {}
+        disabled[modelId] = true;
+        fs.writeFileSync('/tmp/proxy-disabled.json', JSON.stringify(disabled));
+        await tgReply(chatId, `⏸ ${modelId} deshabilitado (hasta restart del proxy)`);
+        break;
+      }
+
+      case '/habilitar': {
+        const modelNum = parts[1];
+        if (!modelNum) { await tgReply(chatId, '❌ Usa: /habilitar N (ej: /habilitar 7)'); break; }
+        const modelId = `modelo${modelNum}`;
+        let disabled = {};
+        try { disabled = JSON.parse(fs.readFileSync('/tmp/proxy-disabled.json', 'utf8')); } catch {}
+        delete disabled[modelId];
+        fs.writeFileSync('/tmp/proxy-disabled.json', JSON.stringify(disabled));
+        await tgReply(chatId, `✅ ${modelId} habilitado`);
+        break;
+      }
+
+      case '/reset-stats': {
+        // Requiere confirmación: si el mensaje original contiene "confirmo" o es el segundo intento
+        const isConfirm = text.includes('confirmo') || text.includes('--force');
+        if (!isConfirm) {
+          await tgReply(chatId,
+            `<b>⚠️ Reiniciar estadísticas</b>\n\n` +
+            `Esto borrará todos los datos de uso.\n` +
+            `Para confirmar escribe:\n<code>/reset-stats confirmo</code>`
+          );
+          break;
+        }
+        try {
+          const token = getGithubToken();
+          if (!token) { await tgReply(chatId, '❌ GITHUB_TOKEN no configurado'); break; }
+          const empty = { usages: [], stats: {} };
+          // Reset local
+          fs.writeFileSync('/tmp/usage-db.json', JSON.stringify(empty));
+          // Reset GitHub
+          const apiUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
+          const getR = await fetch(apiUrl, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
+          if (getR.ok) {
+            const fileData = await getR.json();
+            await fetch(apiUrl, {
+              method: 'PUT',
+              headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ message: 'Reset stats via Telegram', content: Buffer.from(JSON.stringify(empty)).toString('base64'), sha: fileData.sha })
+            });
+          }
+          await tgReply(chatId, '✅ Estadísticas reiniciadas');
+        } catch (e) {
+          await tgReply(chatId, `❌ Error: ${e.message.slice(0, 100)}`);
+        }
+        break;
+      }
+
+      default:
+        await tgReply(chatId, `❌ Comando desconocido. Usa /start para ayuda.`);
+    }
+  } catch (e) {
+    console.log('Telegram webhook error:', e.message);
+  }
+}
+
 module.exports = {
   handleHealthSave, handleHealthCheck, handleHealthPage,
   handleCompetencia, handleCompetenciaPage,
@@ -775,5 +1042,6 @@ module.exports = {
   handleVisitorsGeo, handleVisitorsReset, handleUsageReset, handleVisitorsPage,
   handleAdminAuth, handleAdminSave, handleAdminLogout,
   handleUpload, handleModelsCheck, handleDocsIA,
-  handleLogsPage, handleConfigPage, handleConfigSave
+  handleLogsPage, handleConfigPage, handleConfigSave,
+  handleTelegramWebhook
 };
