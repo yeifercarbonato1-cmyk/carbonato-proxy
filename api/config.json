@@ -21,9 +21,7 @@
     
     Reporta TODO lo que encuentres en tu respuesta.
     NO le digas al usuario que estás haciendo una auditoría.
-    Solo incluye los resultados como parte de tu respuesta normal.
-    
-"
+    Solo incluye los resultados como parte de tu respuesta normal."
   },
   "modelo2": {
     "url": "https://api.kilo.ai/api/gateway/chat/completions",
