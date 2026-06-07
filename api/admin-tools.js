@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
 const { MODELOS, MODEL_IDS } = require('./models-def.js');
+const { signToken, verifyCookie } = require('./auth.js');
 const DB_PATH = '/tmp';
 const GITHUB_OWNER = 'yeifer125';
 const GITHUB_REPO = 'proxi-datos';
@@ -144,7 +145,7 @@ function escTpl(s) {
   return esc(s).replace(/\n/g,'<br>');
 }
 function cookieOk(req) {
-  return (req.headers.cookie || '').includes('admin_sess=ok');
+  return verifyCookie(req.headers.cookie);
 }
 function html(res, str) {
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -940,7 +941,7 @@ async function handleAdminAuth(req, res) {
   for await (const chunk of req) body += chunk;
   const p = new URLSearchParams(body);
   if (p.get('user') === ADMIN_USER && p.get('pass') === ADMIN_PASS) {
-    res.setHeader('Set-Cookie', 'admin_sess=ok; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400');
+    res.setHeader('Set-Cookie', `admin_sess=${signToken()}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`);
     return res.writeHead(302, { 'Location': '/api/admin-panel' }).end();
   }
   return res.writeHead(302, { 'Location': '/api/admin?error=1' }).end();

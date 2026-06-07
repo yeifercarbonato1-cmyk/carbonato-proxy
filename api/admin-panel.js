@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { MODELOS } = require('./models-def.js');
 const T = require('./admin-templates.js');
+const { verifyCookie } = require('./auth.js');
 const GITHUB_USAGE_URL = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
 
 function getToken() { return process.env.GITHUB_TOKEN || ''; }
@@ -40,8 +41,7 @@ async function loadDB() {
 }
 
 module.exports = async (req, res) => {
-  const cookies = req.headers.cookie || '';
-  if (!cookies.includes('admin_sess=ok')) return res.writeHead(302, { 'Location': '/api/admin' }).end();
+  if (!verifyCookie(req.headers.cookie)) return res.writeHead(302, { 'Location': '/api/admin' }).end();
 
   const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'Desconocida').split(',')[0].trim();
 

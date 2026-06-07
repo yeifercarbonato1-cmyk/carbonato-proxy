@@ -1,9 +1,10 @@
+const { verifyCookie } = require('./auth.js');
+
 // Login page - GET /api/admin
 module.exports = async (req, res) => {
-  const cookies = req.headers.cookie || '';
   const url = (req.url || '').split('?')[0];
   
-  if (cookies.includes('admin_sess=ok')) {
+  if (verifyCookie(req.headers.cookie)) {
     return res.writeHead(302, { 'Location': '/api/admin-panel' }).end();
   }
   
