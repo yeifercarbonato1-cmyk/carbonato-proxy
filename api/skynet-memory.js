@@ -3,6 +3,7 @@
 // Vercel-safe: usa /tmp/ (se pierde en cold starts)
 const fs = require('fs');
 const MEMORY_PATH = '/tmp/skynet-memory.json';
+const ACTIVITY_PATH = '/tmp/skynet-activity.json';
 
 function getMemory() {
   try {
@@ -93,6 +94,32 @@ function getModelHealth(modelKey) {
   return { blocked, failures: failures.length, lastFailure: failures.length > 0 ? failures[failures.length - 1] : null };
 }
 
+// ─── Activity Log ────────────────────────────────────────
+function logActivity(type, data) {
+  try {
+    let log = [];
+    try { log = JSON.parse(fs.readFileSync(ACTIVITY_PATH, 'utf8')); } catch (e) {}
+    log.push({ type, data, timestamp: Date.now() });
+    if (log.length > 200) log = log.slice(-200);
+    fs.writeFileSync(ACTIVITY_PATH, JSON.stringify(log, null, 2));
+  } catch (e) { /* Vercel cold start o permisos */ }
+}
+
+function getActivity(limit = 50) {
+  try {
+    const log = JSON.parse(fs.readFileSync(ACTIVITY_PATH, 'utf8'));
+    return log.slice(-limit).reverse();
+  } catch (e) {
+    return [];
+  }
+}
+
+function clearActivity() {
+  try {
+    fs.writeFileSync(ACTIVITY_PATH, JSON.stringify([]));
+  } catch (e) {}
+}
+
 module.exports = {
   recordFailure,
   recordSuccess,
@@ -100,5 +127,8 @@ module.exports = {
   resetIfAllBlocked,
   getMemoryStats,
   getModelHealth,
-  getMemory
+  getMemory,
+  logActivity,
+  getActivity,
+  clearActivity
 };

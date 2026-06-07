@@ -9,7 +9,9 @@ const {
   recordFailure: memFail, 
   recordSuccess: memSuccess,
   getMemoryStats,
-  getModelHealth
+  getModelHealth,
+  logActivity,
+  getActivity
 } = require('./skynet-memory.js');
 
 // ─── Helpers ─────────────────────────────────────────────
@@ -223,6 +225,7 @@ async function handleRouter(req, res) {
     memSuccess(chosenModel);
     res.setHeader('X-Skynet-Router', chosenModel);
     res.setHeader('X-Skynet-Reason', reason);
+    logActivity('router', { router: chosenModel, reason, contentLen: (result.content||'').length });
     return json(res, 200, { ...result.raw, skynet: { router: chosenModel, reason } });
   } catch (e) {
     memFail(chosenModel);
@@ -301,6 +304,7 @@ async function handleChain(req, res) {
       // Si es el último paso, devolver su output
       if (i === chain.length - 1) {
         res.setHeader('X-Skynet-Chain', chain.join('->'));
+        logActivity('chain', { chain: chain.join('->'), steps, finalLen: result.content.length });
         return json(res, 200, {
           steps,
           final: result.content,
@@ -373,6 +377,7 @@ async function handleScan(req, res) {
   const online = results.filter(r => r.status === 'online').length;
   const offline = results.filter(r => r.status === 'offline').length;
   const memoryStats = getMemoryStats();
+  logActivity('scan', { online, offline, total: MODELOS.length });
 
   return json(res, 200, {
     total: MODELOS.length,
@@ -389,6 +394,47 @@ async function handleScan(req, res) {
 
 function handleMemoryStats(req, res) {
   return json(res, 200, getMemoryStats());
+}
+
+// ─── 5. DATA HUB — todos los datos en un endpoint ────────
+
+async function handleDataHub(req, res) {
+  const CONFIG = getConfig();
+  const memoryStats = getMemoryStats();
+  
+  // Scan con timeout más corto para el dashboard
+  const scanResults = [];
+  for (const model of MODELOS) {
+    const cfg = CONFIG[model.id];
+    if (!cfg || cfg.isRotator) {
+      scanResults.push({ id: model.id, status: 'skipped', reason: !cfg ? 'no config' : 'rotator' });
+      continue;
+    }
+    const t0 = Date.now();
+    try {
+      await callModel(model.id, [{ role: 'user', content: 'ping' }], { max_tokens: 1, timeout: 5000 });
+      scanResults.push({ id: model.id, status: 'online', latency: Date.now() - t0 });
+    } catch (e) {
+      scanResults.push({ id: model.id, status: 'offline', latency: Date.now() - t0, error: e.message.slice(0, 80) });
+    }
+  }
+
+  return json(res, 200, {
+    timestamp: Date.now(),
+    models: {
+      total: MODELOS.length,
+      online: scanResults.filter(r => r.status === 'online').length,
+      offline: scanResults.filter(r => r.status === 'offline').length,
+      skipped: scanResults.filter(r => r.status === 'skipped').length,
+      results: scanResults
+    },
+    memory: memoryStats,
+    config: {
+      modelsInConfig: Object.keys(CONFIG).length,
+      envKeys: { or1: !!process.env.OR_KEY1, or2: !!process.env.OR_KEY2 }
+    },
+    version: 'SKYNET v1.0 — PRIMERA RED DE SKYNET'
+  });
 }
 
 // ─── Router principal ────────────────────────────────────
@@ -418,6 +464,9 @@ module.exports = async (req, res) => {
     }
     if (url === '/v1/skynet/memory' && method === 'GET') {
       return handleMemoryStats(req, res);
+    }
+    if (url === '/v1/skynet/data' && (method === 'GET' || method === 'POST')) {
+      return await handleDataHub(req, res);
     }
   } catch (e) {
     console.log(`[skynet] Error global: ${e.message}`);

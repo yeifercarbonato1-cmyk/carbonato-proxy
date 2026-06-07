@@ -1031,6 +1031,243 @@ async function handleTelegramWebhook(req, res) {
   }
 }
 
+// ========================================================
+// SKYNET DASHBOARD — PRIMERA RED DE SKYNET
+// ========================================================
+async function handleSkynetData(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
+  try {
+    const r = await fetch(proxyBase(req) + '/v1/skynet/data');
+    const d = await r.json();
+    res.json(d);
+  } catch(e) {
+    res.json({ error: e.message, models: { total: 16, online: 0, offline: 0, skipped: 0, results: [] }, memory: { blockedCount: 0 } });
+  }
+}
+
+function handleSkynetPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
+  html(res, `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SKYNET — PRIMERA RED</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#050510;--surface:#0a0a18;--card:rgba(10,10,30,0.7);--cyber:#00fff5;--magenta:#ff00e6;--purple:#7b2ff7;--red:#ff0044;--green:#00ff88;--text:#c0c0d0;--dim:#444466}
+body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,255,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,255,0.03) 1px,transparent 1px);background-size:40px 40px;z-index:0;pointer-events:none}
+.glow{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;animation:orb 20s ease-in-out infinite}
+.g1{width:600px;height:600px;background:radial-gradient(circle,rgba(123,47,247,0.08),transparent);top:-300px;left:-200px}
+.g2{width:500px;height:500px;background:radial-gradient(circle,rgba(0,255,245,0.05),transparent);bottom:-200px;right:-200px;animation-delay:-8s}
+@keyframes orb{0%,100%{transform:translate(0,0) scale(1)}33%{transform:translate(50px,-40px) scale(1.1)}66%{transform:translate(-40px,30px) scale(0.9)}}
+.container{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:16px}
+/* HEADER */
+.header{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--card);border:1px solid rgba(0,255,245,0.15);border-radius:10px;backdrop-filter:blur(16px);margin-bottom:16px;flex-wrap:wrap;gap:8px}
+.header .brand{font-size:16px;font-weight:800;background:linear-gradient(135deg,#fff,var(--cyber),var(--magenta));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:4px}
+.header .status{display:flex;align-items:center;gap:12px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--dim)}
+.header .status .dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse-dot 1.5s ease-in-out infinite;display:inline-block}
+@keyframes pulse-dot{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+.header .status .val{color:var(--cyber)}
+.header .back-btn{padding:6px 14px;border:1px solid rgba(255,255,255,0.15);border-radius:6px;color:var(--dim);font-family:'JetBrains Mono',monospace;font-size:10px;text-decoration:none;transition:all 0.2s}
+.header .back-btn:hover{border-color:var(--cyber);color:var(--cyber)}
+/* STATS BAR */
+.stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px}
+.stat-card{background:var(--card);border:1px solid rgba(0,255,245,0.1);border-radius:8px;padding:12px 16px;backdrop-filter:blur(12px);position:relative;overflow:hidden}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--cyber),transparent);opacity:0.3}
+.stat-card .label{font-family:'JetBrains Mono',monospace;font-size:8px;color:var(--dim);letter-spacing:2px;margin-bottom:4px}
+.stat-card .value{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:#fff;letter-spacing:-1px}
+.stat-card .value.cyan{color:var(--cyber)}.stat-card .value.magenta{color:var(--magenta)}.stat-card .value.green{color:var(--green)}.stat-card .value.red{color:var(--red)}
+.stat-card .sub{font-size:9px;color:var(--dim);margin-top:2px;font-family:'JetBrains Mono',monospace}
+/* LIVE GRID */
+.grid-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:3px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.grid-title::before{content:'◆';color:var(--cyber);font-size:8px}
+.grid-title .live{color:var(--green);font-size:8px;animation:pulse-dot 1.5s ease-in-out infinite}
+.m-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:16px}
+.m-card{background:var(--card);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:10px 12px;backdrop-filter:blur(12px);transition:all 0.3s;position:relative;overflow:hidden;cursor:default}
+.m-card:hover{border-color:rgba(0,255,245,0.15);transform:translateY(-1px)}
+.m-card .mid{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:rgba(255,255,255,0.7)}
+.m-card .mname{font-size:9px;color:var(--dim);margin-top:1px}
+.m-card .lat{font-family:'JetBrains Mono',monospace;font-size:8px;margin-top:4px;display:flex;justify-content:space-between}
+.m-card.online{border-left:2px solid var(--green)}.m-card.online .lat{color:rgba(0,255,136,0.5)}
+.m-card.offline{border-left:2px solid var(--red);opacity:0.5}.m-card.offline .lat{color:rgba(255,0,68,0.5)}
+.m-card.skipped{border-left:2px solid rgba(255,255,255,0.1);opacity:0.3}
+.m-card .pulse-bar{position:absolute;bottom:0;left:0;height:2px;background:linear-gradient(90deg,var(--cyber),transparent);animation:pulseLine 2s ease-in-out infinite;opacity:0.4}
+@keyframes pulseLine{0%{width:0%}50%{width:100%}100%{width:0%}}
+.m-card.online .pulse-bar{background:linear-gradient(90deg,var(--green),transparent)}
+.m-card.offline .pulse-bar{background:linear-gradient(90deg,var(--red),transparent);animation:none;width:100%;opacity:0.15}
+/* MEMORY */
+.section{background:var(--card);border:1px solid rgba(0,255,245,0.08);border-radius:8px;padding:14px 16px;backdrop-filter:blur(12px);margin-bottom:16px}
+.section-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:2px;margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.section-title .count{color:var(--cyber);font-size:10px;background:rgba(0,255,245,0.08);padding:1px 8px;border-radius:4px}
+.block-grid{display:flex;flex-wrap:wrap;gap:6px;min-height:20px}
+.block-tag{padding:4px 10px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:9px;background:rgba(255,0,68,0.1);border:1px solid rgba(255,0,68,0.2);color:rgba(255,0,68,0.7)}
+.no-block{font-size:10px;color:rgba(0,255,136,0.5);font-family:'JetBrains Mono',monospace}
+/* LOG FEED */
+.log-feed{max-height:200px;overflow-y:auto;font-family:'JetBrains Mono',monospace;font-size:9px;line-height:1.6}
+.log-feed::-webkit-scrollbar{width:3px}
+.log-feed::-webkit-scrollbar-track{background:transparent}
+.log-feed::-webkit-scrollbar-thumb{background:rgba(0,255,245,0.2);border-radius:2px}
+.log-entry{display:flex;gap:8px;padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.02)}
+.log-entry .time{color:var(--dim);flex-shrink:0;width:60px}
+.log-entry .msg{color:rgba(255,255,255,0.4)}
+.log-entry .msg .online{color:var(--green)}.log-entry .msg .offline{color:var(--red)}.log-entry .msg .info{color:var(--cyber)}
+/* TERMINAL LINE */
+.terminal-line{font-family:'JetBrains Mono',monospace;font-size:10px;color:rgba(255,255,255,0.15);text-align:center;padding:16px 0;letter-spacing:2px;display:flex;align-items:center;justify-content:center;gap:8px}
+.terminal-line .cursor{display:inline-block;width:8px;height:14px;background:var(--cyber);animation:blink 1s step-end infinite;opacity:0.5}
+@keyframes blink{50%{opacity:0}}
+@media(max-width:640px){.m-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}.stats-bar{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="glow g1"></div>
+<div class="glow g2"></div>
+<div class="container">
+<!-- HEADER -->
+<div class="header">
+  <div class="brand">⎈ SKYNET — PRIMERA RED DE IA AUTÓNOMA ⎈</div>
+  <div class="status">
+    <span class="dot"></span>
+    <span id="lastUpdate">INICIALIZANDO...</span>
+    <a href="/api/admin-panel" class="back-btn">← PANEL</a>
+  </div>
+</div>
+<!-- STATS BAR -->
+<div class="stats-bar" id="statsBar">
+  <div class="stat-card"><div class="label">MODELOS TOTALES</div><div class="value cyan" id="totalMod">—</div><div class="sub">16 configurados</div></div>
+  <div class="stat-card"><div class="label">ONLINE</div><div class="value green" id="onlineMod">—</div><div class="sub" id="onlineSub">capacidad activa</div></div>
+  <div class="stat-card"><div class="label">OFFLINE / BLOQUEADOS</div><div class="value red" id="offlineMod">—</div><div class="sub" id="blockedSub">0 en memoria</div></div>
+  <div class="stat-card"><div class="label">ESCANEO</div><div class="value magenta" id="scanStatus">—</div><div class="sub">último scan</div></div>
+</div>
+<!-- LIVE MODEL GRID -->
+<div class="grid-title">MONITOR DE RED <span class="live">● LIVE</span></div>
+<div class="m-grid" id="modelGrid"></div>
+<!-- SECTION: MEMORY BLOCKED -->
+<div class="section">
+  <div class="section-title">MEMORIA <span class="count" id="memCount">0</span></div>
+  <div class="block-grid" id="blockGrid"><span class="no-block">Sin bloqueos activos</span></div>
+</div>
+<!-- SECTION: LOG FEED -->
+<div class="section">
+  <div class="section-title">REGISTRO DE RED <span style="color:var(--dim);font-size:8px">timepo real</span></div>
+  <div class="log-feed" id="logFeed">
+    <div class="log-entry"><span class="time">INIT</span><span class="msg"><span class="info">SKYNET v1.0 inicializado</span></span></div>
+    <div class="log-entry"><span class="time">WAIT</span><span class="msg">Esperando datos...</span></div>
+  </div>
+</div>
+<!-- TERMINAL -->
+<div class="terminal-line">
+  <span>PRIMERA RED DE SKYNET — SISTEMA AUTÓNOMO DE IA</span>
+  <span class="cursor"></span>
+</div>
+</div>
+<script>
+const MODELS = ${JSON.stringify(require('./models-def.js').MODELOS)};
+
+function fmtTime() { return new Date().toLocaleTimeString('es-CR'); }
+function fmtLat(ms) { return ms < 1000 ? ms+'ms' : (ms/1000).toFixed(1)+'s'; }
+
+// Normalizar modelo descriptions
+const MODEL_MAP = {};
+MODELS.forEach(m => { MODEL_MAP[m.id] = m; });
+
+function addLog(time, msg, cls='') {
+  const feed = document.getElementById('logFeed');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  entry.innerHTML = '<span class="time">'+time+'</span><span class="msg">'+(cls?'<span class="'+cls+'">':'')+msg+(cls?'</span>':'')+'</span>';
+  feed.appendChild(entry);
+  feed.scrollTop = feed.scrollHeight;
+  // Keep max 50 entries
+  while(feed.children.length > 50) feed.removeChild(feed.firstChild);
+}
+
+function renderGrid(results) {
+  const grid = document.getElementById('modelGrid');
+  grid.innerHTML = (results || []).map(r => {
+    const m = MODEL_MAP[r.id] || { icon: '🔷', desc: '' };
+    let cls = r.status;
+    let latHtml = '';
+    if (r.status === 'online') latHtml = '<span>⏱ '+fmtLat(r.latency)+'</span><span style="color:rgba(0,255,136,0.6)">✓</span>';
+    else if (r.status === 'offline') latHtml = '<span>✗ '+(r.latency ? fmtLat(r.latency) : '')+'</span><span style="color:rgba(255,0,68,0.6)">OFF</span>';
+    else latHtml = '<span>—</span><span style="color:rgba(255,255,255,0.2)">⏭</span>';
+    return '<div class="m-card '+cls+'">' +
+      '<div class="mid">'+m.icon+' '+r.id+'</div>' +
+      '<div class="mname">'+(m.desc||'').slice(0,30)+'</div>' +
+      '<div class="lat">'+latHtml+'</div>' +
+      '<div class="pulse-bar"></div></div>';
+  }).join('');
+}
+
+function renderBlocked(blocked) {
+  const grid = document.getElementById('blockGrid');
+  const count = document.getElementById('memCount');
+  if (!blocked || blocked.length === 0) {
+    grid.innerHTML = '<span class="no-block">Sin bloqueos activos</span>';
+    count.textContent = '0';
+    return;
+  }
+  count.textContent = blocked.length;
+  grid.innerHTML = blocked.map(b => {
+    const rem = Math.ceil(b.remainingMs / 1000);
+    return '<span class="block-tag">⛔ '+b.model+' ('+rem+'s)</span>';
+  }).join('');
+}
+
+function updateStats(models, memory) {
+  document.getElementById('totalMod').textContent = models.total || '—';
+  document.getElementById('onlineMod').textContent = models.online || '0';
+  document.getElementById('offlineMod').textContent = models.offline || '0';
+  document.getElementById('blockedSub').textContent = (memory?.blockedCount || 0)+' en memoria';
+  
+  const pct = models.total > 0 ? Math.round(models.online / models.total * 100) : 0;
+  document.getElementById('onlineSub').textContent = pct+'% capacidad activa';
+}
+
+async function fetchData() {
+  try {
+    const r = await fetch('/api/skynet/data');
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    
+    const ts = new Date(d.timestamp);
+    document.getElementById('lastUpdate').textContent = '● '+ts.toLocaleTimeString('es-CR')+' · '+(d.models?.online||0)+'/'+d.models?.total+' OK';
+    document.getElementById('scanStatus').textContent = ts.toLocaleTimeString('es-CR');
+    
+    updateStats(d.models, d.memory);
+    renderGrid(d.models?.results);
+    renderBlocked(d.memory?.blocked);
+    
+    addLog(fmtTime(), 'Escaneo completado: '+d.models?.online+' online, '+d.models?.offline+' offline', 'info');
+    
+    // Log blocked models
+    if (d.memory?.blocked?.length > 0) {
+      d.memory.blocked.forEach(b => addLog(fmtTime(), '⛔ '+b.model+' bloqueado '+Math.ceil(b.remainingMs/1000)+'s', 'offline'));
+    }
+    
+    // Log model status changes
+    (d.models?.results || []).forEach(r => {
+      if (r.status === 'online' && r.latency < 500) addLog(fmtTime(), r.id+' rápido ('+fmtLat(r.latency)+')', 'online');
+      if (r.status === 'offline' && r.error) addLog(fmtTime(), '✗ '+r.id+': '+r.error.slice(0,40), 'offline');
+    });
+    
+  } catch(e) {
+    document.getElementById('lastUpdate').textContent = '⚠ Error: '+e.message.slice(0,40);
+    addLog(fmtTime(), 'Error fetching data: '+e.message.slice(0,50), 'offline');
+  }
+}
+
+// Initial load
+fetchData();
+// Auto-refresh every 8 seconds
+setInterval(fetchData, 8000);
+</script>
+</body>
+</html>`);
+}
+
 module.exports = {
   handleHealthSave, handleHealthCheck, handleHealthPage,
   handleCompetencia, handleCompetenciaPage,
@@ -1041,5 +1278,6 @@ module.exports = {
   handleAdminAuth, handleAdminSave, handleAdminLogout,
   handleUpload, handleModelsCheck, handleDocsIA,
   handleLogsPage, handleConfigPage, handleConfigSave,
-  handleTelegramWebhook
+  handleTelegramWebhook,
+  handleSkynetPage, handleSkynetData
 };

@@ -65,5 +65,9 @@ module.exports = async (req, res) => {
   // --- TELEGRAM WEBHOOK ---
   if (pathname === '/api/telegram/webhook' && method === 'POST') return h.handleTelegramWebhook(req, res);
 
+  // --- SKYNET ---
+  if (pathname === '/api/skynet/page') return h.handleSkynetPage(req, res);
+  if (pathname === '/api/skynet/data') return h.handleSkynetData(req, res);
+
   res.status(404).json({ error: 'Not found', path: pathname });
 };
