@@ -812,19 +812,15 @@ async function fetchUsageStats() {
 }
 
 async function handleTelegramWebhook(req, res) {
-  // Responder rápido 200 a Telegram
-  res.status(200).json({ ok: true });
-
   try {
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
     const body = JSON.parse(Buffer.concat(chunks).toString());
 
     const msg = body.message || body.edited_message;
-    if (!msg || !msg.text) return;
+    if (!msg || !msg.text) return res.status(200).json({ ok: true });
 
     const chatId = String(msg.chat.id);
-    // Solo responder al chat autorizado
-    if (chatId !== ALLOWED_CHAT) return;
+    if (chatId !== ALLOWED_CHAT) return res.status(200).json({ ok: true });
 
     const text = msg.text.trim();
     const parts = text.split(/\s+/);
@@ -1028,8 +1024,10 @@ async function handleTelegramWebhook(req, res) {
       default:
         await tgReply(chatId, `❌ Comando desconocido. Usa /start para ayuda.`);
     }
+    res.status(200).json({ ok: true });
   } catch (e) {
     console.log('Telegram webhook error:', e.message);
+    res.status(200).json({ ok: true });
   }
 }
 

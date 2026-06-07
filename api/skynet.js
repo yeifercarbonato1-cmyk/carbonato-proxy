@@ -300,7 +300,7 @@ async function handleChain(req, res) {
 
       // Si es el último paso, devolver su output
       if (i === chain.length - 1) {
-        res.setHeader('X-Skynet-Chain', chain.join('→'));
+        res.setHeader('X-Skynet-Chain', chain.join('->'));
         return json(res, 200, {
           steps,
           final: result.content,
@@ -316,7 +316,7 @@ async function handleChain(req, res) {
         error: e.message
       });
       // Devolver resultado parcial
-      res.setHeader('X-Skynet-Chain', chain.join('→') + ' (parcial)');
+      res.setHeader('X-Skynet-Chain', chain.join('->') + ' (parcial)');
       return json(res, 502, {
         error: {
           message: `Chain falló en paso ${i + 1} (${modelKey}): ${e.message}`,
