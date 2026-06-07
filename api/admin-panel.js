@@ -98,14 +98,26 @@ module.exports = async (req, res) => {
 
   // Telegram bot status
   let botStatus = 'nodata';
-  try {
-    const hdb = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8'));
+  let hdb = null;
+  try { hdb = JSON.parse(fs.readFileSync('/tmp/health-db.json', 'utf8')); } catch(e) {}
+  // Fallback a GitHub si /tmp está vacío (cold start)
+  if (!hdb || (Array.isArray(hdb) && hdb.length === 0)) {
+    try {
+      const ghUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/health-db.json';
+      const ghToken = getToken();
+      if (ghToken) {
+        const r = await fetch(ghUrl, { headers: { 'Authorization': `token ${ghToken}`, 'Accept': 'application/vnd.github.v3+json' } });
+        if (r.ok) { const d = await r.json(); hdb = JSON.parse(Buffer.from(d.content, 'base64').toString()); }
+      }
+    } catch(e) {}
+  }
+  if (hdb) {
     const lastCheck = Array.isArray(hdb) && hdb.length > 0
       ? hdb[hdb.length - 1].time
       : hdb.lastCheck ? new Date(hdb.lastCheck).getTime() : 0;
     if (lastCheck && Date.now() - lastCheck < 3600000) botStatus = 'ok';
     else if (lastCheck) botStatus = 'error';
-  } catch(e) {}
+  }
 
   res.setHeader('Content-Type', 'text/html');
   res.status(200).send(
