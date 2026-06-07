@@ -170,7 +170,7 @@ function getModelAvgLatency(memory, modelKey) {
 }
 
 module.exports = {
-  load, save, DEFAULT_MEMORY,
+  load, save, getGithubToken, DEFAULT_MEMORY,
   recordImprovement, recordFailedAttempt, updateModelHistory,
   hasFailedRecently, getModelAvgLatency
 };

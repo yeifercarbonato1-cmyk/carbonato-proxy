@@ -102,7 +102,8 @@ async function runCycle() {
 
   // Persistir a GitHub API para que Vercel lo lea
   try {
-    const token = process.env.GITHUB_TOKEN || require('child_process').execSync('git config --global github.token', { encoding: 'utf8' }).trim();
+    const memMod = require('./memory.js');
+    const token = memMod.getGithubToken();
     if (token) {
       const GH_API = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/see-latest.json';
       const content = Buffer.from(JSON.stringify(dashboardData, null, 2)).toString('base64');

@@ -29,7 +29,9 @@ async function loadLatest() {
       fs.writeFileSync(LATEST_FILE, JSON.stringify(data));
       return data;
     }
-  } catch(e) {}
+  } catch(e) {
+      console.log('[see:fix] catch en línea 32:', e.message);
+      console.log('[see:fix] catch en línea 32:', e.message);}
 
   // Fallback: construir desde memoria persistente
   try {

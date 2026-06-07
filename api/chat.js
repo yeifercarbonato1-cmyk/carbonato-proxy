@@ -30,7 +30,15 @@ function saveLog(model, ip, status, latency, error) {
     logs.push({ time: Date.now(), model, ip, status, latency, error });
     if (logs.length > 1000) logs = logs.slice(-1000);
     fs.writeFileSync('/tmp/proxy-logs.json', JSON.stringify(logs));
-  } catch(e) {}
+  } catch(e) {
+      console.log('[see:fix] catch en línea 33:', e.message);
+      console.log('[see:fix] catch en línea 33:', e.message);
+      console.log('[see:fix] catch en línea 33:', e.message);
+      console.log('[see:fix] catch en línea 33:', e.message);
+      console.log('[see:fix] catch en línea 33:', e.message);
+      console.log('[see:fix] catch en línea 33:', e.message);
+      console.log('[see:fix] catch en línea 33:', e.message);
+      console.log('[see:fix] catch en línea 33:', e.message);}
 }
 
 // Transform message content for vision models

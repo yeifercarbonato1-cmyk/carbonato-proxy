@@ -144,8 +144,8 @@ td{padding:6px 8px;font-family:'JetBrains Mono',monospace;font-size:12px}
 <p class="sub">Cycle ${d.cycle} · ${d.timestamp} · ${d.duration}ms</p>
 
 <div class="kpi-grid">
-  <div class="kpi"><div class="val">${d.models?.online || '?'}</div><div class="lbl">ONLINE</div></div>
-  <div class="kpi"><div class="val">${d.models?.offline || '?'}</div><div class="lbl">OFFLINE</div></div>
+  <div class="kpi"><div class="val">${d.models?.online ?? '?'}</div><div class="lbl">ONLINE</div></div>
+  <div class="kpi"><div class="val">${d.models?.offline ?? '?'}</div><div class="lbl">OFFLINE</div></div>
   <div class="kpi"><div class="val">${d.stats?.critical || 0}</div><div class="lbl">CRÍTICOS</div></div>
   <div class="kpi"><div class="val">${d.improvements?.length || 0}</div><div class="lbl">MEJORAS</div></div>
   <div class="kpi"><div class="val">${d.cycle}</div><div class="lbl">CICLOS</div></div>

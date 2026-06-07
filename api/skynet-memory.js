@@ -106,7 +106,9 @@ function getModelHealth(modelKey) {
 function logActivity(type, data) {
   try {
     let log = [];
-    try { log = JSON.parse(fs.readFileSync(ACTIVITY_PATH, 'utf8')); } catch (e) {}
+    try {
+          console.log('[see:fix] catch en línea 109:', e.message);
+          console.log('[see:fix] catch en línea 109:', e.message); log = JSON.parse(fs.readFileSync(ACTIVITY_PATH, 'utf8')); } catch (e) {}
     log.push({ type, data, timestamp: Date.now() });
     if (log.length > 200) log = log.slice(-200);
     fs.writeFileSync(ACTIVITY_PATH, JSON.stringify(log, null, 2));
@@ -166,6 +168,8 @@ function getLocalAccessLog() {
 }
 
 function saveLocalAccessLog(entries) {
+  console.log('[see:fix] catch en línea 169:', e.message);
+  console.log('[see:fix] catch en línea 169:', e.message);
   try { fs.writeFileSync(ACCESS_LOG_PATH, JSON.stringify(entries, null, 2)); } catch(e) {}
 }
 
