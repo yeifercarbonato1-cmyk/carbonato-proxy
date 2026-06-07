@@ -560,13 +560,25 @@ async function writeToGitHub(content, sha) {
 }
 
 async function getHealthDb() {
-  // Try GitHub first
+  // Try GitHub first — siempre obtener SHA correcto
   const gh = await readFromGitHub();
+  let sha = gh ? gh.sha || '' : '';
   if (gh && Array.isArray(gh.content)) return { data: gh.content, sha: gh.sha || '' };
+  // Convertir formato object {latencies, history, lastCheck} → array, preservando SHA
+  if (gh && gh.content && typeof gh.content === 'object' && gh.content.latencies) {
+    const arr = [];
+    Object.entries(gh.content.latencies).forEach(([model, v]) => {
+      if (v.avg && v.count > 0) {
+        for (let i = 0; i < Math.min(v.count, 10); i++) {
+          arr.push({ model, latency: v.avg, time: Date.now() - 60000, ip: 'legacy' });
+        }
+      }
+    });
+    return { data: arr, sha: gh.sha || '' };
+  }
   // Fallback to /tmp
   try {
     const raw = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'health-db.json'), 'utf8'));
-    // Convert old format
     if (!Array.isArray(raw) && raw.latencies) {
       const arr = [];
       Object.entries(raw.latencies).forEach(([model, v]) => {
@@ -576,10 +588,10 @@ async function getHealthDb() {
           }
         }
       });
-      return { data: arr, sha: '' };
+      return { data: arr, sha };
     }
-    return { data: Array.isArray(raw) ? raw : [], sha: '' };
-  } catch (e) { return { data: [], sha: '' }; }
+    return { data: Array.isArray(raw) ? raw : [], sha };
+  } catch (e) { return { data: [], sha }; }
 }
 
 async function saveHealthDb(db, sha) {
@@ -626,7 +638,7 @@ async function saveUsageDB(db) {
       const data = await getRes.json();
       sha = data.sha || '';
     }
-    await fetch(GITHUB_USAGE_URL, {
+    const putRes = await fetch(GITHUB_USAGE_URL, {
       method: 'PUT',
       headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -635,7 +647,11 @@ async function saveUsageDB(db) {
         sha
       })
     });
-  } catch(e) {}
+    if (!putRes.ok) {
+      const errBody = await putRes.text().catch(() => 'unknown');
+      console.log('[saveUsageDB] GitHub PUT falló:', putRes.status, errBody.slice(0, 300));
+    }
+  } catch(e) { console.log('[saveUsageDB] Error:', e.message); }
 }
 
 async function handleVisitorsReset(req, res) {
@@ -646,57 +662,31 @@ async function handleVisitorsReset(req, res) {
 
 async function handleUsageReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
-  const token = getGithubToken();
-  
-  // 1. Limpiar usage-db local
-  try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify({ usages: [], stats: {} }, null, 2)); } catch(e) {}
-  
-  // 2. Limpiar usage-db en GitHub
-  if (token) {
-    try {
-      let sha = '';
-      const getR = await fetch(GITHUB_USAGE_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
-      if (getR.ok) { const d = await getR.json(); sha = d.sha || ''; }
-      await fetch(GITHUB_USAGE_URL, {
-        method: 'PUT',
-        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: 'Reset usage-db.json - limpieza manual',
-          content: Buffer.from(JSON.stringify({ usages: [], stats: {} }, null, 2)).toString('base64'),
-          sha
-        })
-      });
-    } catch(e) { console.log('[reset] Error GitHub usage:', e.message); }
-  }
-  
-  // 3. Limpiar health-db local
-  try { fs.writeFileSync(path.join(DB_PATH, 'health-db.json'), JSON.stringify({ latencies: {}, history: [], lastCheck: null }, null, 2)); } catch(e) {}
-  
-  // 4. Limpiar health-db en GitHub
-  if (token) {
-    try {
-      let sha = '';
-      const getR = await fetch(GITHUB_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
-      if (getR.ok) { const d = await getR.json(); sha = d.sha || ''; }
-      await fetch(GITHUB_URL, {
-        method: 'PUT',
-        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: 'Reset health-db.json - limpieza manual',
-          content: Buffer.from(JSON.stringify({ latencies: {}, history: [], lastCheck: null }, null, 2)).toString('base64'),
-          sha
-        })
-      });
-    } catch(e) { console.log('[reset] Error GitHub health:', e.message); }
-  }
-  
-  // 5. Limpiar logs locales
+  const errors = [];
+
+  // 1. Usage-DB — reuse saveUsageDB (local + GitHub)
+  try {
+    await saveUsageDB({ usages: [], stats: {} });
+  } catch(e) { errors.push('usage-db: ' + e.message); }
+
+  // 2. Health-DB — reuse saveHealthDb
+  try {
+    const h = await getHealthDb();
+    const healthSha = h && h.sha ? h.sha : '';
+    await saveHealthDb([], healthSha);
+  } catch(e) { errors.push('health-db: ' + e.message); }
+
+  // 3. Logs locales
   try { fs.writeFileSync(path.join(DB_PATH, 'proxy-logs.json'), '[]'); } catch(e) {}
-  
-  // 6. Limpiar circuit breaker
+
+  // 4. Circuit breaker
   try { fs.writeFileSync(path.join(DB_PATH, 'model9-circuit.json'), JSON.stringify({ failures: {}, lastFailures: {} })); } catch(e) {}
-  
-  res.json({ ok: true, message: 'Todos los datos limpiados: usage-db, health-db, logs, circuit breaker' });
+
+  res.json({
+    ok: errors.length === 0,
+    message: errors.length === 0 ? 'Datos limpiados: usage-db, health-db, logs, circuit breaker' : 'Errores: ' + errors.join(' | '),
+    errors
+  });
 }
 
 async function handleVisitorsPage(req, res) {
