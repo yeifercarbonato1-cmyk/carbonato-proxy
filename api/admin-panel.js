@@ -8,26 +8,30 @@ function getToken() { return process.env.GITHUB_TOKEN || ''; }
 
 async function loadDB() {
   let db = { usages: [], stats: {} };
+  let loadedFromGitHub = false;
   const token = getToken();
   if (token) {
     try {
       const r = await fetch(GITHUB_USAGE_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
-      if (r.ok) { const d = await r.json(); db = JSON.parse(Buffer.from(d.content, 'base64').toString()); }
+      if (r.ok) { const d = await r.json(); db = JSON.parse(Buffer.from(d.content, 'base64').toString()); loadedFromGitHub = true; }
     } catch(e) {}
   }
-  let localDb = null;
-  try { localDb = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch(e) {}
-  if (localDb && localDb.usages && localDb.usages.length > 0) {
-    const remoteKeys = new Set(db.usages.map(u => u.timestamp + '|' + u.model + '|' + u.ip));
-    const nuevos = localDb.usages.filter(u => !remoteKeys.has(u.timestamp + '|' + u.model + '|' + u.ip));
-    if (nuevos.length > 0) {
-      db.usages.push(...nuevos);
-      db.stats = {};
-      for (const u of db.usages) {
-        if (!db.stats[u.model]) db.stats[u.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-        db.stats[u.model].totalTokens += u.tokens || 0;
-        db.stats[u.model].totalRequests += 1;
-        if (!db.stats[u.model].uniqueIPs.includes(u.ip)) db.stats[u.model].uniqueIPs.push(u.ip);
+  // Si GitHub devolvió datos vacíos (reset), NO mergear local (datos obsoletos de otra instancia)
+  if (!loadedFromGitHub || (db.usages && db.usages.length > 0)) {
+    let localDb = null;
+    try { localDb = JSON.parse(fs.readFileSync('/tmp/usage-db.json', 'utf8')); } catch(e) {}
+    if (localDb && localDb.usages && localDb.usages.length > 0) {
+      const remoteKeys = new Set(db.usages.map(u => u.timestamp + '|' + u.model + '|' + u.ip));
+      const nuevos = localDb.usages.filter(u => !remoteKeys.has(u.timestamp + '|' + u.model + '|' + u.ip));
+      if (nuevos.length > 0) {
+        db.usages.push(...nuevos);
+        db.stats = {};
+        for (const u of db.usages) {
+          if (!db.stats[u.model]) db.stats[u.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+          db.stats[u.model].totalTokens += u.tokens || 0;
+          db.stats[u.model].totalRequests += 1;
+          if (!db.stats[u.model].uniqueIPs.includes(u.ip)) db.stats[u.model].uniqueIPs.push(u.ip);
+        }
       }
     }
   }
