@@ -98,12 +98,18 @@ function shouldSyncToGitHub() {
   return true;
 }
 
-async function loadUsageDB() {
-  // /tmp primero (más rápido)
+function loadUsageDB() {
+  // Solo sincrónico desde /tmp (hot path de cada request)
   try {
-    const local = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8'));
-    if (local && Array.isArray(local.usages)) return local;
+    return JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8'));
   } catch(e) {}
+  return { usages: [], stats: {} };
+}
+
+// Versión async con GitHub fallback (para admin-panel.js que sí necesita merge remoto)
+async function loadUsageDBAsync() {
+  const local = loadUsageDB();
+  if (local && Array.isArray(local.usages) && local.usages.length > 0) return local;
   // Fallback a GitHub
   try {
     const token = getGithubToken();
@@ -172,6 +178,6 @@ async function saveUsageDB(localDb) {
 
 module.exports = {
   getHealthDb, saveHealthDb, readFromGitHub, writeToGitHub,
-  loadUsageDB, saveUsageDB,
+  loadUsageDB, loadUsageDBAsync, saveUsageDB,
   GITHUB_URL, GITHUB_USAGE_URL, DB_PATH
 };
