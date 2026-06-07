@@ -79,6 +79,9 @@ module.exports = async (req, res) => {
   if (pathname === '/api/visitors/reset' && method === 'POST') {
     return handleVisitorsReset(req, res);
   }
+  if (pathname === '/api/visitors/geo') {
+    return handleVisitorsGeo(req, res);
+  }
 
   // --- USAGE RESET (limpia todo: usage-db, health-db, logs, circuit) ---
   if (pathname === '/api/usage/reset' && method === 'POST') {
@@ -654,6 +657,21 @@ async function saveUsageDB(db) {
   } catch(e) { console.log('[saveUsageDB] Error:', e.message); }
 }
 
+async function handleVisitorsGeo(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
+  const ip = new URL(req.url, 'http://localhost').searchParams.get('ip');
+  if (!ip) return res.status(400).json({ error: 'ip param required' });
+  try {
+    const r = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,countryCode,regionName,city,isp,org,lat,lon,query`, {
+      signal: AbortSignal.timeout(5000)
+    });
+    const data = await r.json();
+    res.json(data);
+  } catch(e) {
+    res.json({ status: 'fail' });
+  }
+}
+
 async function handleVisitorsReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
   await saveUsageDB({ usages: [], stats: {} });
@@ -852,7 +870,7 @@ function renderTable() {
     
     // Fetch geolocation if not cached
     if (!geoCache[entry.ip]) {
-      const API = 'https://ip-api.com/json/';
+      const API = '/api/visitors/geo?ip=';
       fetch(API + entry.ip)
         .then(r => r.json())
         .then(d => {
@@ -1027,8 +1045,7 @@ async function handleModelsCheck(req, res) {
 }
 
 // ========================================================
-// DOCS IA (merged from docs-ia.js)
-// ========================================================
+// DOCS IA — metadata pública de modelos
 function handleDocsIA(req, res) {
   const url = (req.url || '').split('?')[0];
   if (url === '/api/docs-ia' && req.method === 'GET') {
@@ -1036,26 +1053,36 @@ function handleDocsIA(req, res) {
       api_base: "https://carbonato-proxy.vercel.app",
       endpoint: "/chat/completions",
       models: {
-        modelo1: { id: "kilo-auto/free", free: true, provider: "kilo", description: "Auto-selection best model" },
-        modelo2: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "kilo", description: "120B reasoning" },
-        modelo3: { id: "poolside/laguna-m.1:free", free: true, provider: "kilo", description: "Laguna M.1 balanced" },
-        modelo4: { id: "poolside/laguna-xs.2:free", free: true, provider: "kilo", description: "Laguna XS.2 speed" },
-        modelo5: { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", free: true, provider: "kilo", description: "Multimodal (text+image)", image_gen: true },
-        modelo6: { id: "stepfun/step-3.7-flash:free", free: true, provider: "kilo", description: "Fast reasoning" },
-        modelo7: { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", free: true, provider: "kilo", description: "Code model" },
-        modelo8: { id: "openrouter/free", free: true, provider: "kilo", description: "OpenRouter access" },
-        modelo9: { id: "smart-rotator", free: true, provider: "kilo", description: "Auto-failover with circuit breaker" },
-        modelo10: { id: "google/gemini-2.0-flash-exp:free", free: true, provider: "kilo", description: "Google Gemini 2.0 Experimental" }
+        modelo1: { id: "kilo-auto/free", free: true, provider: "kilo", description: "Modelo estrella — alto rendimiento" },
+        modelo2: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "kilo", description: "Razonamiento profundo — tareas complejas" },
+        modelo3: { id: "poolside/laguna-m.1:free", free: true, provider: "kilo", description: "Equilibrio velocidad y calidad" },
+        modelo4: { id: "poolside/laguna-xs.2:free", free: true, provider: "kilo", description: "Máxima velocidad — respuestas instantáneas" },
+        modelo5: { id: "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", free: true, provider: "kilo", description: "Visión y texto — multimodal", vision: true },
+        modelo6: { id: "stepfun/step-3.7-flash:free", free: true, provider: "kilo", description: "Razonamiento rápido y preciso" },
+        modelo7: { id: "nvidia/nemotron-3-ultra-550b-a55b:free", free: true, provider: "kilo", description: "NVIDIA 550B MoE — razonamiento masivo" },
+        modelo8: { id: "openrouter/free", free: true, provider: "kilo", description: "Acceso multi-proveedor" },
+        modelo9: { id: "smart-rotator", free: true, provider: "kilo", description: "Failover inteligente — siempre activo" },
+        modelo10: { id: "pollinations-image", free: true, provider: "pollinations", description: "Generación de imágenes HD", image_gen: true },
+        modelo11: { id: "deepseek-v4-flash-free", free: true, provider: "opencode", description: "Tool calling avanzado" },
+        modelo12: { id: "minimax-m3-free", free: true, provider: "opencode", description: "Ligero y eficiente" },
+        modelo13: { id: "openai/gpt-oss-120b:free", free: true, provider: "openrouter", description: "Potencia open-source" },
+        modelo14: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "openrouter", description: "Alta capacidad de proceso" },
+        modelo15: { id: "google/gemma-4-31b-it:free", free: true, provider: "openrouter", description: "Precisión y confiabilidad" },
+        modelo16: { id: "z-ai/glm-4.5-air:free", free: true, provider: "openrouter", description: "Arquitectura MoE eficiente" }
       },
       endpoints: {
         chat: "/chat/completions", models: "/models", admin: "/api/admin",
-        admin_panel: "/api/admin-panel", check_models: "/api/models-check", images: "/images/generations", upload: "/api/upload"
+        admin_panel: "/api/admin-panel", check_models: "/api/models-check",
+        images: "/images/generations", upload: "/api/upload",
+        health: "/api/health/page", playground: "/api/playground",
+        competencia: "/api/competencia/page", rotator: "/api/rotator/page",
+        visitors: "/api/visitors/page", logs: "/api/logs/page", config: "/api/config/page"
       },
       usage: {
-        chat: { method: "POST", body: { model: "modelo1-modelo10", messages: [{ role: "user", content: "Hello" }] } },
-        image_gen: { endpoint: "/images/generations", model: "modelo5", body: { prompt: "a beautiful sunset over mountains" } }
+        chat: { method: "POST", body: { model: "modelo1 - modelo16", messages: [{ role: "user", content: "Hello" }] } },
+        image_gen: { endpoint: "/images/generations", model: "modelo10", body: { prompt: "a beautiful sunset over mountains" } }
       },
-      auth: { note: "No global auth required. Admin panel uses hardcoded credentials", env_vars: ["GITHUB_TOKEN", "IMGBB_API_KEY"] }
+      auth: { note: "No global auth required. Admin panel uses credentials from env vars.", env_vars: ["GITHUB_TOKEN", "OR_KEY1", "OR_KEY2"] }
     });
   }
   res.status(404).json({ error: "Not found" });
