@@ -1164,7 +1164,7 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 </div>
 </div>
 <script>
-const MODELS = ${JSON.stringify(require('./models-def.js').MODELOS)};
+const MODELS = ${JSON.stringify(require('../models-def.js').MODELOS)};
 
 function fmtTime() { return new Date().toLocaleTimeString('es-CR'); }
 function fmtLat(ms) { return ms < 1000 ? ms+'ms' : (ms/1000).toFixed(1)+'s'; }

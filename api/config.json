@@ -36,8 +36,8 @@
     "system_prompt": ""
   },
   "modelo7": {
-    "url": "https://api.kilo.ai/api/gateway/chat/completions",
-    "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
+    "url": "https://opencode.ai/zen/v1/chat/completions",
+    "model": "nemotron-3-ultra-free",
     "key": "",
     "system_prompt": ""
   },
@@ -68,7 +68,7 @@
   },
   "modelo12": {
     "url": "https://opencode.ai/zen/v1/chat/completions",
-    "model": "minimax-m3-free",
+    "model": "mimo-v2.5-free",
     "key": "",
     "system_prompt": ""
   },
