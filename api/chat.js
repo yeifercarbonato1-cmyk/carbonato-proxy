@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const { MODELOS } = require('./models-def.js');
 
 // Circuit breaker para modelo9 - persiste en /tmp
 let circuitBreaker = { failures: {}, lastFailures: {} };
@@ -195,18 +196,11 @@ module.exports = async (req, res) => {
   const url = (req.url || '').split('?')[0];
   
   if (url.endsWith('/models') && req.method === 'GET') {
-    const CONFIG = getConfig();
-    const data = Object.keys(CONFIG).map(key => ({
-      id: key,
+    const data = MODELOS.map(m => ({
+      id: m.id,
       object: "model",
       owned_by: "carbonato",
-      ...(key === 'modelo9' ? { description: "Smart Model Rotator - auto-failover entre todos los modelos" } : {}),
-      ...(key === 'modelo11' ? { description: "DeepSeek V4 Flash via OpenCode Zen - gratuito e ilimitado" } : {}),
-      ...(key === 'modelo12' ? { description: "MiniMax M3 via OpenCode Zen - gratuito e ilimitado" } : {}),
-      ...(key === 'modelo13' ? { description: "OpenAI GPT OSS 120B via OpenRouter - key1" } : {}),
-      ...(key === 'modelo14' ? { description: "Nvidia Nemotron Super 120B via OpenRouter - key2" } : {}),
-      ...(key === 'modelo15' ? { description: "Google Gemma 4 31B via OpenRouter - key2" } : {}),
-      ...(key === 'modelo16' ? { description: "Z.ai GLM 4.5 Air MoE via OpenRouter - key1" } : {})
+      description: m.desc
     }));
     return res.status(200).json({ object: "list", data });
   }
