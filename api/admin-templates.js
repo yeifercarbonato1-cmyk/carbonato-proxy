@@ -106,6 +106,7 @@ td.time{color:var(--dim);font-size:9px}
 .footer{text-align:center;padding:20px 0;margin-top:30px;border-top:1px solid var(--border)}
 .footer p{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim)}
 @keyframes pulse-dot{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.2)}}
+@keyframes toastFade{0%{opacity:1;transform:translateY(0)}70%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-10px)}}
 @media(max-width:768px){.top-bar{flex-direction:column;align-items:flex-start}.m-grid{grid-template-columns:1fr}}
 </style>
 </head>
@@ -211,7 +212,8 @@ function actionButtonsHTML() {
     <button class="csv-btn" onclick="exportCSV()">⬇ EXPORTAR CSV</button>
     <a href="/api/admin-logout" class="action-btn logout">⛙ CERRAR SESIÓN</a>
   </div>
-  <div id="status"></div>`;
+  <div id="status"></div>
+  <div id="lastSave" style="text-align:center;font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.15);min-height:16px;margin-bottom:4px;transition:color 0.5s"></div>`;
 }
 
 function chartsSectionHTML(dailyLabels, dailyData, topModelsLabels, topModelsData, topIPsLabels, topIPsData, usages) {
@@ -237,10 +239,24 @@ function test(m,n){
 }
 function saveAll(){
   var c={};for(var i=1;i<=16;i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
-  var st=document.getElementById('status');st.innerHTML='<span class="info">⟫ GUARDANDO CONFIGURACIÓN...</span>';
+  var st=document.getElementById('status');var ls=document.getElementById('lastSave');
+  st.innerHTML='<span class="info">⟫⟫ GUARDANDO CONFIGURACIÓN...</span>';
   fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
-  .then(r=>r.json()).then(x=>{st.innerHTML=x.success?'<span class="ok">✓ CONFIGURACIÓN GUARDADA</span>':'<span class="err">⛔ ERROR AL GUARDAR</span>';setTimeout(()=>st.innerHTML='',3000);})
-  .catch(e=>{st.innerHTML='<span class="err">⛔ '+e.message+'</span>';});
+  .then(r=>r.json()).then(x=>{
+    if(x.success){
+      var now=new Date();
+      var timeStr=now.toLocaleDateString('es-CR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+      st.innerHTML='<span class="ok" style="display:inline-block;padding:6px 20px;border:1px solid rgba(0,255,136,0.3);border-radius:6px;background:rgba(0,255,136,0.06);animation:toastFade 3s ease forwards">✓ CONFIGURACIÓN GUARDADA</span>';
+      ls.innerHTML='Último guardado: '+timeStr;
+      ls.style.color='rgba(0,255,136,0.5)';
+      setTimeout(function(){ls.style.color='rgba(255,255,255,0.15)';},3000);
+      setTimeout(function(){st.innerHTML='';},3500);
+    } else {
+      st.innerHTML='<span class="err" style="display:inline-block;padding:6px 20px;border:1px solid rgba(255,0,0,0.3);border-radius:6px;background:rgba(255,0,0,0.06)">⛔ ERROR AL GUARDAR</span>';
+      setTimeout(function(){st.innerHTML='';},5000);
+    }
+  })
+  .catch(function(e){st.innerHTML='<span class="err" style="display:inline-block;padding:6px 20px;border:1px solid rgba(255,0,0,0.3);border-radius:6px;background:rgba(255,0,0,0.06)">⛔ '+e.message+'</span>';setTimeout(function(){st.innerHTML='';},5000);});
 }
 function checkAll(){
   var st=document.getElementById('status');st.innerHTML='<span class="info">⟫ CONSULTANDO MODELOS EN KILO.AI...</span>';

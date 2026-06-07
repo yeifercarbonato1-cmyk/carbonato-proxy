@@ -3,14 +3,13 @@ const path = require('path');
 const { MODELOS } = require('./models-def.js');
 const T = require('./admin-templates.js');
 const { verifyCookie } = require('./auth.js');
-const GITHUB_USAGE_URL = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
-
-function getToken() { return process.env.GITHUB_TOKEN || ''; }
+const { getGithubToken } = require('./admin/helpers.js');
+const { GITHUB_USAGE_URL } = require('./admin/db.js');
 
 async function loadDB() {
   let db = { usages: [], stats: {} };
   let loadedFromGitHub = false;
-  const token = getToken();
+  const token = getGithubToken();
   if (token) {
     try {
       const r = await fetch(GITHUB_USAGE_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
@@ -108,7 +107,7 @@ module.exports = async (req, res) => {
   if (!hdb || (Array.isArray(hdb) && hdb.length === 0)) {
     try {
       const ghUrl = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/health-db.json';
-      const ghToken = getToken();
+      const ghToken = getGithubToken();
       if (ghToken) {
         const r = await fetch(ghUrl, { headers: { 'Authorization': `token ${ghToken}`, 'Accept': 'application/vnd.github.v3+json' } });
         if (r.ok) { const d = await r.json(); hdb = JSON.parse(Buffer.from(d.content, 'base64').toString()); }
