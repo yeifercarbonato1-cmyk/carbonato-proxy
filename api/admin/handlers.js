@@ -816,6 +816,12 @@ async function handleTelegramWebhook(req, res) {
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
     const body = JSON.parse(Buffer.concat(chunks).toString());
 
+    // Health/diagnóstico
+    if (body.diagnose) {
+      const tokenOk = (process.env.TELEGRAM_BOT_TOKEN || '').length > 5;
+      return res.json({ ok: true, token_set: tokenOk, token_prefix: (process.env.TELEGRAM_BOT_TOKEN || '').substring(0,10) + '...' });
+    }
+
     const msg = body.message || body.edited_message;
     if (!msg || !msg.text) return res.status(200).json({ ok: true });
 
@@ -828,7 +834,7 @@ async function handleTelegramWebhook(req, res) {
 
     switch (cmd) {
       case '/start': {
-        await tgReply(chatId,
+        const reply = await tgReply(chatId,
           `<b>🤖 Carbonato Proxy Bot</b>\n\n` +
           `Comandos disponibles:\n\n` +
           `/status — Estado de todos los modelos\n` +
@@ -842,6 +848,11 @@ async function handleTelegramWebhook(req, res) {
           `/reset-stats — Reinicia contadores (pide confirmación)\n` +
           `/start — Esta ayuda`
         );
+        // Debug: log si tgReply falla
+        if (!reply.ok) {
+          const errText = await reply.text();
+          console.log('[tg] sendMessage error:', reply.status, errText.substring(0,200));
+        }
         break;
       }
 
