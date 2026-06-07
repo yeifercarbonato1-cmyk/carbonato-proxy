@@ -37,7 +37,7 @@
   },
   "modelo7": {
     "url": "https://api.kilo.ai/api/gateway/chat/completions",
-    "model": "google/gemini-2.0-flash-exp:free",
+    "model": "nvidia/nemotron-3-ultra-550b-a55b:free",
     "key": "",
     "system_prompt": ""
   },

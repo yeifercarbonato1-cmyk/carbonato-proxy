@@ -7,7 +7,7 @@ const MODELOS = [
   { id: 'modelo4',  name: 'Laguna XS.2',               icon: '⚡', desc: 'Máxima velocidad — respuestas instantáneas' },
   { id: 'modelo5',  name: 'Nemotron Nano Omni 30B',    icon: '✨', desc: 'Visión y texto — multimodal' },
   { id: 'modelo6',  name: 'Step-3.7-Flash',            icon: '🧠', desc: 'Razonamiento rápido y preciso' },
-  { id: 'modelo7',  name: 'Gemini 2.0 Flash',          icon: '🧪', desc: 'Google Gemini Flash — respuestas rápidas' },
+  { id: 'modelo7',  name: 'Nemotron 3 Ultra 550B',   icon: '🌀', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
   { id: 'modelo8',  name: 'OpenRouter',                icon: '🌐', desc: 'Acceso multi-proveedor' },
   { id: 'modelo9',  name: 'Smart Rotator',             icon: '🔄', desc: 'Failover inteligente — siempre activo' },
   { id: 'modelo10', name: 'Pollinations HD',           icon: '💎', desc: 'Generación de imágenes HD' },
