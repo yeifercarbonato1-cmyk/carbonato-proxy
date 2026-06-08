@@ -1,43 +1,68 @@
 // knowledge/rag.js — Motor RAG simple
-// 1. Carga knowledge/base.md (y archivos .md en knowledge/)
-// 2. Indexa por secciones
-// 3. Busca por keyword matching simple (sin vectores)
-// 4. Inyecta secciones relevantes en el prompt
+// Compatible con Vercel (no depende de fs para el contenido base)
+// + Fallback a archivos .md en knowledge/ para desarrollo local
 
 const fs = require('fs');
 const path = require('path');
 
-const KNOWLEDGE_DIR = path.join(__dirname);
+// Conocimiento por defecto (siempre disponible en Vercel)
+let _knowledgeText = `# Base de Conocimiento — modelo17
+
+## Sección 1: [Título]
+
+- Punto clave 1
+- Punto clave 2
+
+## Sección 2: [Título]
+
+- Dato relevante A
+- Dato relevante B
+`;
 
 let _cache = null;
 
+function parseSections(text) {
+  const sections = [];
+  const blocks = text.split(/\n## /);
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    const title = lines[0].replace(/^#+\s*/, '').trim();
+    const body = lines.slice(1).join('\n').trim();
+    if (body) {
+      const keywords = (title + ' ' + body).toLowerCase().split(/\s+/).filter(w => w.length > 3);
+      sections.push({ title, content: `## ${title}\n${body}`, keywords, raw: block });
+    }
+  }
+  return sections;
+}
+
 function loadKnowledge() {
   if (_cache) return _cache;
-  const sections = [];
+  let text = _knowledgeText;
+
+  // Fallback: intentar leer archivos .md del directorio (local)
   try {
-    const files = fs.readdirSync(KNOWLEDGE_DIR).filter(f => f.endsWith('.md'));
-    for (const file of files) {
-      const content = fs.readFileSync(path.join(KNOWLEDGE_DIR, file), 'utf8');
-      const blocks = content.split(/\n## /);
-      for (const block of blocks) {
-        const lines = block.trim().split('\n');
-        const title = lines[0].replace(/^#+\s*/, '').trim();
-        const body = lines.slice(1).join('\n').trim();
-        if (body) {
-          const keywords = (title + ' ' + body).toLowerCase().split(/\s+/).filter(w => w.length > 3);
-          sections.push({ title, content: `## ${title}\n${body}`, keywords, raw: block });
-        }
-      }
-    }
+    const files = fs.readdirSync(__dirname).filter(f => f.endsWith('.md') && f !== 'SKILL.md');
+    const mdContent = files.map(f => fs.readFileSync(path.join(__dirname, f), 'utf8')).join('\n\n');
+    if (mdContent.trim()) text = mdContent;
   } catch(e) {
-    console.log('[knowledge] Error cargando:', e.message);
+    // En Vercel no hay filesystem, usar default
   }
+
+  const sections = parseSections(text);
   _cache = { sections, fullText: sections.map(s => s.content).join('\n\n') };
   return _cache;
 }
 
 function clearCache() {
   _cache = null;
+}
+
+// Actualiza el conocimiento en runtime
+function updateKnowledge(text) {
+  _knowledgeText = text;
+  _cache = null;
+  return loadKnowledge();
 }
 
 // Busca secciones relevantes para una query
@@ -64,21 +89,6 @@ function search(query, limit = 3) {
   };
 }
 
-// System prompt con TODO el conocimiento (modo "gigante")
-function getSystemPromptFull() {
-  const db = loadKnowledge();
-  if (!db.fullText) return '';
-  return `[CONOCIMIENTO]\n${db.fullText}\n[/CONOCIMIENTO]\n\nUsa el conocimiento entre [CONOCIMIENTO] y [/CONOCIMIENTO] para responder preguntas. Si la pregunta no está cubierta, responde con tu conocimiento general.`;
-}
-
-// System prompt con solo secciones relevantes (modo RAG)
-function getSystemPromptRAG(query) {
-  const result = search(query, 3);
-  if (!result.found) return '';
-  const relevant = result.sections.map(s => s.content).join('\n\n');
-  return `[CONTEXTO RELEVANTE]\n${relevant}\n[/CONTEXTO RELEVANTE]\n\nUsa el contexto entre [CONTEXTO RELEVANTE] y [/CONTEXTO RELEVANTE] para responder. Si no hay contexto relevante, usa tu conocimiento general.`;
-}
-
 // Inyecta conocimiento RAG en mensajes
 function injectKnowledgeRAG(messages, query, limit = 3) {
   const result = search(query, limit);
@@ -102,4 +112,4 @@ function injectKnowledgeFull(messages) {
   return messages;
 }
 
-module.exports = { loadKnowledge, search, getSystemPromptFull, getSystemPromptRAG, injectKnowledgeRAG, injectKnowledgeFull, clearCache };
+module.exports = { loadKnowledge, search, injectKnowledgeRAG, injectKnowledgeFull, updateKnowledge, clearCache };
