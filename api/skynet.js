@@ -34,8 +34,7 @@ function getConfig() {
   try {
     const tmp = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8'));
     if (tmp && typeof tmp === 'object' && Object.keys(tmp).length > 0) return tmp;
-  } catch (e) {
-      console.log('[see:fix] catch en línea 37:', e.message);}
+  } catch(e) {}
   try {
     return JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
   } catch (e) {
