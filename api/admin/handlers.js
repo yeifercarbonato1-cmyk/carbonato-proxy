@@ -67,7 +67,7 @@ function handleHealthPage(req, res) {
 <title>HEALTH — Carbonato Proxy</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}h1{font-family:'JetBrains Mono',monospace;font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px}td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'JetBrains Mono',monospace;font-size:11px}tr:hover td{background:rgba(255,255,255,0.02)}#status{font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.4);margin-bottom:12px}.live{color:rgba(255,255,255,0.3);font-size:9px}.ok{color:rgba(255,255,255,0.7)}.fail{color:rgba(255,255,255,0.25)}</style></head>
 <body><h1>⟐ HEALTH DASHBOARD <span class="live">● LIVE</span></h1>
-<div id="status">Probando 16 modelos...</div>
+<div id="status">Probando 17 modelos...</div>
 <table><thead><tr><th>MODELO</th><th>NOMBRE</th><th>LATENCIA</th><th>STATUS</th></tr></thead><tbody id="tbody"></tbody></table>
 <script>
 const tbody=document.getElementById('tbody');
@@ -665,7 +665,8 @@ function handleDocsIA(req, res) {
         modelo13: { id: "openai/gpt-oss-120b:free", free: true, provider: "openrouter", description: "Potencia open-source" },
         modelo14: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "openrouter", description: "Alta capacidad de proceso" },
         modelo15: { id: "google/gemma-4-31b-it:free", free: true, provider: "openrouter", description: "Precisión y confiabilidad" },
-        modelo16: { id: "z-ai/glm-4.5-air:free", free: true, provider: "openrouter", description: "Arquitectura MoE eficiente" }
+        modelo16: { id: "z-ai/glm-4.5-air:free", free: true, provider: "openrouter", description: "Arquitectura MoE eficiente" },
+        modelo17: { id: "deepseek-v4-flash-free", free: true, provider: "opencode", description: "Conocimiento + caveman — respuestas brutales con base de datos" }
       },
       endpoints: {
         chat: "/chat/completions", models: "/models", admin: "/api/admin",
@@ -676,7 +677,7 @@ function handleDocsIA(req, res) {
         visitors: "/api/visitors/page", logs: "/api/logs/page", config: "/api/config/page"
       },
       usage: {
-        chat: { method: "POST", body: { model: "modelo1 - modelo16", messages: [{ role: "user", content: "Hello" }] } },
+        chat: { method: "POST", body: { model: "modelo1 - modelo17", messages: [{ role: "user", content: "Hello" }] } },
         image_gen: { endpoint: "/images/generations", model: "modelo10", body: { prompt: "a beautiful sunset over mountains" } }
       },
       auth: { note: "No global auth required. Admin panel uses credentials from env vars.", env_vars: ["GITHUB_TOKEN", "OR_KEY1", "OR_KEY2"] }
@@ -867,7 +868,7 @@ async function handleTelegramWebhook(req, res) {
           `/status — Estado de todos los modelos\n` +
           `/rapidos — Top 5 más rápidos ahora\n` +
           `/stats — Uso del día y totales\n` +
-          `/modelos — Lista de los 16 modelos\n` +
+          `/modelos — Lista de los 17 modelos\n` +
           `/ips — Top 10 IPs que más usan\n` +
           `/kernel — Último commit del proxy\n` +
           `/pausar N — Deshabilita modelo (ej: /pausar 7)\n` +

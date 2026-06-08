@@ -1,6 +1,6 @@
 # ⎈ CARBONATO PROXY
 
-Gateway unificado de IA — 16 modelos desde una sola URL compatible con OpenAI API.
+Gateway unificado de IA — 17 modelos desde una sola URL compatible con OpenAI API.
 
 **URL base:** `https://carbonato-proxy.vercel.app`
 
@@ -30,7 +30,7 @@ Gateway unificado de IA — 16 modelos desde una sola URL compatible con OpenAI 
 
 ---
 
-## Modelos (16)
+## Modelos (17)
 
 | # | Nombre | Descripción |
 |---|--------|-------------|
@@ -50,6 +50,7 @@ Gateway unificado de IA — 16 modelos desde una sola URL compatible con OpenAI 
 | 14 | Nemotron Super 120B | Alta capacidad de proceso |
 | 15 | Gemma 4 | Precisión y confiabilidad |
 | 16 | GLM 4.5 Air MoE | Arquitectura MoE eficiente |
+| 17 | Cavernícola | Conocimiento + caveman — respuestas brutales con base de datos |
 
 ---
 

@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
 
   // Generar cards desde MODELOS
   let cards = '';
-  for (let i = 1; i <= 16; i++) {
+  for (let i = 1; i <= 17; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || {};
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };

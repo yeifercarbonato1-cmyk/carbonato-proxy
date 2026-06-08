@@ -2,7 +2,7 @@
 // Separado de admin-panel.js para mantener la lógica limpia
 const { MODELOS } = require('./models-def.js');
 
-const COLORS = ['#00fff5','#ff00e6','#7b2ff7','#00ff88','#ffd700','#ff4500','#00bfff','#ff69b4','#00ffff','#ff8c00','#8a2be2','#ff1493','#00ff7f','#da70d6','#ff6347','#7fff00'];
+const COLORS = ['#00fff5','#ff00e6','#7b2ff7','#00ff88','#ffd700','#ff4500','#00bfff','#ff69b4','#00ffff','#ff8c00','#8a2be2','#ff1493','#00ff7f','#da70d6','#ff6347','#7fff00','#ff3300'];
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -158,7 +158,7 @@ function overviewHTML(totalReq, totalTok, totalIps, modelsActive) {
   <div class="ov-card"><div class="ov-label">Total Requests</div><div class="ov-value">${totalReq.toLocaleString()}</div></div>
   <div class="ov-card"><div class="ov-label">Tokens Consumidos</div><div class="ov-value">${totalTok.toLocaleString()}</div></div>
   <div class="ov-card"><div class="ov-label">IPs Únicas</div><div class="ov-value">${totalIps}</div></div>
-  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">${modelsActive}<span> / 16 activos</span></div></div>
+  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">${modelsActive}<span> / 17 activos</span></div></div>
 </div>`;
 }
 
