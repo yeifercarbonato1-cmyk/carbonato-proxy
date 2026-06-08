@@ -142,7 +142,7 @@ function renderKB(){
   if(!kb.length) html='<div class="note" style="margin-bottom:12px">No hay secciones de conocimiento. Agrega una abajo.</div>';
   document.getElementById('kbEntries').innerHTML=html;
 }
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(>/g,'&gt;')}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 function showStatus(msg, type){
   const st=document.getElementById('status');
