@@ -20,7 +20,8 @@
     { "src": "api/admin-tools.js", "use": "@vercel/node" },
     { "src": "api/skynet.js", "use": "@vercel/node" },
     { "src": "api/see.js", "use": "@vercel/node" },
-    { "src": "api/knowledge.js", "use": "@vercel/node" }
+    { "src": "api/knowledge.js", "use": "@vercel/node" },
+    { "src": "api/modelo17.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/chat/completions", "dest": "/api/chat.js" },
@@ -51,6 +52,7 @@
     { "src": "/v1/skynet(.*)", "dest": "/api/skynet.js" },
     { "src": "/api/see(.*)", "dest": "/api/see.js" },
     { "src": "/api/knowledge(.*)", "dest": "/api/knowledge.js" },
+    { "src": "/api/modelo17(.*)", "dest": "/api/modelo17.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }

@@ -127,7 +127,7 @@ module.exports = async (req, res) => {
     T.headHTML('⎈ CARBONATO — PANEL ⎈') +
     T.topBarHTML(userIp) +
     T.navHTML() +
-    T.overviewHTML(totalReq, totalTok, totalIps.size, 16) +
+    T.overviewHTML(totalReq, totalTok, totalIps.size, 17) +
     T.telegramStatusHTML(botStatus) +
     T.chartsSectionHTML(dailyLabels, dailyData, topModelsLabels, topModelsData, topIPsLabels, topIPsData, usages) +
     T.actionButtonsHTML() +

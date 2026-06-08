@@ -143,6 +143,7 @@ function navHTML() {
   <a href="/api/health/page" class="nav-link">⟐ HEALTH</a>
   <a href="/api/competencia/page" class="nav-link">⟐ COMPETENCIA</a>
   <a href="/api/rotator/page" class="nav-link">⟐ ROTADOR</a>
+  <a href="/api/modelo17" class="nav-link" style="color:#ff3300">🦴 CAVERNÍCOLA</a>
   <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>
   <a href="/api/playground" class="nav-link">⟐ PLAYGROUND</a>
   <a href="/api/visitors/page" class="nav-link">⟐ VISITANTES</a>
