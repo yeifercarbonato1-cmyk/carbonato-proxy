@@ -66,10 +66,17 @@ async function loadFromGitHub() {
 }
 
 async function load() {
+  function mergeDefaults(obj) {
+    // Rellena campos faltantes con DEFAULT_MEMORY
+    for (const key of Object.keys(DEFAULT_MEMORY)) {
+      if (!(key in obj)) obj[key] = JSON.parse(JSON.stringify(DEFAULT_MEMORY[key]));
+    }
+    return obj;
+  }
   // Try GitHub first (multi-instancia safe)
   const gh = await loadFromGitHub();
   if (gh && gh.data) {
-    // Merge con local si tiene ciclos más recientes
+    mergeDefaults(gh.data);
     const local = loadLocal();
     if (local && local.lastCycleTime && gh.data.lastCycleTime) {
       if (new Date(local.lastCycleTime) > new Date(gh.data.lastCycleTime)) {
@@ -78,14 +85,14 @@ async function load() {
       }
     }
     fs.writeFileSync(MEMORY_FILE, JSON.stringify(gh.data, null, 2));
-    return { memory: gh.data, sha: gh.sha };
+    return { memory: mergeDefaults(gh.data), sha: gh.sha };
   }
   // Fallback local
   const local = loadLocal();
-  if (local) return { memory: local, sha: '' };
+  if (local) return { memory: mergeDefaults(local), sha: '' };
   // Nuevo
   fs.writeFileSync(MEMORY_FILE, JSON.stringify(DEFAULT_MEMORY, null, 2));
-  return { memory: { ...DEFAULT_MEMORY }, sha: '' };
+  return { memory: { ...DEFAULT_MEMORY, modelHistory: {}, performance: { weeklyAvgLatency: [], weeklyFailRate: [], weeklyTokens: [] } }, sha: '' };
 }
 
 async function save(memory, sha) {

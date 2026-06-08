@@ -12,7 +12,7 @@ function shouldReplace(findings, modelKey, mem) {
   );
   if (healthFindings.length === 0) return false;
 
-  const modelHistory = mem.modelHistory[modelKey];
+  const modelHistory = (mem.modelHistory || {})[modelKey];
   if (!modelHistory) return healthFindings.length >= 2;
 
   // Si falló 3+ veces seguidas y lleva +24h sin OK

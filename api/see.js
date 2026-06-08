@@ -10,28 +10,23 @@ const memory = require('../see/memory.js');
 const LATEST_FILE = '/tmp/see-latest.json';
 const GH_LATEST_RAW = 'https://raw.githubusercontent.com/yeifer125/proxi-datos/main/see-latest.json';
 
-// Carga el último resultado: local /tmp/ primero, luego GitHub API
+// Carga el último resultado: GitHub API primero (persistente), luego /tmp/
 async function loadLatest() {
-  // Intento local
-  try {
-    return JSON.parse(fs.readFileSync(LATEST_FILE, 'utf8'));
-  } catch(e) {
-      console.log('[see:fix] catch en línea 18:', e.message);
-      console.log('[see:fix] catch en línea 18:', e.message);
-      console.log('[see:fix] catch en línea 18:', e.message);}
-
-  // Intento GitHub API (persistente entre instancias)
+  // Intento GitHub API (persistente entre instancias Vercel)
   try {
     const r = await fetch(GH_LATEST_RAW, { signal: AbortSignal.timeout(5000) });
     if (r.ok) {
       const data = await r.json();
       // Cache local
-      fs.writeFileSync(LATEST_FILE, JSON.stringify(data));
+      try { fs.writeFileSync(LATEST_FILE, JSON.stringify(data)); } catch(e) {}
       return data;
     }
-  } catch(e) {
-      console.log('[see:fix] catch en línea 32:', e.message);
-      console.log('[see:fix] catch en línea 32:', e.message);}
+  } catch(e) {}
+
+  // Fallback a /tmp/ local (cold start sin GitHub)
+  try {
+    return JSON.parse(fs.readFileSync(LATEST_FILE, 'utf8'));
+  } catch(e) {}
 
   // Fallback: construir desde memoria persistente
   try {
