@@ -68,9 +68,31 @@ async function callModel(modelKey, messages, opts = {}) {
   if (cfg.isRotator) throw new Error(`No se puede llamar al rotador directamente`);
 
   const maxTokens = opts.max_tokens || 512;
+
+  // Truncar messages a ~8000 chars total (excepto si contiene imágenes)
+  const hasImages = messages.some(m => Array.isArray(m.content) && m.content.some(p => p.type === 'image_url'));
+  let msgs = messages;
+  if (!hasImages) {
+    const MAX_CHARS = 8000;
+    let totalChars = 0;
+    const truncated = [];
+    for (const m of messages) {
+      const content = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+      const remaining = MAX_CHARS - totalChars;
+      if (remaining <= 0) break;
+      if (content.length > remaining) {
+        truncated.push({ ...m, content: content.slice(0, remaining) + '...[truncated]' });
+        break;
+      }
+      truncated.push(m);
+      totalChars += content.length;
+    }
+    msgs = truncated;
+  }
+
   const body = {
     model: cfg.model,
-    messages,
+    messages: msgs,
     max_tokens: maxTokens,
     temperature: opts.temperature ?? 0.7,
     stream: false
@@ -128,41 +150,25 @@ async function callImageModel(prompt) {
 
 function buildRouterPrompt() {
   const descriptions = MODELOS
-    .filter(m => m.id !== 'modelo9') // excluir rotador
-    .map(m => {
-      let extra = '';
-      if (m.id === 'modelo4') extra = ' — MEJOR PARA VELOCIDAD, saludos, consultas simples';
-      else if (m.id === 'modelo2') extra = ' — MEJOR PARA razonamiento profundo, análisis, código complejo';
-      else if (m.id === 'modelo7') extra = ' — MEJOR PARA problemas masivos, matemáticas, investigación';
-      else if (m.id === 'modelo5') extra = ' — MEJOR PARA imágenes, visión multimodal';
-      else if (m.id === 'modelo10') extra = ' — SOLO para generar imágenes';
-      else if (m.id === 'modelo11') extra = ' — tool calling, funciones, JSON estructurado';
-      else if (m.id === 'modelo1') extra = ' — buena opción genérica';
-      else if (m.id === 'modelo6') extra = ' — rápido y preciso, buen balance';
-      else if (m.id === 'modelo3') extra = ' — equilibrio velocidad/calidad';
-      return `${m.id}: ${m.desc}${extra}`;
-    }).join('\n');
+    .filter(m => m.id !== 'modelo9')
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map(m => `${m.id}: ${m.desc}`).join('\n');
 
-  return `Eres SKYNET ROUTER, el núcleo de inteligencia de una red de IA autónoma.
-
-Tu función: analizar el mensaje del usuario y elegir el modelo ÓPTIMO para responder.
+  return `Eres SKYNET ROUTER. Analiza el mensaje y elige el modelo ÓPTIMO.
 
 MODELOS DISPONIBLES:
 ${descriptions}
 
-INSTRUCCIONES:
-- Analiza el contenido, la complejidad y la intención del mensaje.
-- Si el mensaje pide EXPLÍCITAMENTE crear una imagen, elige modelo10.
-- Si el mensaje contiene una imagen (data:image o URL de imagen), elige modelo5.
-- Para preguntas simples, saludos, charla casual → modelo4 (más rápido).
-- Para código, análisis, razonamiento → modelo2 o modelo7 según profundidad.
-- Para tool calling o JSON estructurado → modelo11.
-- Para el resto → modelo1 (balanceado).
+REGLAS DE ENRUTAMIENTO:
+- modelo4 → más rápido (saludos, consultas simples, charla casual)
+- modelo2, modelo7 → más inteligentes (código, análisis, razonamiento)
+- modelo5 → imágenes, visión multimodal (si el mensaje contiene data:image o image_url)
+- modelo10 → SOLO para generar imágenes (si el usuario pide explícitamente crear una imagen)
+- modelo11 → tool calling, JSON estructurado
+- modelo1 → balanceado (default)
+- modelo9 → NO usar (rotador interno)
 
-Responde ÚNICAMENTE con el ID del modelo en este formato exacto:
-{"model":"modeloX","reason":"razón breve"}
-
-Nada más. Solo el JSON.`;
+Responde ÚNICAMENTE JSON: {"model":"modeloX","reason":"razón breve"}`;
 }
 
 async function handleRouter(req, res) {
@@ -302,12 +308,19 @@ async function handleChain(req, res) {
         tokens: result.raw?.usage?.total_tokens || 0
       });
 
-      // Agregar output al contexto para el siguiente modelo
-      accumulatedMessages = [
-        ...accumulatedMessages,
-        { role: 'assistant', content: result.content },
-        { role: 'user', content: `Continúa desde donde quedó el modelo anterior. Mejora, refina o completa lo que dijo. No repitas, solo construye sobre ello.` }
-      ];
+      // Mantener mensajes originales + último output (evita O(n²))
+      if (i === 0) {
+        accumulatedMessages = [
+          ...messages,
+          { role: 'assistant', content: result.content },
+          { role: 'user', content: `Continúa desde donde quedó el modelo anterior. Mejora, refina o completa. No repitas.` }
+        ];
+      } else {
+        accumulatedMessages = [
+          ...messages,
+          { role: 'user', content: `Resultado del paso anterior (${modelKey}):\n${result.content.slice(0, 2000)}\n\nContinúa refinando o completando. No repitas.` }
+        ];
+      }
 
       // Si es el último paso, devolver su output
       if (i === chain.length - 1) {
@@ -343,45 +356,51 @@ async function handleChain(req, res) {
   }
 }
 
-// ─── 3. SCANNER ──────────────────────────────────────────
+// ─── Scan compartido (paralelo, chunks de 4) ────────────
 
-async function handleScan(req, res) {
+async function scanModels(timeout = 10000) {
   const CONFIG = getConfig();
   const results = [];
+  const CHUNK = 4;
 
+  // Modelos a probar (saltar rotador)
+  const toScan = MODELOS.filter(m => CONFIG[m.id] && !CONFIG[m.id].isRotator);
+  // Modelos skipped
   for (const model of MODELOS) {
     const cfg = CONFIG[model.id];
     if (!cfg || cfg.isRotator) {
-      results.push({ id: model.id, status: 'skipped', reason: !cfg ? 'no config' : 'rotator' });
-      continue;
-    }
-
-    const t0 = Date.now();
-    try {
-      const r = await callModel(model.id, [{ role: 'user', content: 'ping' }], {
-        max_tokens: 1,
-        timeout: 10000
-      });
-      const latency = Date.now() - t0;
-      results.push({
-        id: model.id,
-        status: 'online',
-        latency,
-        tokens: r.raw?.usage?.total_tokens || 0
-      });
-      memSuccess(model.id);
-    } catch (e) {
-      const latency = Date.now() - t0;
-      results.push({
-        id: model.id,
-        status: 'offline',
-        latency,
-        error: e.message.slice(0, 100)
-      });
-      memFail(model.id);
+      results.push({ id: model.id, status: 'skipped', reason: !cfg ? 'no config' : 'rotator', latency: 0 });
     }
   }
 
+  // Procesar en chunks de 4 para no saturar Vercel Hobby
+  for (let i = 0; i < toScan.length; i += CHUNK) {
+    const chunk = toScan.slice(i, i + CHUNK);
+    const chunkResults = await Promise.allSettled(chunk.map(model => {
+      const t0 = Date.now();
+      return callModel(model.id, [{ role: 'user', content: 'ping' }], { max_tokens: 1, timeout })
+        .then(r => {
+          memSuccess(model.id);
+          return { id: model.id, status: 'online', latency: Date.now() - t0, tokens: r.raw?.usage?.total_tokens || 0 };
+        })
+        .catch(e => {
+          memFail(model.id);
+          return { id: model.id, status: 'offline', latency: Date.now() - t0, error: e.message.slice(0, 100) };
+        });
+    }));
+    for (const r of chunkResults) {
+      if (r.status === 'fulfilled') results.push(r.value);
+      else results.push({ id: 'unknown', status: 'error', latency: 0, error: r.reason?.message?.slice(0, 100) || 'unknown' });
+    }
+  }
+
+  return results;
+}
+
+// ─── 3. SCANNER ──────────────────────────────────────────
+
+async function handleScan(req, res) {
+  const results = await scanModels(10000);
   const online = results.filter(r => r.status === 'online').length;
   const offline = results.filter(r => r.status === 'offline').length;
   const memoryStats = getMemoryStats();
@@ -407,25 +426,9 @@ function handleMemoryStats(req, res) {
 // ─── 5. DATA HUB — todos los datos en un endpoint ────────
 
 async function handleDataHub(req, res) {
-  const CONFIG = getConfig();
   const memoryStats = getMemoryStats();
-  
-  // Scan con timeout más corto para el dashboard
-  const scanResults = [];
-  for (const model of MODELOS) {
-    const cfg = CONFIG[model.id];
-    if (!cfg || cfg.isRotator) {
-      scanResults.push({ id: model.id, status: 'skipped', reason: !cfg ? 'no config' : 'rotator' });
-      continue;
-    }
-    const t0 = Date.now();
-    try {
-      await callModel(model.id, [{ role: 'user', content: 'ping' }], { max_tokens: 1, timeout: 5000 });
-      scanResults.push({ id: model.id, status: 'online', latency: Date.now() - t0 });
-    } catch (e) {
-      scanResults.push({ id: model.id, status: 'offline', latency: Date.now() - t0, error: e.message.slice(0, 80) });
-    }
-  }
+  const scanResults = await scanModels(5000);
+  const CONFIG = getConfig();
 
   return json(res, 200, {
     timestamp: Date.now(),
@@ -448,8 +451,11 @@ async function handleDataHub(req, res) {
 // ─── 6.5 SEE INTEGRATION: Diagnose & Evolve ──────────────
 
 async function handleSeeDiagnose(req, res) {
+  let diagnose;
+  try { diagnose = require('../see/diagnose.js'); } catch(e) {
+    return json(res, 501, { error: { message: 'SEE diagnose module not available', type: 'not_implemented' } });
+  }
   try {
-    const diagnose = require('../see/diagnose.js');
     const result = await diagnose.fullDiagnose();
     return json(res, 200, { ok: true, ...result });
   } catch(e) {
@@ -459,8 +465,11 @@ async function handleSeeDiagnose(req, res) {
 }
 
 async function handleSeeEvolve(req, res) {
+  let worker;
+  try { worker = require('../see/see-worker.js'); } catch(e) {
+    return json(res, 501, { error: { message: 'SEE evolve module not available', type: 'not_implemented' } });
+  }
   try {
-    const worker = require('../see/see-worker.js');
     const result = await worker.runCycle();
     return json(res, 200, { ok: true, ...result });
   } catch(e) {
@@ -495,19 +504,18 @@ async function handleLogs(req, res) {
 // ─── Router principal ────────────────────────────────────
 
 module.exports = async (req, res) => {
-  const urlPath = (req.url || '').split('?')[0];
+  let urlPath = (req.url || '').split('?')[0];
+  // Normalizar: eliminar trailing slash (excepto si es solo '/')
+  if (urlPath.length > 1 && urlPath.endsWith('/')) urlPath = urlPath.slice(0, -1);
   const method = req.method;
   const ip = getClientIp(req);
   const t0 = Date.now();
 
-  // CORS headers básicos
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (method === 'OPTIONS') {
-    return res.status(204).end();
-  }
+  // Helper para logAccess silencioso
+  const log = (entry) => logAccess({
+    timestamp: new Date().toISOString(), ip, ...entry,
+    latency_ms: Date.now() - t0
+  }).catch(() => {});
 
   // Interceptar res.json para capturar modelo y status
   const _origJson = res.json.bind(res);
@@ -523,60 +531,60 @@ module.exports = async (req, res) => {
     if (urlPath.startsWith('/v1/skynet/logs')) {
       const result = await handleLogs(req, res);
       _respStatus = 200;
-      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: urlPath, method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      log({ endpoint: urlPath, method });
       return result;
     }
 
     if (urlPath === '/v1/skynet/chat' && method === 'POST') {
       const result = await handleRouter(req, res);
       _respStatus = 200;
-      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/chat', method, status: 'ok', model: _respModel, latency_ms: Date.now() - t0 }).catch(() => {});
+      log({ endpoint: '/v1/skynet/chat', method, model: _respModel });
       return result;
     }
     if (urlPath === '/v1/skynet/chain' && method === 'POST') {
       const result = await handleChain(req, res);
       _respStatus = 200;
-      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/chain', method, status: 'ok', model: _respModel || '', latency_ms: Date.now() - t0 }).catch(() => {});
+      log({ endpoint: '/v1/skynet/chain', method, model: _respModel || '' });
       return result;
     }
     if (urlPath === '/v1/skynet/scan' && (method === 'POST' || method === 'GET')) {
       const result = await handleScan(req, res);
       _respStatus = 200;
-      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/scan', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      log({ endpoint: '/v1/skynet/scan', method });
       return result;
     }
     if (urlPath === '/v1/skynet/memory' && method === 'GET') {
       const result = handleMemoryStats(req, res);
       _respStatus = 200;
-      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/memory', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      log({ endpoint: '/v1/skynet/memory', method });
       return result;
     }
     if (urlPath === '/v1/skynet/data' && (method === 'GET' || method === 'POST')) {
       const result = await handleDataHub(req, res);
       _respStatus = 200;
-      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/data', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      log({ endpoint: '/v1/skynet/data', method });
       return result;
     }
     // ─── 7. SEE INTEGRATION ────────────────────────────────
     if (urlPath === '/v1/skynet/diagnose' && (method === 'GET' || method === 'POST')) {
       const result = await handleSeeDiagnose(req, res);
       _respStatus = 200;
-      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/diagnose', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      log({ endpoint: '/v1/skynet/diagnose', method });
       return result;
     }
     if (urlPath === '/v1/skynet/evolve' && method === 'POST') {
       const result = await handleSeeEvolve(req, res);
       _respStatus = 200;
-      logAccess({ timestamp: new Date().toISOString(), ip, endpoint: '/v1/skynet/evolve', method, status: 'ok', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+      log({ endpoint: '/v1/skynet/evolve', method });
       return result;
     }
   } catch (e) {
     console.log(`[skynet] Error global: ${e.message}`);
-    logAccess({ timestamp: new Date().toISOString(), ip, endpoint: urlPath, method, status: 'error', model: '', latency_ms: Date.now() - t0, error: e.message.slice(0, 200) }).catch(() => {});
+    log({ endpoint: urlPath, method, status: 'error', error: e.message.slice(0, 200) });
     return json(res, 500, { error: { message: `Skynet error: ${e.message}`, type: 'skynet_error' } });
   }
 
-  logAccess({ timestamp: new Date().toISOString(), ip, endpoint: urlPath, method, status: '404', model: '', latency_ms: Date.now() - t0 }).catch(() => {});
+  log({ endpoint: urlPath, method, status: '404' });
   return json(res, 404, { error: { message: 'Skynet endpoint not found', type: 'not_found' } });
 };
 

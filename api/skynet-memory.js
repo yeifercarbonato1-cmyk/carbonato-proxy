@@ -5,13 +5,20 @@ const fs = require('fs');
 const MEMORY_PATH = '/tmp/skynet-memory.json';
 const ACTIVITY_PATH = '/tmp/skynet-activity.json';
 const ACCESS_LOG_PATH = '/tmp/skynet-access-log.json';
+const LAST_SYNC_PATH = '/tmp/skynet-last-sync';
 
 // GitHub persistence (same pattern as admin/db.js)
 const GITHUB_OWNER = 'yeifer125';
 const GITHUB_REPO = 'proxi-datos';
 const GITHUB_ACCESS_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/skynet-access-log.json`;
 
-let _lastAccessSync = 0;
+// Sync timestamp helpers (persiste en /tmp/ para sobrevivir cold starts)
+function getLastSync() {
+  try { return parseInt(fs.readFileSync(LAST_SYNC_PATH, 'utf8'), 10) || 0; } catch(e) { return 0; }
+}
+function setLastSync(ts) {
+  try { fs.writeFileSync(LAST_SYNC_PATH, String(ts)); } catch(e) {}
+}
 
 function getMemory() {
   try {
@@ -107,8 +114,8 @@ function logActivity(type, data) {
   try {
     let log = [];
     try {
-          console.log('[see:fix] catch en línea 109:', e.message);
-          console.log('[see:fix] catch en línea 109:', e.message); log = JSON.parse(fs.readFileSync(ACTIVITY_PATH, 'utf8')); } catch (e) {}
+      log = JSON.parse(fs.readFileSync(ACTIVITY_PATH, 'utf8'));
+    } catch (e) { /* archivo no existe aún */ }
     log.push({ type, data, timestamp: Date.now() });
     if (log.length > 200) log = log.slice(-200);
     fs.writeFileSync(ACTIVITY_PATH, JSON.stringify(log, null, 2));
@@ -168,8 +175,6 @@ function getLocalAccessLog() {
 }
 
 function saveLocalAccessLog(entries) {
-  console.log('[see:fix] catch en línea 169:', e.message);
-  console.log('[see:fix] catch en línea 169:', e.message);
   try { fs.writeFileSync(ACCESS_LOG_PATH, JSON.stringify(entries, null, 2)); } catch(e) {}
 }
 
@@ -182,10 +187,11 @@ async function logAccess(entry) {
   if (local.length > 1000) local.splice(0, local.length - 1000);
   saveLocalAccessLog(local);
   
-  // Sync a GitHub cada 30s (rate limit)
+  // Sync a GitHub cada 30s (rate limit) — persistente en /tmp/
   const now = Date.now();
-  if (now - _lastAccessSync < 30000) return;
-  _lastAccessSync = now;
+  const lastSync = getLastSync();
+  if (now - lastSync < 30000) return;
+  setLastSync(now);
   
   const gh = await readAccessLogFromGitHub();
   let merged = [];
