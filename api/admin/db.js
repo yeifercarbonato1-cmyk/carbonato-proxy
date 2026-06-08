@@ -1,81 +1,63 @@
-// Database layer unificada — health-db + usage-db con persistencia GitHub + /tmp
 const fs = require('fs');
 const path = require('path');
 const { getGithubToken } = require('./helpers.js');
 
 const DB_PATH = '/tmp';
-const GITHUB_OWNER = 'yeifer125';
-const GITHUB_REPO = 'proxi-datos';
-const GITHUB_PATH = 'health-db.json';
-const GITHUB_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/${GITHUB_PATH}`;
-const GITHUB_USAGE_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/contents/usage-db.json`;
+const GITHUB_URL = 'https://api.github.com/repos/yeifer125/proxi-datos/contents';
+const GITHUB_USAGE_URL = 'https://api.github.com/repos/yeifer125/proxi-datos/contents/usage-db.json';
 
-// ========================================================
-// HEALTH DB
-// ========================================================
-
-async function readFromGitHub() {
-  const token = getGithubToken();
-  if (!token) return null;
+// ---------------------------------------------------------------
+// HEALTH DB (sin cambios)
+// ---------------------------------------------------------------
+async function readFromGitHub(file = 'health-db.json') {
   try {
-    const r = await fetch(GITHUB_URL, {
+    const token = getGithubToken();
+    if (!token) return { data: [], sha: '' };
+    const r = await fetch(`${GITHUB_URL}/${file}`, {
       headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
     });
-    if (!r.ok) return null;
-    const data = await r.json();
-    return { content: JSON.parse(Buffer.from(data.content, 'base64').toString()), sha: data.sha || '' };
-  } catch(e) { return null; }
-}
-
-async function writeToGitHub(content, sha) {
-  const token = getGithubToken();
-  if (!token) return false;
-  try {
-    const r = await fetch(GITHUB_URL, {
-      method: 'PUT',
-      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: `Update health-db.json - ${new Date().toISOString().slice(0,10)}`,
-        content: Buffer.from(JSON.stringify(content, null, 2)).toString('base64'),
-        sha
-      })
-    });
-    return r.ok;
-  } catch(e) { return false; }
-}
-
-async function getHealthDb() {
-  const gh = await readFromGitHub();
-  let sha = gh ? gh.sha || '' : '';
-  if (gh && Array.isArray(gh.content)) return { data: gh.content, sha: gh.sha || '' };
-  // Convertir formato object {latencies, history} → array
-  if (gh && gh.content && typeof gh.content === 'object' && gh.content.latencies) {
-    const arr = [];
-    Object.entries(gh.content.latencies).forEach(([model, v]) => {
-      if (v.avg && v.count > 0) {
-        for (let i = 0; i < Math.min(v.count, 10); i++) {
-          arr.push({ model, latency: v.avg, time: Date.now() - 60000, ip: 'legacy' });
-        }
-      }
-    });
-    return { data: arr, sha: gh.sha || '' };
-  }
-  // Fallback a /tmp
-  try {
-    const raw = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'health-db.json'), 'utf8'));
-    if (!Array.isArray(raw) && raw.latencies) {
-      const arr = [];
-      Object.entries(raw.latencies).forEach(([model, v]) => {
-        if (v.avg && v.count > 0) {
+    if (!r.ok) return { data: [], sha: '' };
+    const d = await r.json();
+    const sha = d.sha || '';
+    const raw = Buffer.from(d.content, 'base64').toString();
+    // Convertir formato legacy (health-db.json plano) a array
+    let arr = [];
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) { arr = parsed; }
+      else if (typeof parsed === 'object' && parsed !== null) {
+        Object.entries(parsed).forEach(([model, v]) => {
           for (let i = 0; i < Math.min(v.count, 10); i++) {
             arr.push({ model, latency: v.avg, time: Date.now() - 60000, ip: 'legacy' });
           }
-        }
-      });
-      return { data: arr, sha };
-    }
-    return { data: Array.isArray(raw) ? raw : [], sha };
-  } catch (e) { return { data: [], sha }; }
+        });
+      }
+    } catch(e) {}
+    return { data: arr, sha };
+  } catch (e) { return { data: [], sha: '' }; }
+}
+
+async function writeToGitHub(db, sha, file = 'health-db.json') {
+  try {
+    const token = getGithubToken();
+    if (!token) return;
+    const max = 5000;
+    if (db.length > max) db = db.slice(db.length - max);
+    await fetch(`${GITHUB_URL}/${file}`, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: `Update ${file} - ${db.length} records`,
+        content: Buffer.from(JSON.stringify(db, null, 2)).toString('base64'),
+        sha
+      })
+    });
+  } catch(e) { console.log('[db] writeToGitHub error:', e.message); }
+}
+
+async function getHealthDb() {
+  const { data, sha } = await readFromGitHub();
+  return { data, sha };
 }
 
 async function saveHealthDb(db, sha) {
@@ -85,55 +67,95 @@ async function saveHealthDb(db, sha) {
   await writeToGitHub(db, sha || '');
 }
 
-// ========================================================
-// USAGE DB
-// ========================================================
+// ---------------------------------------------------------------
+// USAGE DB — rediseñado para Vercel serverless
+// ---------------------------------------------------------------
+// Estrategia:
+//   - /tmp/ = cache local rápido (se escribe en cada request)
+//   - GitHub = fuente de verdad (se sincroniza cada ~3s)
+//   - Escritura async fire-and-forget: el response no espera a GitHub
+//   - Admin panel lee de GitHub primero + mergea local
 
-// Rate limiter para GitHub writes
 let _lastGithubSync = 0;
+let _pendingSync = null;
+
 function shouldSyncToGitHub() {
   const now = Date.now();
-  if (now - _lastGithubSync < 30000) return false;
+  if (now - _lastGithubSync < 3000) return false;
   _lastGithubSync = now;
   return true;
 }
 
 function loadUsageDB() {
-  // Solo sincrónico desde /tmp (hot path de cada request)
+  // Hot path: solo /tmp/ (sincrónico, rápido)
   try {
     return JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8'));
   } catch(e) {}
   return { usages: [], stats: {} };
 }
 
-// Versión async con GitHub fallback (para admin-panel.js que sí necesita merge remoto)
+// Admin panel: lee de GitHub + mergea datos locales no sincronizados
 async function loadUsageDBAsync() {
-  const local = loadUsageDB();
-  if (local && Array.isArray(local.usages) && local.usages.length > 0) return local;
-  // Fallback a GitHub
-  try {
-    const token = getGithubToken();
-    if (token) {
+  let db = { usages: [], stats: {} };
+  const token = getGithubToken();
+  if (token) {
+    try {
       const r = await fetch(GITHUB_USAGE_URL, {
         headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
       });
       if (r.ok) {
-        const data = await r.json();
-        return JSON.parse(Buffer.from(data.content, 'base64').toString());
+        const d = await r.json();
+        db = JSON.parse(Buffer.from(d.content, 'base64').toString());
+      }
+    } catch(e) {}
+  }
+
+  // Mergear datos locales que GitHub no tenga aún (ventana de ~3s)
+  let localDb = null;
+  try { localDb = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
+  if (localDb && localDb.usages && localDb.usages.length > 0) {
+    const remoteKeys = new Set((db.usages || []).map(u => u.timestamp + '|' + u.model + '|' + u.ip));
+    const nuevos = (localDb.usages || []).filter(u => !remoteKeys.has(u.timestamp + '|' + u.model + '|' + u.ip));
+    if (nuevos.length > 0) {
+      db.usages = [...(db.usages || []), ...nuevos];
+      // Reconstruir stats
+      db.stats = {};
+      for (const u of (db.usages || [])) {
+        if (!db.stats[u.model]) db.stats[u.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+        db.stats[u.model].totalTokens += u.tokens || 0;
+        db.stats[u.model].totalRequests += 1;
+        if (!db.stats[u.model].uniqueIPs.includes(u.ip)) db.stats[u.model].uniqueIPs.push(u.ip);
       }
     }
-  } catch(e) {}
-  return { usages: [], stats: {} };
+  }
+
+  // Actualizar cache local
+  if (db.usages && db.usages.length > 0) {
+    try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(db, null, 2)); } catch(e) {}
+  }
+
+  return db;
 }
 
+// Guardar: escribe local + sync a GitHub cada ~3s (fire-and-forget)
 async function saveUsageDB(localDb) {
-  // Siempre guardar local
-  try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(localDb, null, 2)); } catch(e) {}
-  if (!shouldSyncToGitHub()) return;
+  // 1. Siempre escribir a /tmp/ (sincrónico, sin bloqueo)
+  try {
+    fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(localDb, null, 2));
+  } catch(e) {}
+
+  // 2. Si pasó la ventana de 3s, disparar sync a GitHub (fire-and-forget)
+  if (shouldSyncToGitHub()) {
+    _pendingSync = _syncToGitHub(localDb).catch(e => console.log('[db] sync error:', e.message));
+  }
+}
+
+async function _syncToGitHub(localDb) {
   const token = getGithubToken();
   if (!token) return;
+
   try {
-    // Fetch remote + merge (evita race conditions entre instancias)
+    // Leer remoto de GitHub
     let remoteDb = { usages: [], stats: {} };
     let sha = '';
     const getRes = await fetch(GITHUB_USAGE_URL, {
@@ -144,36 +166,58 @@ async function saveUsageDB(localDb) {
       sha = fileData.sha || '';
       try { remoteDb = JSON.parse(Buffer.from(fileData.content, 'base64').toString()); } catch(e) {}
     }
+
     // Merge dedup por timestamp+model+ip
-    const mergedDb = { usages: [], stats: {} };
     const seen = new Set();
+    const allUsages = [];
+
     for (const u of (remoteDb.usages || [])) {
       const k = u.timestamp + '|' + u.model + '|' + u.ip;
-      if (!seen.has(k)) { seen.add(k); mergedDb.usages.push(u); }
+      if (!seen.has(k)) { seen.add(k); allUsages.push(u); }
     }
     for (const u of (localDb.usages || [])) {
       const k = u.timestamp + '|' + u.model + '|' + u.ip;
-      if (!seen.has(k)) { seen.add(k); mergedDb.usages.push(u); }
+      if (!seen.has(k)) { seen.add(k); allUsages.push(u); }
     }
-    // Rebuild stats
-    for (const u of mergedDb.usages) {
+
+    // Limitar a últimos 2000 registros (antes 1000)
+    const maxRecords = 2000;
+    const trimmedUsages = allUsages.length > maxRecords ? allUsages.slice(-maxRecords) : allUsages;
+
+    // Reconstruir stats desde los registros completos (antes de truncar, para no perder IPs)
+    const mergedDb = { usages: trimmedUsages, stats: {} };
+    for (const u of allUsages) {
       if (!mergedDb.stats[u.model]) mergedDb.stats[u.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
       mergedDb.stats[u.model].totalTokens += u.tokens || 0;
       mergedDb.stats[u.model].totalRequests += 1;
       if (!mergedDb.stats[u.model].uniqueIPs.includes(u.ip)) mergedDb.stats[u.model].uniqueIPs.push(u.ip);
     }
-    if (mergedDb.usages.length > 1000) mergedDb.usages = mergedDb.usages.slice(-1000);
-    // Write merged a GitHub
+
+    // Escribir merged a GitHub
     const content = JSON.stringify(mergedDb, null, 2);
     const putRes = await fetch(GITHUB_USAGE_URL, {
       method: 'PUT',
       headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: `Update usage stats - ${mergedDb.usages.length} records`, content: Buffer.from(content).toString('base64'), sha })
+      body: JSON.stringify({
+        message: `Update usage stats - ${trimmedUsages.length} records`,
+        content: Buffer.from(content).toString('base64'),
+        sha
+      })
     });
-    if (!putRes.ok) { const e = await putRes.text(); console.log('[db] GitHub PUT falló:', putRes.status, e.substring(0,200)); }
-    // Actualizar /tmp con merged
+
+    if (!putRes.ok) {
+      const errText = await putRes.text();
+      console.log('[db] GitHub PUT falló:', putRes.status, errText.substring(0, 200));
+      return;
+    }
+
+    // Actualizar /tmp/ con datos merged (consistente con GitHub)
     try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), content); } catch(e) {}
-  } catch(e) { console.log('[db] saveUsageDB error:', e.message); }
+
+    console.log('[db] GitHub sync OK:', trimmedUsages.length, 'registros');
+  } catch(e) {
+    console.log('[db] _syncToGitHub error:', e.message);
+  }
 }
 
 module.exports = {

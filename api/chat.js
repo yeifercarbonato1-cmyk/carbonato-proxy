@@ -295,7 +295,7 @@ module.exports = async (req, res) => {
               db.lastUpdated = new Date().toISOString();
               db.lastModel = userModel;
               db.lastTokens = tokens;
-              await saveUsageDB(db);
+              saveUsageDB(db);
             } catch(e) {}
             
             saveLog(userModel, userIp, upstreamRes.status, 0, null);
@@ -442,7 +442,7 @@ module.exports = async (req, res) => {
           if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
           db.lastUpdated = new Date().toISOString();
           db.lastModel = userModel;
-          await saveUsageDB(db);
+          saveUsageDB(db);
         } catch(e) { console.log('Error guardando uso streaming:', e.message); }
         saveLog(userModel, userIp, 200, 0, null);
         return;
@@ -531,7 +531,7 @@ module.exports = async (req, res) => {
         db.lastUpdated = new Date().toISOString();
         db.lastModel = userModel;
         db.lastTokens = tokens;
-        await saveUsageDB(db);
+        saveUsageDB(db);
       } catch(e) { console.log('Error guardando uso:', e.message); }
       
       saveLog(userModel, userIp, upstreamRes.status, 0, null);
