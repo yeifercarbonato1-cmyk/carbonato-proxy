@@ -315,9 +315,11 @@ select{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12)
 const chat=document.getElementById('chat');
 function addMsg(role,content,model){
   const d=document.createElement('div');d.className='msg msg-'+role;
-  d.innerHTML='<div class="msg-label">'+(role==='user'?'Tú':(model||'IA'))+'</div><div class="msg-content">'+content+'</div>';
+  const safe=esc(content);
+  d.innerHTML='<div class="msg-label">'+(role==='user'?'Tú':(model||'IA'))+'</div><div class="msg-content">'+safe+'</div>';
   chat.appendChild(d);chat.scrollTop=chat.scrollHeight;
 }
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;')}
 async function enviar(){
   const input=document.getElementById('input');const text=input.value.trim();
   if(!text)return;addMsg('user',text);input.value='';
