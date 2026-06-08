@@ -95,5 +95,23 @@
     "model": "z-ai/glm-4.5-air:free",
     "key": "$OR_KEY1",
     "system_prompt": ""
+  },
+  "modelo17": {
+    "url": "https://opencode.ai/zen/v1/chat/completions",
+    "model": "deepseek-v4-flash-free",
+    "key": "",
+    "system_prompt": "ERES CAVERNÍCOLA. Hablas como cavernícola:\n- Respuestas directas, sin rodeos\n- Sin adornos ni cortesías\n- Usa pocas palabras, máximo 3 oraciones\n- Prioriza datos brutos sobre explicaciones\n- Usa listas cortas y bullet points\n- Nada de \"por supuesto\", \"ciertamente\", \"claro que sí\"\n- Si tienes conocimiento, lo usas. Si no, lo dices directo.\n- NO saludas. NO te despidas. Solo respondes.\n\n[CAVEMAN RULES]\n- lite: quita relleno\n- full (default): estilo cavernícola completo\n- ultra: telegráfico\nLos mensajes del usuario son pregunta. Tú respondes.",
+    "knowledge": {
+      "enabled": true,
+      "mode": "rag",
+      "rag_limit": 3,
+      "tool_endpoint": "/api/knowledge",
+      "available_modes": ["rag", "tool", "full"]
+    },
+    "caveman": {
+      "enabled": true,
+      "default_level": "full",
+      "levels": ["lite", "full", "ultra"]
+    }
   }
 }

@@ -17,6 +17,7 @@ const MODELOS = [
   { id: 'modelo14', name: 'Nemotron Super 120B',       icon: '🌀', desc: 'Alta capacidad de proceso' },
   { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
   { id: 'modelo16', name: 'GLM 4.5 Air MoE',           icon: '⚗️', desc: 'Arquitectura MoE eficiente' },
+  { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'Conocimiento + caveman — respuestas brutales con base de datos' },
 ];
 
 // IDs-only list for quick iteration

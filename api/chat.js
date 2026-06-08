@@ -8,6 +8,7 @@ const {
   isModelBlocked, 
   resetIfAllBlocked 
 } = require('./skynet-memory.js');
+const { injectKnowledgeRAG, injectKnowledgeFull } = require('../knowledge/knowledge.js');
 
 // Circuit breaker con SkynetMemory — persistencia y aprendizaje
 // Reemplaza el viejo sistema de 30s con bloqueo inteligente de 5 min
@@ -73,7 +74,24 @@ const KILO_MODELS = [
   "openrouter/free"
 ];
 // Rotación para modelo9 (modelos de texto/imagen)
-const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12', 'modelo13', 'modelo14', 'modelo15', 'modelo16'];
+const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12', 'modelo13', 'modelo14', 'modelo15', 'modelo16', 'modelo17'];
+
+// ─── Helper para extraer último mensaje de usuario ───
+function getLastUserMessage(messages) {
+  if (!messages || !Array.isArray(messages)) return '';
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === 'user') {
+      const c = messages[i].content;
+      if (typeof c === 'string') return c;
+      if (Array.isArray(c)) {
+        const t = c.find(p => p.type === 'text');
+        return t?.text || t?.content || '';
+      }
+      return '';
+    }
+  }
+  return '';
+}
 
 // ─── Config dinámico desde config.json ───
 // Busca: /tmp/proxy-config.json (hot-reload desde admin) → config.json (deploy)
@@ -328,6 +346,17 @@ module.exports = async (req, res) => {
           body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
         }
       }
+      // Modelo17: inyección de conocimiento
+      if (userModel === 'modelo17' && cfg.knowledge && cfg.knowledge.enabled) {
+        const mode = cfg.knowledge.mode || 'rag';
+        if (mode === 'rag') {
+          const q = getLastUserMessage(body.messages);
+          if (q) body.messages = injectKnowledgeRAG(body.messages, q, cfg.knowledge.rag_limit || 3);
+        } else if (mode === 'full') {
+          body.messages = injectKnowledgeFull(body.messages);
+        }
+        // mode 'tool': el modelo usa /api/knowledge directamente
+      }
       const headers = { 'Content-Type': 'application/json' };
       const resolvedKey = resolveKey(cfg);
       if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
@@ -401,6 +430,17 @@ module.exports = async (req, res) => {
       if (!hasSystem) {
         body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
       }
+    }
+    // Modelo17: inyección de conocimiento
+    if (userModel === 'modelo17' && cfg.knowledge && cfg.knowledge.enabled) {
+      const mode = cfg.knowledge.mode || 'rag';
+      if (mode === 'rag') {
+        const q = getLastUserMessage(body.messages);
+        if (q) body.messages = injectKnowledgeRAG(body.messages, q, cfg.knowledge.rag_limit || 3);
+      } else if (mode === 'full') {
+        body.messages = injectKnowledgeFull(body.messages);
+      }
+      // mode 'tool': el modelo usa /api/knowledge directamente
     }
     
     const headers = { 'Content-Type': 'application/json' };
