@@ -8,7 +8,7 @@ const {
   isModelBlocked, 
   resetIfAllBlocked 
 } = require('./skynet-memory.js');
-const { injectKnowledgeRAG, injectKnowledgeFull } = require('../knowledge/rag.js');
+const { loadKnowledge, search:searchKnowledge, injectKnowledgeRAG, injectKnowledgeFull } = require('../knowledge/rag.js');
 
 // Circuit breaker con SkynetMemory — persistencia y aprendizaje
 // Reemplaza el viejo sistema de 30s con bloqueo inteligente de 5 min
@@ -341,9 +341,16 @@ module.exports = async (req, res) => {
       body.model = cfg.model;
       body.stream = true;
       if (cfg.system_prompt) {
-        const hasSystem = body.messages && body.messages.some(m => m.role === 'system');
-        if (!hasSystem) {
-          body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
+        if (userModel === 'modelo17') {
+          body.messages = body.messages || [];
+          const idx = body.messages.findIndex(m => m.role === 'system');
+          if (idx >= 0) body.messages[idx] = { role: 'system', content: cfg.system_prompt };
+          else body.messages.unshift({ role: 'system', content: cfg.system_prompt });
+        } else {
+          const hasSystem = body.messages && body.messages.some(m => m.role === 'system');
+          if (!hasSystem) {
+            body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
+          }
         }
       }
       // Modelo17: inyección de conocimiento
@@ -351,9 +358,31 @@ module.exports = async (req, res) => {
         const mode = cfg.knowledge.mode || 'rag';
         if (mode === 'rag') {
           const q = getLastUserMessage(body.messages);
-          if (q) body.messages = injectKnowledgeRAG(body.messages, q, cfg.knowledge.rag_limit || 3);
+          if (q) {
+            const result = searchKnowledge(q, cfg.knowledge.rag_limit || 3);
+            if (result.found) {
+              const context = result.sections.map(s => s.content).join('\n\n');
+              // Fusionar contexto en el system prompt caveman
+              const sysIdx = body.messages.findIndex(m => m.role === 'system');
+              if (sysIdx >= 0) {
+                body.messages[sysIdx] = {
+                  role: 'system',
+                  content: body.messages[sysIdx].content + '\n\n[CONTEXTO RELEVANTE]\n' + context + '\n[/CONTEXTO RELEVANTE]'
+                };
+              }
+            }
+          }
         } else if (mode === 'full') {
-          body.messages = injectKnowledgeFull(body.messages);
+          const fullDb = loadKnowledge();
+          if (fullDb.fullText) {
+            const sysIdx = body.messages.findIndex(m => m.role === 'system');
+            if (sysIdx >= 0) {
+              body.messages[sysIdx] = {
+                role: 'system',
+                content: body.messages[sysIdx].content + '\n\n[CONOCIMIENTO]\n' + fullDb.fullText + '\n[/CONOCIMIENTO]'
+              };
+            }
+          }
         }
         // mode 'tool': el modelo usa /api/knowledge directamente
       }
@@ -426,9 +455,16 @@ module.exports = async (req, res) => {
     body.model = cfg.model;
     
     if (cfg.system_prompt) {
-      const hasSystem = body.messages && body.messages.some(m => m.role === 'system');
-      if (!hasSystem) {
-        body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
+      if (userModel === 'modelo17') {
+        body.messages = body.messages || [];
+        const idx = body.messages.findIndex(m => m.role === 'system');
+        if (idx >= 0) body.messages[idx] = { role: 'system', content: cfg.system_prompt };
+        else body.messages.unshift({ role: 'system', content: cfg.system_prompt });
+      } else {
+        const hasSystem = body.messages && body.messages.some(m => m.role === 'system');
+        if (!hasSystem) {
+          body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
+        }
       }
     }
     // Modelo17: inyección de conocimiento
@@ -436,9 +472,30 @@ module.exports = async (req, res) => {
       const mode = cfg.knowledge.mode || 'rag';
       if (mode === 'rag') {
         const q = getLastUserMessage(body.messages);
-        if (q) body.messages = injectKnowledgeRAG(body.messages, q, cfg.knowledge.rag_limit || 3);
+        if (q) {
+          const result = searchKnowledge(q, cfg.knowledge.rag_limit || 3);
+          if (result.found) {
+            const context = result.sections.map(s => s.content).join('\n\n');
+            const sysIdx = body.messages.findIndex(m => m.role === 'system');
+            if (sysIdx >= 0) {
+              body.messages[sysIdx] = {
+                role: 'system',
+                content: body.messages[sysIdx].content + '\n\n[CONTEXTO RELEVANTE]\n' + context + '\n[/CONTEXTO RELEVANTE]'
+              };
+            }
+          }
+        }
       } else if (mode === 'full') {
-        body.messages = injectKnowledgeFull(body.messages);
+        const fullDb = loadKnowledge();
+        if (fullDb.fullText) {
+          const sysIdx = body.messages.findIndex(m => m.role === 'system');
+          if (sysIdx >= 0) {
+            body.messages[sysIdx] = {
+              role: 'system',
+              content: body.messages[sysIdx].content + '\n\n[CONOCIMIENTO]\n' + fullDb.fullText + '\n[/CONOCIMIENTO]'
+            };
+          }
+        }
       }
       // mode 'tool': el modelo usa /api/knowledge directamente
     }
