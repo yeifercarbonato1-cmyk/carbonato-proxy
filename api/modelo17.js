@@ -129,7 +129,7 @@ button.primary:hover{background:#ff5522}
 
 <script>
 // Load KB entries
-const kb = ${JSON.stringify(rag.loadKnowledge().sections)};
+const kb = ${JSON.stringify(rag.loadKnowledge().sections).replace(/<\//g, '<\\/')};
 function renderKB(){
   let html='';
   kb.forEach((s,i)=>{
