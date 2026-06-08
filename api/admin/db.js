@@ -92,7 +92,6 @@ async function saveHealthDb(db, sha) {
 // Rate limiter para GitHub writes
 let _lastGithubSync = 0;
 function shouldSyncToGitHub() {
-  return false; // DESACTIVADO TEMPORALMENTE para reset
   const now = Date.now();
   if (now - _lastGithubSync < 30000) return false;
   _lastGithubSync = now;
