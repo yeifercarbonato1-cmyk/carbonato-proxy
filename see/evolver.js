@@ -47,9 +47,11 @@ async function evaluateImprovements(diagnosis, mem) {
     }
   }
 
-  // 2. Bugs de código (catch silenciosos)
+  // 2. Bugs de código (solo si hay handler en code-patch)
   const codeIssues = diagnosis.findings.filter(f => f.area === 'code' && f.severity === 'improvement');
+  const fixableIds = codePatch.getFixablePatternIds();
   for (const ci of codeIssues) {
+    if (!fixableIds.includes(ci.id)) continue; // code-patch no puede fixearlo
     if (!memory.hasFailedRecently(mem, `fix_${ci.file}_${ci.line}`, 24)) {
       improvements.push({
         action: 'code_patch',

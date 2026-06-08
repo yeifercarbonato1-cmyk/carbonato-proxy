@@ -126,4 +126,20 @@ function applyFix(finding) {
   return { ok: false, error: 'patrón no encontrado' };
 }
 
-module.exports = { scanForBugs, applyFix, KNOWN_PATTERNS };
+// ─── Helpers para evolver.js ───
+
+function getFixablePatternIds() {
+  return KNOWN_PATTERNS
+    .filter(p => {
+      // Probar si fix devuelve ok=false con reportOnly
+      const result = p.fix('test.js', '', { line: 0, file: 'test.js', code: '' });
+      return result.ok || !result.reportOnly;
+    })
+    .map(p => p.id);
+}
+
+function canAutoFix(patternId) {
+  return getFixablePatternIds().includes(patternId);
+}
+
+module.exports = { scanForBugs, applyFix, KNOWN_PATTERNS, canAutoFix, getFixablePatternIds };
