@@ -151,7 +151,7 @@ function showStatus(msg, type){
 }
 
 function buildKnowledgeText(){
-  return kb.map(s => '## '+s.title+'\n'+s.content.replace(/^## .+\n/,'')).join('\n\n');
+  return kb.map(s => '## '+s.title+'\\n'+s.content.replace(/^## .+\\n/,'')).join('\\n\\n');
 }
 
 async function saveConfig(){
