@@ -66,6 +66,12 @@ const server = http.createServer((req, res) => {
   if (path === '/api/admin') return adminHandler(req, res);
   if (path === '/api/admin-panel') return adminPanelHandler(req, res);
 
+  // Knowledge endpoint
+  if (path.startsWith('/api/knowledge')) {
+    const knowledgeHandler = wrapHandler(require('./api/knowledge.js'));
+    return knowledgeHandler(req, res);
+  }
+
   // SEE routes
   if (path.startsWith('/api/see')) {
     const seeHandler = wrapHandler(require('./api/see.js'));

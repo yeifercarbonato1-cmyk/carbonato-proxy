@@ -8,7 +8,7 @@ const {
   isModelBlocked, 
   resetIfAllBlocked 
 } = require('./skynet-memory.js');
-const { injectKnowledgeRAG, injectKnowledgeFull } = require('../knowledge/knowledge.js');
+const { injectKnowledgeRAG, injectKnowledgeFull } = require('../knowledge/rag.js');
 
 // Circuit breaker con SkynetMemory — persistencia y aprendizaje
 // Reemplaza el viejo sistema de 30s con bloqueo inteligente de 5 min
