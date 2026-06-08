@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const rag = require('../knowledge/rag.js');
+const { cookieOk } = require('./admin/helpers.js');
 
 const CONFIG_PATH = path.join(__dirname, 'config.json');
 const KNOWLEDGE_BASE_PATH = path.join(__dirname, '..', 'knowledge', 'base.md');
@@ -17,13 +18,6 @@ function getGithubToken() {
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-function cookieOk(req) {
-  const cookies = (req.headers['cookie'] || '').split(';').reduce((a, c) => {
-    const [k, v] = c.trim().split('='); a[k] = v; return a;
-  }, {});
-  return cookies.admin_sess === 'ok';
 }
 
 function getConfig() {
