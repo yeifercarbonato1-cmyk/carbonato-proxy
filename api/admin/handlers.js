@@ -363,13 +363,41 @@ async function handleVisitorsGeo(req, res) {
 async function handleVisitorsReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
   await saveUsageDB({ usages: [], stats: {} });
+  // También escribir directo a GitHub (saveUsageDB tiene sync desactivado)
+  await writeUsageResetToGitHub({ usages: [], stats: {} });
   res.json({ ok: true, message: 'Usage DB reset to zero' });
+}
+
+async function writeUsageResetToGitHub(data) {
+  const token = getGithubToken();
+  if (!token) return;
+  try {
+    // Obtener SHA actual
+    const getRes = await fetch(GITHUB_USAGE_URL, {
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    let sha = '';
+    if (getRes.ok) { const d = await getRes.json(); sha = d.sha || ''; }
+    // PUT datos vacíos
+    await fetch(GITHUB_USAGE_URL, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Reset usage-db to zero',
+        content: Buffer.from(JSON.stringify(data, null, 2)).toString('base64'),
+        sha
+      })
+    });
+    // Sincronizar /tmp también
+    try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(data, null, 2)); } catch(e) {}
+  } catch(e) { console.log('[reset] GitHub write falló:', e.message); }
 }
 
 async function handleUsageReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
   const errors = [];
-  try { await saveUsageDB({ usages: [], stats: {} }); } catch(e) { errors.push('usage-db: ' + e.message); }
+  const emptyUsage = { usages: [], stats: {} };
+  try { await saveUsageDB(emptyUsage); await writeUsageResetToGitHub(emptyUsage); } catch(e) { errors.push('usage-db: ' + e.message); }
   try { const h = await getHealthDb(); await saveHealthDb([], h.sha || ''); } catch(e) { errors.push('health-db: ' + e.message); }
   try { fs.writeFileSync(path.join(DB_PATH, 'proxy-logs.json'), '[]'); } catch(e) {}
   try { fs.writeFileSync(path.join(DB_PATH, 'model9-circuit.json'), JSON.stringify({ failures: {}, lastFailures: {} })); } catch(e) {}
