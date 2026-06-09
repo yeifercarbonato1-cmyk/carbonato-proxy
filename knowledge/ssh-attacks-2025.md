@@ -52,6 +52,50 @@ Tool: hydra ssh://target -l user -P wordlist.txt. Tool: medusa. Tool: ncrack. De
 
 SSH agent forwarding allows using local keys through jumpbox. Risk: root on jumpbox can use forwarded agent socket to authenticate to downstream servers. Attack: SSH into jumpbox with agent forwarding, locate SSH_AUTH_SOCK, use ssh-add -l to list loaded keys, then ssh -o ForwardAgent=yes target to use stolen agent. Detection: check for SSH_AUTH_SOCK environment variable. Defense: use ProxyJump instead of agent forwarding, or limit forwarding with ssh_config ForwardAgent no.
 
+## SSH ProxyJump Exploitation
+
+ProxyJump (-J) chaining for multi-hop pivoting: `ssh -J user@jump1,user@jump2 target`. Attack path: compromise jump1 → pivot to jump2 → reach internal target. No agent forwarding needed — ProxyJump passes credentials/keys locally. Detection: check SSH config for ProxyJump directives, audit auth.log for multi-hop connections. Defense: restrict SSH access per-host in ssh_config, monitor unusual connection chains.
+
+## SSH Certificate Authority Attack
+
+Abuse SSH CA signed certs for lateral movement. If CA key compromised, sign certs for any user/principal. Create cert with `ssh-keygen -s ca_key -I id -n user,root -V +52w pubkey.pem`. SSH CA certs bypass authorized_keys. Attack: steal CA private key from CA host, sign backdoor certs, deploy cert to controlled hosts. Detection: monitor all SSH CA sign operations, audit cert validity period. Defense: HSM-protected CA key, short certificate validity, strict principal enforcement.
+
+## SSH Key Discovery Automation
+
+Tools for finding SSH keys on compromised systems: `find / -name "id_rsa" -o -name "id_ed25519" 2>/dev/null`. Search for SSH keys in config files: `grep -r "PRIVATE KEY" /etc /opt /home 2>/dev/null`. Memory extraction: `strings /dev/mem | grep -E "BEGIN.*SSH.*PRIVATE KEY"`. SSH agent socket hijack: `ls -la /tmp/ssh-*` and `SSH_AUTH_SOCK=/tmp/ssh-XXXXX/agent.XXXX ssh-add -l`. Modern tools: secretsdump-style, LaZagne, SessionGopher for PuTTY/WinSCP keys.
+
+## SSH over WebSocket Tunneling
+
+SSH over WebSocket to bypass network restrictions. Use node.js/websocat to convert WebSocket to TCP. Server: `websocat -s 443 ws-listen:0.0.0.0:443 tcp:127.0.0.1:22`. Client: `websocat ws://target:443 tcp:127.0.0.1:2200 & ssh -p 2200 user@127.0.0.1`. Detection: WebSocket traffic to non-standard ports, traffic pattern analysis. Also SSH over HTTP/2, SSH over gRPC for deep packet inspection evasion.
+
+## SSH Session Hijacking
+
+If root on the SSH client machine, hijack established SSH sessions. Attack: `ps aux | grep ssh` find established connections, `ls -la /proc/<PID>/fd/` find the master socket, `gdb -p <PID>` to inject code or duplicate fd. Alternative: with access to user's files, find SSH control master socket in /tmp or ~/.ssh/controlmasters. Detection: monitor SSH socket access across processes. Defense: disable ControlMaster in ssh config, use SSH CA + short-lived certs.
+
+## SSH Config File Attack (CVE-2023-48795)
+
+Terrapin attack: prefix truncation in SSH channel handshake. Affects ChaCha20-Poly1305 and CBC-ETM ciphers. Sequence number manipulation truncates security-relevant messages at connection start. Downgrades: disables keystroke timing obfuscation and port forwarding controls. Mitigation: only use AES-GCM ciphers, update OpenSSH >9.6. Detection: scan for ChaCha20-Poly1305 or CBC-ETM in alg exchange. Fixed in OpenSSH 9.6, libssh 0.10.6, PuTTY 0.80.
+
+## SSH Connection Rate Limiting Evasion
+
+Evade fail2ban/denyhosts: distributed SSH brute force from multiple IPs (botnet). Slow brute: 1 attempt per 5 minutes per IP. Proxy chains: rotating proxies via SOCKS/SHADOWSOCKS. TOR: SSH via torify. Modern evasion: use valid creds from leaks (rockyou2025, COMB) instead of brute force. Defense: enforce key-only authentication, disable password auth completely.
+
+## SSH Jumphost Discovery
+
+Discovery of SSH jump hosts during internal pentest. Scan: `nmap -p 22 --open 10.0.0.0/8` large-scale SSH scanning. SSH service detection: `nmap -sV -p 22 --script ssh-hostkey,banner`. Common bastion configs identified by SSH version >9.x. For cloud: discovery via SSRF metadata (AWS: http://169.254.169.254/latest/meta-data/), SSH-enabled instances via cloud APIs. Kubernetes: `kubectl get pods --all-namespaces | grep ssh`.
+
+## SSH User Enumeration
+
+Determine valid usernames via timing attack on OpenSSH. Pre-2025 OpenSSH versions: different response time for valid vs invalid users with PasswordAuthentication enabled. Also via error message difference: "Permission denied" (user exists) vs "User unknown" (user doesn't exist) depending on sshd_config. Newer technique: timing side-channel via keyboard-interactive auth. Defense: set `LogLevel VERBOSE` to log failed usernames, use `MaxAuthTries 3`.
+
+## SSH Backdoor via PAM Module
+
+Persistence via rogue PAM module on target. Create shared lib intercepting pam_sm_authenticate that accepts a magic password. Place .so in /lib/security/pam_ssh_backdoor.so. Modify /etc/pam.d/sshd to include module. Detection: check PAM config files for unknown modules, verify module hashes. Defense: monitor PAM config changes, use RPM/Deb package verification.
+
+## SSH Client-Side Exploitation
+
+Vulnerable SSH clients when connecting to attacker-controlled server. Pre-2026 vulnerabilities: X11 forwarding exploitation, agent forwarding abuse. New technique: malicious SSH server returns crafted responses triggering buffer overflow in client's handling of server-sent options (environment variables, X11 forwarding). Defense: update SSH client regularly, disable X11 and agent forwarding when connecting to untrusted hosts.
+
 ## SSH Over DNS Tunneling
 
 Tools: iodine, dnscat2 for SSH over DNS when direct SSH blocked. SSH over DNS using DNS queries to tunnel SSH traffic. Requires controlled DNS server. Detection: unusual DNS query patterns, large TXT record responses, high DNS traffic volume. Defense: monitor DNS query sizes, restrict DNS resolution to authorized resolvers, inspect TXT record payloads.
