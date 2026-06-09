@@ -21,6 +21,8 @@ const KILO_MODELS = [
   
   for (const modelId of KILO_MODELS) {
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 10000);
       const response = await fetch('https://api.kilo.ai/api/gateway/chat/completions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -28,8 +30,10 @@ const KILO_MODELS = [
           model: modelId,
           messages: [{ role: 'user', content: 'OK' }],
           max_tokens: 5
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeout);
       
       const data = await response.json();
       if (response.ok && !data.error) {
