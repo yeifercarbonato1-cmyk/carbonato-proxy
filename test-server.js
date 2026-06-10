@@ -84,6 +84,12 @@ const server = http.createServer((req, res) => {
     return m18Handler(req, res);
   }
 
+  // Modelo19 admin page
+  if (path.startsWith('/api/modelo19')) {
+    const m19Handler = wrapHandler(require('./api/modelo19.js'));
+    return m19Handler(req, res);
+  }
+
   // SEE routes
   if (path.startsWith('/api/see')) {
     const seeHandler = wrapHandler(require('./api/see.js'));

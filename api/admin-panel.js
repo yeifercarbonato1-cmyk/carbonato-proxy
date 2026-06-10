@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
 
   // Generar cards desde MODELOS
   let cards = '';
-  for (let i = 1; i <= 18; i++) {
+  for (let i = 1; i <= 19; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || {};
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -93,7 +93,7 @@ module.exports = async (req, res) => {
 
   // Stats cards
   let statsCards = '';
-  for (let i = 1; i <= 18; i++) {
+  for (let i = 1; i <= 19; i++) {
     const name = 'modelo' + i;
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     statsCards += T.statCardHTML(name, s, i-1);
@@ -127,7 +127,7 @@ module.exports = async (req, res) => {
     T.headHTML('⎈ CARBONATO — PANEL ⎈') +
     T.topBarHTML(userIp) +
     T.navHTML() +
-    T.overviewHTML(totalReq, totalTok, totalIps.size, 18) +
+    T.overviewHTML(totalReq, totalTok, totalIps.size, 19) +
     T.telegramStatusHTML(botStatus) +
     T.chartsSectionHTML(dailyLabels, dailyData, topModelsLabels, topModelsData, topIPsLabels, topIPsData, usages) +
     T.actionButtonsHTML() +

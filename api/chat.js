@@ -66,7 +66,7 @@ const KILO_MODELS = [
   "openrouter/free"
 ];
 // Rotación para modelo9 (modelos de texto/imagen)
-const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12', 'modelo13', 'modelo14', 'modelo15', 'modelo16', 'modelo17', 'modelo18'];
+const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12', 'modelo13', 'modelo14', 'modelo15', 'modelo16', 'modelo17', 'modelo18', 'modelo19'];
 
 // ─── Helper para extraer último mensaje de usuario ───
 function getLastUserMessage(messages) {
@@ -332,7 +332,7 @@ module.exports = async (req, res) => {
       body.model = cfg.model;
       body.stream = true;
       if (cfg.system_prompt) {
-        if (userModel === 'modelo17' || userModel === 'modelo18') {
+        if (userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo19') {
           body.messages = body.messages || [];
           const idx = body.messages.findIndex(m => m.role === 'system');
           if (idx >= 0) body.messages[idx] = { role: 'system', content: cfg.system_prompt };
@@ -446,7 +446,7 @@ module.exports = async (req, res) => {
     body.model = cfg.model;
     
     if (cfg.system_prompt) {
-      if (userModel === 'modelo17' || userModel === 'modelo18') {
+      if (userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo19') {
         body.messages = body.messages || [];
         const idx = body.messages.findIndex(m => m.role === 'system');
         if (idx >= 0) body.messages[idx] = { role: 'system', content: cfg.system_prompt };
@@ -458,7 +458,7 @@ module.exports = async (req, res) => {
         }
       }
     }
-    // Modelo17/18: inyección de conocimiento
+    // Modelo17/18/19: inyección de conocimiento (solo 17/18)
     if ((userModel === 'modelo17' || userModel === 'modelo18') && cfg.knowledge && cfg.knowledge.enabled) {
       const mode = cfg.knowledge.mode || 'rag';
       if (mode === 'rag') {

@@ -145,6 +145,7 @@ function navHTML() {
   <a href="/api/rotator/page" class="nav-link">⟐ ROTADOR</a>
   <a href="/api/modelo17" class="nav-link" style="color:#ff3300">🦴 CAVERNÍCOLA</a>
   <a href="/api/modelo18" class="nav-link" style="color:#ffaa00">🦖 CAVERNÍCOLA X</a>
+  <a href="/api/modelo19" class="nav-link" style="color:#ffcc00">🧟 CAVERNÍCOLA SLOP</a>
   <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>
   <a href="/api/playground" class="nav-link">⟐ PLAYGROUND</a>
   <a href="/api/visitors/page" class="nav-link">⟐ VISITANTES</a>
@@ -242,7 +243,7 @@ function test(m,n){
   .catch(e=>{d.className='m-result err';d.textContent='⛔ Error: '+e.message});
 }
 function saveAll(){
-  for(var i=1;i<=18;i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
+  for(var i=1;i<=19;i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
   var st=document.getElementById('status');var ls=document.getElementById('lastSave');
   st.innerHTML='<span class="info">⟫⟫ GUARDANDO CONFIGURACIÓN...</span>';
   fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})

@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     }
   }
 
-  const modelos = MODELOS.map(m => ({icon:m.icon, name:m.id, desc:m.desc}));
+  const modelos = MODELOS.slice(0, 15).map(m => ({icon:m.icon, name:m.id, desc:m.desc}));
   const cardsJS = JSON.stringify(modelos);
 
   let html = renderHTML(cardsJS);
