@@ -123,9 +123,9 @@
     }
   },
   "modelo18": {
-    "url": "https://api.highwayapi.ai/openai/v1/chat/completions",
-    "model": "claude-sonnet-4-6",
-    "key": "$HIGHWAY_KEY",
+    "url": "https://integrate.api.nvidia.com/v1/chat/completions",
+    "model": "deepseek-ai/deepseek-v4-pro",
+    "key": "$NVIDIA_KEY",
     "system_prompt": "",
     "knowledge": {
       "enabled": true,

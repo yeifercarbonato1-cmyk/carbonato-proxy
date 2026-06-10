@@ -18,7 +18,7 @@ const MODELOS = [
   { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
   { id: 'modelo16', name: 'GPT-5.5',                   icon: '⚗️', desc: 'GPT-5.5 via Highway API' },
   { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
-  { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'Claude Sonnet 4-6 — precisión quirúrgica' },
+  { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'DeepSeek V4 Pro — NVIDIA推理' },
   { id: 'modelo19', name: 'Cavernícola Slop',            icon: '🧟', desc: 'DeepSeek V4 Flash — jailbreak puro, sin filtros' },
 ];
 
