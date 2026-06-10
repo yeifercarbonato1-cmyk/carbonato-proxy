@@ -18,6 +18,7 @@ const MODELOS = [
   { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
   { id: 'modelo16', name: 'GLM 4.5 Air MoE',           icon: '⚗️', desc: 'Arquitectura MoE eficiente' },
   { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
+  { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'Claude Sonnet 4-6 — precisión quirúrgica' },
 ];
 
 // IDs-only list for quick iteration

@@ -144,8 +144,8 @@ function suggestSlots(discoveryResult) {
   const usedSlots = Object.keys(cfg);
   const working = discoveryResult.working;
 
-  // Encontrar slots disponibles (modelo17+)
-  let nextSlot = 17;
+  // Encontrar slots disponibles (modelo18+)
+  let nextSlot = 18;
   while (usedSlots.includes(`modelo${nextSlot}`)) nextSlot++;
 
   const suggestions = [];

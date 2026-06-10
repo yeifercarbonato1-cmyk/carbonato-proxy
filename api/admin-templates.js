@@ -2,7 +2,7 @@
 // Separado de admin-panel.js para mantener la lógica limpia
 const { MODELOS } = require('./models-def.js');
 
-const COLORS = ['#00fff5','#ff00e6','#7b2ff7','#00ff88','#ffd700','#ff4500','#00bfff','#ff69b4','#00ffff','#ff8c00','#8a2be2','#ff1493','#00ff7f','#da70d6','#ff6347','#7fff00','#ff3300'];
+const COLORS = ['#00fff5','#ff00e6','#7b2ff7','#00ff88','#ffd700','#ff4500','#00bfff','#ff69b4','#00ffff','#ff8c00','#8a2be2','#ff1493','#00ff7f','#da70d6','#ff6347','#7fff00','#ff3300','#ffaa00'];
 
 function esc(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -144,6 +144,7 @@ function navHTML() {
   <a href="/api/competencia/page" class="nav-link">⟐ COMPETENCIA</a>
   <a href="/api/rotator/page" class="nav-link">⟐ ROTADOR</a>
   <a href="/api/modelo17" class="nav-link" style="color:#ff3300">🦴 CAVERNÍCOLA</a>
+  <a href="/api/modelo18" class="nav-link" style="color:#ffaa00">🦖 CAVERNÍCOLA X</a>
   <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>
   <a href="/api/playground" class="nav-link">⟐ PLAYGROUND</a>
   <a href="/api/visitors/page" class="nav-link">⟐ VISITANTES</a>
@@ -159,7 +160,7 @@ function overviewHTML(totalReq, totalTok, totalIps, modelsActive) {
   <div class="ov-card"><div class="ov-label">Total Requests</div><div class="ov-value">${totalReq.toLocaleString()}</div></div>
   <div class="ov-card"><div class="ov-label">Tokens Consumidos</div><div class="ov-value">${totalTok.toLocaleString()}</div></div>
   <div class="ov-card"><div class="ov-label">IPs Únicas</div><div class="ov-value">${totalIps}</div></div>
-  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">${modelsActive}<span> / 17 activos</span></div></div>
+  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">${modelsActive}<span> / 18 activos</span></div></div>
 </div>`;
 }
 
@@ -241,7 +242,7 @@ function test(m,n){
   .catch(e=>{d.className='m-result err';d.textContent='⛔ Error: '+e.message});
 }
 function saveAll(){
-  var c={};for(var i=1;i<=17;i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
+  for(var i=1;i<=18;i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
   var st=document.getElementById('status');var ls=document.getElementById('lastSave');
   st.innerHTML='<span class="info">⟫⟫ GUARDANDO CONFIGURACIÓN...</span>';
   fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})

@@ -1,6 +1,6 @@
 # ⎈ CARBONATO PROXY
 
-Gateway unificado de IA — 17 modelos desde una sola URL compatible con OpenAI API.
+Gateway unificado de IA — 18 modelos desde una sola URL compatible con OpenAI API.
 
 **URL base:** `https://carbonato-proxy.vercel.app`
 

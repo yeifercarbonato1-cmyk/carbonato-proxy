@@ -67,7 +67,7 @@ function handleHealthPage(req, res) {
 <title>HEALTH — Carbonato Proxy</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}h1{font-family:'JetBrains Mono',monospace;font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px}td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'JetBrains Mono',monospace;font-size:11px}tr:hover td{background:rgba(255,255,255,0.02)}#status{font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.4);margin-bottom:12px}.live{color:rgba(255,255,255,0.3);font-size:9px}.ok{color:rgba(255,255,255,0.7)}.fail{color:rgba(255,255,255,0.25)}</style></head>
 <body><h1>⟐ HEALTH DASHBOARD <span class="live">● LIVE</span></h1>
-<div id="status">Probando 17 modelos...</div>
+<div id="status">Probando 18 modelos...</div>
 <table><thead><tr><th>MODELO</th><th>NOMBRE</th><th>LATENCIA</th><th>STATUS</th></tr></thead><tbody id="tbody"></tbody></table>
 <script>
 const tbody=document.getElementById('tbody');
@@ -870,7 +870,7 @@ async function handleTelegramWebhook(req, res) {
           `/status — Estado de todos los modelos\n` +
           `/rapidos — Top 5 más rápidos ahora\n` +
           `/stats — Uso del día y totales\n` +
-          `/modelos — Lista de los 17 modelos\n` +
+          `/modelos — Lista de los 18 modelos\n` +
           `/ips — Top 10 IPs que más usan\n` +
           `/kernel — Último commit del proxy\n` +
           `/pausar N — Deshabilita modelo (ej: /pausar 7)\n` +

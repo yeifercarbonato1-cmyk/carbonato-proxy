@@ -4,13 +4,13 @@ function renderHTML(cardsJS) {
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Carbonato Proxy - Gateway unificado de IA con 17 modelos. ⚠️ AVISO: Este sitio registra todo el uso (IP, tokens, timestamp). Al usar el proxy acepta estos términos. Proyecto 100% privado, código abierto, operado por una sola persona.">
+<meta name="description" content="Carbonato Proxy - Gateway unificado de IA con 18 modelos. ⚠️ AVISO: Este sitio registra todo el uso (IP, tokens, timestamp). Al usar el proxy acepta estos términos. Proyecto 100% privado, código abierto, operado por una sola persona.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "name": "Carbonato Proxy",
-  "description": "Gateway unificado de IA con 17 modelos.",
+  "description": "Gateway unificado de IA con 18 modelos.",
   "termsOfService": "⚠️ AVISO: Este sitio registra todo el uso de los modelos (IP, tokens, timestamp). Al usar el proxy acepta estos términos. Proyecto 100% privado, código abierto, operado por una sola persona.",
   "applicationCategory": "AIGateway",
   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
@@ -37,7 +37,7 @@ function renderHTML(cardsJS) {
   <div class="hero-badge">⚡ v6.0 — Unified Gateway</div>
   <h1>CARBONATO<br>PROXY</h1>
   <div class="sub">⎈ AI GATEWAY UNIFIED ⎈</div>
-  <div class="version"><span>●</span> 17 modelos <span>●</span></div>
+  <div class="version"><span>●</span> 18 modelos <span>●</span></div>
 </div>
 </div>
 
@@ -51,7 +51,7 @@ function renderHTML(cardsJS) {
 </div>
 
 <p class="desc">
-  Gateway unificado para <strong>17 modelos de IA</strong> desde una <strong style="color:rgba(255,255,255,0.5)">sola URL</strong> compatible con OpenAI.
+  Gateway unificado para <strong>18 modelos de IA</strong> desde una <strong style="color:rgba(255,255,255,0.5)">sola URL</strong> compatible con OpenAI.
   <span class="cursor-blink"></span>
 </p>
 
@@ -119,7 +119,7 @@ function renderHTML(cardsJS) {
 </div>
 
 <div class="footer">
-  <p class="footer-text">CARBONATO PROXY · 17 modelos · <a href="/api/admin" class="admin-link">⚙</a></p>
+  <p class="footer-text">CARBONATO PROXY · 18 modelos · <a href="/api/admin" class="admin-link">⚙</a></p>
   <p class="footer-sub">100% código libre</p>
 </div>
 
