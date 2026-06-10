@@ -52,7 +52,7 @@ button.primary:hover{background:#ffcc44}
 <body>
 <a href="/api/admin-panel" class="back">⟵ VOLVER AL PANEL</a>
 <h1>🧟 CAVERNÍCOLA SLOP</h1>
-<div class="sub">modelo19 — Claude Sonnet 4-6 · Sin base de conocimiento · System prompt Cavernícola</div>
+<div class="sub">modelo19 — DeepSeek V4 Flash · System prompt Cavernícola RED TEAM ULTRA · Sin base de conocimiento</div>
 
 <div class="info-row">
   <span>🔗 ${esc(config.modelo19?.url || '')}</span>
