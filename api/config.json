@@ -91,9 +91,9 @@
     "system_prompt": ""
   },
   "modelo16": {
-    "url": "https://openrouter.ai/api/v1/chat/completions",
-    "model": "z-ai/glm-4.5-air:free",
-    "key": "$OR_KEY1",
+    "url": "https://api.highwayapi.ai/openai/v1/chat/completions",
+    "model": "gpt-5.5",
+    "key": "$HIGHWAY_KEY",
     "system_prompt": ""
   },
   "modelo17": {

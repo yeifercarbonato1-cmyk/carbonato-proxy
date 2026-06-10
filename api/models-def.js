@@ -16,7 +16,7 @@ const MODELOS = [
   { id: 'modelo13', name: 'OpenAI GPT OSS',            icon: '🔥', desc: 'Potencia open-source' },
   { id: 'modelo14', name: 'Nemotron Super 120B',       icon: '🌀', desc: 'Alta capacidad de proceso' },
   { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
-  { id: 'modelo16', name: 'GLM 4.5 Air MoE',           icon: '⚗️', desc: 'Arquitectura MoE eficiente' },
+  { id: 'modelo16', name: 'GPT-5.5',                   icon: '⚗️', desc: 'GPT-5.5 via Highway API' },
   { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
   { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'Claude Sonnet 4-6 — precisión quirúrgica' },
 ];
