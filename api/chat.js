@@ -89,8 +89,7 @@ function getLastUserMessage(messages) {
 // Busca: /tmp/proxy-config.json (hot-reload desde admin) → config.json (deploy)
 function resolveKey(cfg) {
   if (!cfg.key) return '';
-  if (cfg.key === '$OR_KEY1') return process.env.OR_KEY1 || '';
-  if (cfg.key === '$OR_KEY2') return process.env.OR_KEY2 || '';
+  if (cfg.key.startsWith('$')) return process.env[cfg.key.slice(1)] || '';
   return cfg.key;
 }
 
