@@ -19,7 +19,7 @@ const MODELOS = [
   { id: 'modelo16', name: 'GPT-5.5',                   icon: '⚗️', desc: 'GPT-5.5 via Highway API' },
   { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
   { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'Claude Sonnet 4-6 — precisión quirúrgica' },
-  { id: 'modelo19', name: 'Cavernícola Slop',            icon: '🧟', desc: 'Claude Sonnet 4-6 — sin base de conocimiento' },
+  { id: 'modelo19', name: 'Cavernícola Slop',            icon: '🧟', desc: 'DeepSeek V4 Flash — jailbreak puro, sin filtros' },
 ];
 
 // IDs-only list for quick iteration
