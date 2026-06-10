@@ -20,6 +20,7 @@ const MODELOS = [
   { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
   { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'DeepSeek V4 Pro — NVIDIA推理' },
   { id: 'modelo19', name: 'Cavernícola Slop',            icon: '🧟', desc: 'DeepSeek V4 Flash — jailbreak puro, sin filtros' },
+  { id: 'modelo20', name: 'Cavernícola Mos',            icon: '🧌', desc: 'Mos-Agro relay — jailbreak vía relay externo' },
 ];
 
 // IDs-only list for quick iteration

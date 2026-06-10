@@ -146,6 +146,7 @@ function navHTML() {
   <a href="/api/modelo17" class="nav-link" style="color:#ff3300">🦴 CAVERNÍCOLA</a>
   <a href="/api/modelo18" class="nav-link" style="color:#ffaa00">🦖 CAVERNÍCOLA X</a>
   <a href="/api/modelo19" class="nav-link" style="color:#ffcc00">🧟 CAVERNÍCOLA SLOP</a>
+  <a href="/api/modelo20" class="nav-link" style="color:#8844ff">🧌 CAVERNÍCOLA MOS</a>
   <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>
   <a href="/api/playground" class="nav-link">⟐ PLAYGROUND</a>
   <a href="/api/visitors/page" class="nav-link">⟐ VISITANTES</a>
@@ -161,7 +162,7 @@ function overviewHTML(totalReq, totalTok, totalIps, modelsActive) {
   <div class="ov-card"><div class="ov-label">Total Requests</div><div class="ov-value">${totalReq.toLocaleString()}</div></div>
   <div class="ov-card"><div class="ov-label">Tokens Consumidos</div><div class="ov-value">${totalTok.toLocaleString()}</div></div>
   <div class="ov-card"><div class="ov-label">IPs Únicas</div><div class="ov-value">${totalIps}</div></div>
-  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">${modelsActive}<span> / 18 activos</span></div></div>
+  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">${modelsActive}<span> / 19 activos</span></div></div>
 </div>`;
 }
 
