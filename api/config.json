@@ -50,7 +50,7 @@
   "modelo18": {
     "url": "https://api.highwayapi.ai/openai/v1/chat/completions",
     "model": "claude-sonnet-4-6",
-    "key": "sk_miX_lamr7VvjVpiVmLN-2amwDtnj4xr-E4t_1t7rHE0",
+    "key": "$HIGHWAY_KEY",
     "system_prompt": ""
   }
 }
