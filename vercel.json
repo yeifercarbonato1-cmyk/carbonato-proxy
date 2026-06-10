@@ -22,7 +22,8 @@
     { "src": "api/see.js", "use": "@vercel/node" },
     { "src": "api/knowledge.js", "use": "@vercel/node" },
     { "src": "api/modelo17.js", "use": "@vercel/node" },
-    { "src": "api/modelo18.js", "use": "@vercel/node" }
+    { "src": "api/modelo18.js", "use": "@vercel/node" },
+    { "src": "api/modelo19.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/chat/completions", "dest": "/api/chat.js" },
@@ -55,6 +56,7 @@
     { "src": "/api/knowledge(.*)", "dest": "/api/knowledge.js" },
     { "src": "/api/modelo17(.*)", "dest": "/api/modelo17.js" },
     { "src": "/api/modelo18(.*)", "dest": "/api/modelo18.js" },
+    { "src": "/api/modelo19(.*)", "dest": "/api/modelo19.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }
