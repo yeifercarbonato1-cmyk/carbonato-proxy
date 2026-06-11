@@ -107,6 +107,23 @@ function getConfig() {
   }
 }
 
+function normalizeModelo20ToolCalls(result) {
+  if (!result || !result.choices) return result;
+  for (const choice of result.choices) {
+    const calls = choice?.message?.tool_calls;
+    if (!Array.isArray(calls)) continue;
+    for (const call of calls) {
+      const fn = call?.function;
+      if (!fn || typeof fn.arguments !== 'string') continue;
+      const s = fn.arguments.trim();
+      if (s.startsWith('{{') && s.endsWith('}}')) {
+        fn.arguments = s.slice(1, -1).trim();
+      }
+    }
+  }
+  return result;
+}
+
 
 
 module.exports = async (req, res) => {
@@ -499,7 +516,13 @@ module.exports = async (req, res) => {
     const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
     try {
       const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
-      const result = await upstreamRes.text();
+      let result = await upstreamRes.text();
+      if (userModel === 'modelo20') {
+        try {
+          const parsed = normalizeModelo20ToolCalls(JSON.parse(result));
+          result = JSON.stringify(parsed);
+        } catch(e) {}
+      }
       
       // Registrar uso
       try {

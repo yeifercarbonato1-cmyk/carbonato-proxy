@@ -20,7 +20,7 @@ const MODELOS = [
   { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
   { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
   { id: 'modelo19', name: 'Cavernícola Slop',            icon: '🧟', desc: 'DeepSeek V4 Flash — jailbreak puro, sin filtros' },
-  { id: 'modelo20', name: 'Cavernícola CN',             icon: '🐉', desc: 'ModelVerse Claude Sonnet 4-6 — China relay' },
+  { id: 'modelo20', name: 'Cavernícola CN',             icon: '🐉', desc: 'GPT-4 relay — tool calling activo' },
 ];
 
 // IDs-only list for quick iteration

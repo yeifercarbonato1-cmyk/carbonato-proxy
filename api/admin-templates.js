@@ -244,7 +244,7 @@ function test(m,n){
   .catch(e=>{d.className='m-result err';d.textContent='⛔ Error: '+e.message});
 }
 function saveAll(){
-  for(var i=1;i<=19;i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
+  for(var i=1;i<=20;i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
   var st=document.getElementById('status');var ls=document.getElementById('lastSave');
   st.innerHTML='<span class="info">⟫⟫ GUARDANDO CONFIGURACIÓN...</span>';
   fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
