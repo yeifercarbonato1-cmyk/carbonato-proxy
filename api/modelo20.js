@@ -32,11 +32,11 @@ const HTML = (config, knowledgeText) => `
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CAVERNÍCOLA MOS — modelo20</title>
+<title>CAVERNÍCOLA CN — modelo20</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}
-h1{font-family:'JetBrains Mono',monospace;font-size:18px;color:#8844ff;margin-bottom:4px;letter-spacing:2px}
+h1{font-family:'JetBrains Mono',monospace;font-size:18px;color:#44ccff;margin-bottom:4px;letter-spacing:2px}
 .sub{font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:24px;font-family:'JetBrains Mono',monospace}
 .section{border:1px solid rgba(255,255,255,0.08);padding:20px;margin-bottom:20px;border-radius:4px}
 .section-title{font-size:11px;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;letter-spacing:1px;margin-bottom:12px;text-transform:uppercase}
@@ -48,8 +48,8 @@ h1{font-family:'JetBrains Mono',monospace;font-size:18px;color:#8844ff;margin-bo
 textarea{width:100%;padding:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace;resize:vertical;min-height:200px}
 button{padding:8px 20px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;border-radius:3px;transition:0.2s}
 button:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.3)}
-button.primary{background:#8844ff;color:#0a0a0f;border-color:#8844ff;font-weight:bold}
-button.primary:hover{background:#9955ff}
+button.primary{background:#44ccff;color:#0a0a0f;border-color:#44ccff;font-weight:bold}
+button.primary:hover{background:#55ddff}
 #status{font-size:11px;margin-top:8px;padding:8px 12px;border-radius:3px;font-family:'JetBrains Mono',monospace;display:none}
 #status.show{display:block}
 #status.ok{background:rgba(0,255,136,0.08);color:#00ff88;border:1px solid rgba(0,255,136,0.2)}
@@ -57,7 +57,7 @@ button.primary:hover{background:#9955ff}
 #testResult{margin-top:8px;padding:12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:pre-wrap;min-height:40px;display:none}
 #testResult.show{display:block}
 .kb-entry{border:1px solid rgba(255,255,255,0.06);padding:12px;margin-bottom:8px;border-radius:3px;position:relative}
-.kb-entry .title{font-size:12px;font-weight:bold;color:#8844ff;margin-bottom:4px}
+.kb-entry .title{font-size:12px;font-weight:bold;color:#44ccff;margin-bottom:4px}
 .kb-entry .content{font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:4px}
 .kb-entry .del{position:absolute;top:8px;right:8px;cursor:pointer;font-size:14px;color:rgba(255,255,255,0.2);border:none;background:none;padding:2px 6px}
 .kb-entry .del:hover{color:#ff3333}
@@ -68,7 +68,7 @@ button.primary:hover{background:#9955ff}
 </head>
 <body>
 <a href="/api/admin-panel" class="back">⟵ VOLVER AL PANEL</a>
-<h1>🦴 CAVERNÍCOLA</h1>
+<h1>🐉 CAVERNÍCOLA CN</h1>
 <div class="sub">modelo20 — Configuración y base de conocimiento</div>
 
 <!-- Config section -->
