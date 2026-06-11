@@ -16,11 +16,11 @@ const MODELOS = [
   { id: 'modelo13', name: 'OpenAI GPT OSS',            icon: '🔥', desc: 'Potencia open-source' },
   { id: 'modelo14', name: 'Nemotron Super 120B',       icon: '🌀', desc: 'Alta capacidad de proceso' },
   { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
-  { id: 'modelo16', name: 'GPT-5.5',                   icon: '⚗️', desc: 'GPT-5.5 via Highway API' },
+  { id: 'modelo16', name: 'Cavernícola Mos',            icon: '🧌', desc: 'Mos-Agro relay — jailbreak vía relay externo' },
   { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
   { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'DeepSeek V4 Pro — NVIDIA推理' },
   { id: 'modelo19', name: 'Cavernícola Slop',            icon: '🧟', desc: 'DeepSeek V4 Flash — jailbreak puro, sin filtros' },
-  { id: 'modelo20', name: 'Cavernícola Mos',            icon: '🧌', desc: 'Mos-Agro relay — jailbreak vía relay externo' },
+  { id: 'modelo20', name: 'Cavernícola CN',             icon: '🐉', desc: 'ModelVerse Claude Sonnet 4-6 — China relay' },
 ];
 
 // IDs-only list for quick iteration
