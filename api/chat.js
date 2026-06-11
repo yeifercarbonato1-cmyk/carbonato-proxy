@@ -331,8 +331,8 @@ module.exports = async (req, res) => {
     if (useStream) {
       body.model = cfg.model;
       body.stream = true;
-      // Modelo16/20: sanitizar request - upstream Qwen no soporta tools/stream_options
-      if (userModel === 'modelo16' || userModel === 'modelo20') {
+      // Modelo16: sanitizar request - upstream Qwen no soporta tools/stream_options
+      if (userModel === 'modelo16') {
         delete body.tools;
         delete body.tool_choice;
         delete body.stream_options;
