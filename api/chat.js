@@ -138,7 +138,10 @@ function ollamaToOpenAI(ollamaJson) {
     model: ollamaJson.model || 'ollama',
     choices: [{
       index: 0,
-      message: { role: msg.role || 'assistant', content },
+      message: Object.assign(
+        { role: msg.role || 'assistant', content },
+        msg.tool_calls ? { tool_calls: msg.tool_calls } : {}
+      ),
       finish_reason: ollamaJson.done_reason || (ollamaJson.done ? 'stop' : null)
     }],
     usage: {
