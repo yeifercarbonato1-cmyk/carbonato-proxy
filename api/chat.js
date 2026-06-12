@@ -312,6 +312,8 @@ module.exports = async (req, res) => {
               rotatorBody.messages = [{ role: 'system', content: targetCfg.system_prompt }, ...(rotatorBody.messages || [])];
             }
           }
+          // modelo14 en rotator: forzar no-streaming
+          if (modelKey === 'modelo14') rotatorBody.stream = false;
           
           const upstreamRes = await fetch(targetCfg.url, {
             method: 'POST',
@@ -521,7 +523,9 @@ module.exports = async (req, res) => {
     }
 
     body.model = cfg.model;
-    
+    // modelo14: forzar no-streaming (Ollama streamea por defecto incluso sin pedirlo)
+    if (userModel === 'modelo14') body.stream = false;
+
     if (cfg.system_prompt) {
       if (userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo19' || userModel === 'modelo20') {
         body.messages = body.messages || [];
