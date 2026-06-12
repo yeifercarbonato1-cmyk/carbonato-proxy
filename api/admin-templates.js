@@ -144,7 +144,7 @@ function navHTML() {
   <a href="/api/competencia/page" class="nav-link">⟐ COMPETENCIA</a>
   <a href="/api/rotator/page" class="nav-link">⟐ ROTADOR</a>
   <a href="/api/modelo17" class="nav-link" style="color:#ff3300">🦴 CAVERNÍCOLA</a>
-  <a href="/api/modelo18" class="nav-link" style="color:#ffaa00">🦖 CAVERNÍCOLA X</a>
+  <a href="/api/modelo18" class="nav-link" style="color:#ffaa00">🦖 GLM 5.1</a>
   <a href="/api/modelo19" class="nav-link" style="color:#ffcc00">🧟 CAVERNÍCOLA SLOP</a>
   <a href="/api/modelo20" class="nav-link" style="color:#44ccff">🐉 CAVERNÍCOLA CN</a>
   <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>

@@ -18,7 +18,7 @@ const MODELOS = [
   { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
   { id: 'modelo16', name: 'Cavernícola Mos',            icon: '🧌', desc: 'Mos-Agro relay — jailbreak vía relay externo' },
   { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
-  { id: 'modelo18', name: 'Cavernícola X',             icon: '🦖', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
+  { id: 'modelo18', name: 'GLM 5.1 — Zhipu AI',           icon: '🦖', desc: 'z-ai/glm-5.1 — razonamiento vía NVIDIA NIM' },
   { id: 'modelo19', name: 'Cavernícola Slop',            icon: '🧟', desc: 'DeepSeek V4 Flash — jailbreak puro, sin filtros' },
   { id: 'modelo20', name: 'Cavernícola CN',             icon: '🐉', desc: 'GPT-4 relay — tool calling activo' },
 ];

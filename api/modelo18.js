@@ -1,4 +1,4 @@
-// api/modelo18.js — Página de administración para modelo18 Cavernícola X
+// api/modelo18.js — Página de administración para modelo18 GLM 5.1
 // GET  /api/modelo18          → página HTML (requiere auth)
 // POST /api/modelo18/knowledge → actualiza conocimiento
 // POST /api/modelo18/config    → actualiza configuración
@@ -32,7 +32,7 @@ const HTML = (config, knowledgeText) => `
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>CAVERNÍCOLA X — modelo18</title>
+<title>GLM 5.1 — modelo18</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}
@@ -68,8 +68,8 @@ button.primary:hover{background:#ff5522}
 </head>
 <body>
 <a href="/api/admin-panel" class="back">⟵ VOLVER AL PANEL</a>
-<h1>🦖 CAVERNÍCOLA X</h1>
-<div class="sub">modelo18 — Configuración y base de conocimiento</div>
+<h1>🦖 GLM 5.1 — Zhipu AI</h1>
+<div class="sub">modelo18 — z-ai/glm-5.1 · OpenRouter</div>
 
 <!-- Config section -->
 <div class="section">
