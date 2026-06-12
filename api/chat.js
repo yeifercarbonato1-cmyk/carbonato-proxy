@@ -447,6 +447,12 @@ module.exports = async (req, res) => {
         const resultText = await upstreamRes.text();
         let parsed;
         try { parsed = ollamaToOpenAI(JSON.parse(resultText)); } catch(e) { parsed = null; }
+        // Si el modelo respondió con tool_calls, devolver JSON directo en vez de SSE vacío
+        const toolCalls = parsed?.choices?.[0]?.message?.tool_calls;
+        if (toolCalls && toolCalls.length > 0) {
+          res.setHeader('Content-Type', 'application/json');
+          return res.status(upstreamRes.status).json(parsed);
+        }
         const content = parsed?.choices?.[0]?.message?.content || '';
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
