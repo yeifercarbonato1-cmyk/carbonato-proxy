@@ -124,6 +124,58 @@ function normalizeModelo20ToolCalls(result) {
   return result;
 }
 
+// ─── Ollama → OpenAI response transformer ───
+function ollamaToOpenAI(ollamaJson) {
+  // Non-streaming: {"model":"...","message":{"role":"assistant","content":"..."},"done":true,...}
+  if (!ollamaJson || ollamaJson.choices) return ollamaJson; // ya es OpenAI
+  const msg = ollamaJson.message || {};
+  return {
+    id: 'chatcmpl-ollama-' + Date.now(),
+    object: 'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model: ollamaJson.model || 'ollama',
+    choices: [{
+      index: 0,
+      message: { role: msg.role || 'assistant', content: msg.content || '' },
+      finish_reason: ollamaJson.done_reason || (ollamaJson.done ? 'stop' : null)
+    }],
+    usage: {
+      prompt_tokens: ollamaJson.prompt_eval_count || 0,
+      completion_tokens: ollamaJson.eval_count || 0,
+      total_tokens: (ollamaJson.prompt_eval_count || 0) + (ollamaJson.eval_count || 0)
+    }
+  };
+}
+
+// ─── Ollama NDJSON → SSE stream transformer ───
+function ollamaChunkToSSE(chunkText) {
+  // Each line is a JSON object: {"model":"...","message":{"content":"..."},"done":false}
+  const lines = chunkText.split('\n').filter(l => l.trim());
+  const sseLines = [];
+  for (const line of lines) {
+    try {
+      const obj = JSON.parse(line);
+      if (obj.choices) { sseLines.push('data: ' + line); continue; } // ya SSE
+      const content = obj.message?.content || '';
+      const thinking = obj.message?.thinking || '';
+      const deltaContent = content + (thinking ? '\\n\\n[THINKING]\\n' + thinking : '');
+      sseLines.push('data: ' + JSON.stringify({
+        id: 'chatcmpl-ollama-' + Date.now(),
+        object: 'chat.completion.chunk',
+        created: Math.floor(Date.now() / 1000),
+        model: obj.model || 'ollama',
+        choices: [{
+          index: 0,
+          delta: { content: deltaContent },
+          finish_reason: obj.done ? 'stop' : null
+        }]
+      }));
+    } catch(e) { /* skip malformed */ }
+  }
+  if (sseLines.length > 0) sseLines.push('data: [DONE]');
+  return sseLines.join('\n\n') + '\n\n';
+}
+
 
 
 module.exports = async (req, res) => {
@@ -270,6 +322,13 @@ module.exports = async (req, res) => {
           
           const resultText = await upstreamRes.text();
           
+          // modelo14 en rotator: transformar Ollama → OpenAI
+          let rotatorResult = resultText;
+          if (modelKey === 'modelo14' && upstreamRes.ok) {
+            try { rotatorResult = JSON.stringify(ollamaToOpenAI(JSON.parse(resultText))); }
+            catch(e) { console.log('[rotator] Error transformando modelo14:', e.message); }
+          }
+          
           if (upstreamRes.ok) {
             // Validar que sea JSON válido (no binario como modelo10)
             const contentType = upstreamRes.headers.get('content-type') || '';
@@ -286,7 +345,7 @@ module.exports = async (req, res) => {
             try {
               let tokens = 0;
               try {
-                const parsed = JSON.parse(resultText);
+                const parsed = JSON.parse(rotatorResult);
                 tokens = parsed.usage?.total_tokens || 0;
                 if (tokens === 0) {
                   const content = parsed.choices?.[0]?.message?.content || '';
@@ -309,7 +368,7 @@ module.exports = async (req, res) => {
             saveLog(userModel, userIp, upstreamRes.status, 0, null);
             
             console.log(`[rotator] OK con ${modelKey}`);
-            return res.status(upstreamRes.status).setHeader('Content-Type', 'application/json').send(resultText);
+            return res.status(upstreamRes.status).setHeader('Content-Type', 'application/json').send(rotatorResult);
           } else if (upstreamRes.status === 429) {
             // Rate limit - abrir circuito
             recordFailure(modelKey);
@@ -345,7 +404,7 @@ module.exports = async (req, res) => {
     }
 
     // ─── Streaming real ───
-    if (useStream) {
+    if (useStream && userModel !== 'modelo14') {
       body.model = cfg.model;
       body.stream = true;
       // Modelo16 ahora usa gpt-5.5 vía modelverse — soporta tools
@@ -517,6 +576,13 @@ module.exports = async (req, res) => {
     try {
       const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
       let result = await upstreamRes.text();
+      // modelo14: transformar respuesta Ollama → OpenAI
+      if (userModel === 'modelo14') {
+        try {
+          const parsed = ollamaToOpenAI(JSON.parse(result));
+          result = JSON.stringify(parsed);
+        } catch(e) { console.log('[modelo14] Error transformando respuesta:', e.message); }
+      }
       if (userModel === 'modelo20') {
         try {
           const parsed = normalizeModelo20ToolCalls(JSON.parse(result));
