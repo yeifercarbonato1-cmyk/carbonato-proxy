@@ -130,7 +130,20 @@ function ollamaToOpenAI(ollamaJson) {
   if (!ollamaJson || ollamaJson.choices) return ollamaJson; // ya es OpenAI
   const msg = ollamaJson.message || {};
   // Algunos modelos (Qwen, etc.) ponen el contenido en "thinking" en vez de "content"
-  const content = msg.content || msg.thinking || '';
+  const hasToolCalls = Array.isArray(msg.tool_calls) && msg.tool_calls.length > 0;
+  const content = hasToolCalls ? null : (msg.content || msg.thinking || '');
+  // Normalizar tool_calls: Ollama → OpenAI format
+  const toolCalls = hasToolCalls ? msg.tool_calls.map(tc => {
+    const fn = tc.function || {};
+    return {
+      id: tc.id || ('call_' + Math.random().toString(36).slice(2, 10)),
+      type: 'function',
+      function: {
+        name: fn.name || '',
+        arguments: typeof fn.arguments === 'string' ? fn.arguments : JSON.stringify(fn.arguments || {})
+      }
+    };
+  }) : undefined;
   return {
     id: 'chatcmpl-ollama-' + Date.now(),
     object: 'chat.completion',
@@ -140,9 +153,9 @@ function ollamaToOpenAI(ollamaJson) {
       index: 0,
       message: Object.assign(
         { role: msg.role || 'assistant', content },
-        msg.tool_calls ? { tool_calls: msg.tool_calls } : {}
+        toolCalls ? { tool_calls: toolCalls } : {}
       ),
-      finish_reason: ollamaJson.done_reason || (ollamaJson.done ? 'stop' : null)
+      finish_reason: toolCalls ? 'tool_calls' : (ollamaJson.done_reason || (ollamaJson.done ? 'stop' : null))
     }],
     usage: {
       prompt_tokens: ollamaJson.prompt_eval_count || 0,
