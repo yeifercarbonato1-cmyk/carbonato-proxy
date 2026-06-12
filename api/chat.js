@@ -126,9 +126,11 @@ function normalizeModelo20ToolCalls(result) {
 
 // ─── Ollama → OpenAI response transformer ───
 function ollamaToOpenAI(ollamaJson) {
-  // Non-streaming: {"model":"...","message":{"role":"assistant","content":"..."},"done":true,...}
+  // Non-streaming: {"model":"...","message":{"role":"assistant","content":"","thinking":"..."},"done":true,...}
   if (!ollamaJson || ollamaJson.choices) return ollamaJson; // ya es OpenAI
   const msg = ollamaJson.message || {};
+  // Algunos modelos (Qwen, etc.) ponen el contenido en "thinking" en vez de "content"
+  const content = msg.content || msg.thinking || '';
   return {
     id: 'chatcmpl-ollama-' + Date.now(),
     object: 'chat.completion',
@@ -136,7 +138,7 @@ function ollamaToOpenAI(ollamaJson) {
     model: ollamaJson.model || 'ollama',
     choices: [{
       index: 0,
-      message: { role: msg.role || 'assistant', content: msg.content || '' },
+      message: { role: msg.role || 'assistant', content },
       finish_reason: ollamaJson.done_reason || (ollamaJson.done ? 'stop' : null)
     }],
     usage: {
@@ -406,7 +408,72 @@ module.exports = async (req, res) => {
     }
 
     // ─── Streaming real ───
-    if (useStream && userModel !== 'modelo14') {
+    if (useStream && userModel === 'modelo14') {
+      // modelo14: Ollama no soporta SSE nativo, forzamos no-streaming y convertimos a SSE
+      body.model = cfg.model;
+      body.stream = false;
+      if (cfg.system_prompt) {
+        const hasSystem = body.messages && body.messages.some(m => m.role === 'system');
+        if (!hasSystem) {
+          body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
+        }
+      }
+      const headers = { 'Content-Type': 'application/json' };
+      const resolvedKey = resolveKey(cfg);
+      if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
+      const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
+      try {
+        const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(60000) });
+        if (!upstreamRes.ok) {
+          const errText = await upstreamRes.text();
+          return res.status(upstreamRes.status).json({ error: { message: errText } });
+        }
+        const resultText = await upstreamRes.text();
+        let parsed;
+        try { parsed = ollamaToOpenAI(JSON.parse(resultText)); } catch(e) { parsed = null; }
+        const content = parsed?.choices?.[0]?.message?.content || '';
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.write('data: ' + JSON.stringify({
+          id: 'chatcmpl-ollama-' + Date.now(),
+          object: 'chat.completion.chunk',
+          created: Math.floor(Date.now() / 1000),
+          model: cfg.model,
+          choices: [{ index: 0, delta: { content }, finish_reason: null }]
+        }) + '\n\n');
+        res.write('data: ' + JSON.stringify({
+          id: 'chatcmpl-ollama-' + Date.now(),
+          object: 'chat.completion.chunk',
+          created: Math.floor(Date.now() / 1000),
+          model: cfg.model,
+          choices: [{ index: 0, delta: {}, finish_reason: 'stop' }]
+        }) + '\n\n');
+        res.write('data: [DONE]\n\n');
+        res.end();
+        // Token estimation
+        try {
+          const tokens = Math.max(1, Math.round(content.length / 4));
+          const db = loadUsageDB();
+          db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
+          if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+          db.stats[userModel].totalRequests += 1;
+          if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
+          if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
+          db.lastUpdated = new Date().toISOString();
+          db.lastModel = userModel;
+          saveUsageDB(db);
+        } catch(e) {}
+        saveLog(userModel, userIp, 200, 0, null);
+        return;
+      } catch(e) {
+        saveLog(userModel, userIp, 502, 0, e.message);
+        return res.status(502).json({ error: { message: e.message, type: "api_error" } });
+      }
+    }
+
+    if (useStream) {
       body.model = cfg.model;
       body.stream = true;
       // Modelo16 ahora usa gpt-5.5 vía modelverse — soporta tools
