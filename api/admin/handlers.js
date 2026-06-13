@@ -2,20 +2,43 @@
 const { URL } = require('url');
 const fs = require('fs');
 const path = require('path');
-const { MODELOS, MODEL_IDS } = require('../models-def.js');
+const { MODELOS, PUBLIC_MODELOS, MODEL_IDS } = require('../models-def.js');
 const { signToken } = require('../auth.js');
-const { proxyBase, esc, escTpl, cookieOk, html, getGithubToken } = require('./helpers.js');
+const { proxyBase, esc, escTpl, cookieOk, requestAuthOk, apiKeyOk, html, getGithubToken } = require('./helpers.js');
 const { getHealthDb, saveHealthDb, loadUsageDB, saveUsageDB, loadUsageDBAsync, GITHUB_USAGE_URL, DB_PATH } = require('./db.js');
 
 const PROMPTS_PATH = path.join(DB_PATH, 'prompt-templates.json');
 const ADMIN_USER = process.env.ADMIN_USER;
 const ADMIN_PASS = process.env.ADMIN_PASS;
+const AUTH_FAILS = new Map();
+const AUTH_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_MAX_FAILS = Number(process.env.ADMIN_AUTH_MAX_FAILS || 8);
+function clientIp(req) {
+  return String(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
+}
+function authLocked(ip) {
+  const now = Date.now();
+  const rec = AUTH_FAILS.get(ip);
+  if (!rec || now - rec.first > AUTH_WINDOW_MS) return false;
+  return rec.count >= AUTH_MAX_FAILS;
+}
+function recordAuthFail(ip) {
+  const now = Date.now();
+  const rec = AUTH_FAILS.get(ip);
+  if (!rec || now - rec.first > AUTH_WINDOW_MS) AUTH_FAILS.set(ip, { count: 1, first: now });
+  else { rec.count += 1; AUTH_FAILS.set(ip, rec); }
+}
+function clearAuthFail(ip) { AUTH_FAILS.delete(ip); }
 
 // ========================================================
 // HELPERS LOCALES
 // ========================================================
 function loadPrompts() { try { return JSON.parse(fs.readFileSync(PROMPTS_PATH,'utf8')); } catch(e) { return []; } }
 function savePrompts(a) { fs.writeFileSync(PROMPTS_PATH, JSON.stringify(a, null, 2)); }
+function requireAdmin(req, res, next) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
+  return next();
+}
 
 // ========================================================
 // HEALTH
@@ -41,23 +64,28 @@ async function handleHealthSave(req, res) {
 
 async function handleHealthCheck(req, res) {
   const { data: db, sha } = await getHealthDb();
-  const results = await Promise.all(MODELOS.map(async (m) => {
+  const adminApiKey = (process.env.CARBONATO_API_KEY || String(process.env.CARBONATO_API_KEYS || '').split(',')[0] || '').trim();
+  const visibleModels = cookieOk(req) ? MODELOS : PUBLIC_MODELOS;
+  const results = await Promise.all(visibleModels.map(async (m) => {
     const t0 = Date.now();
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (adminApiKey) headers.Authorization = 'Bearer ' + adminApiKey;
+      else if (req.headers.cookie) headers.Cookie = req.headers.cookie;
       const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ model: m.id, messages: [{ role: 'user', content: 'ping' }], max_tokens: 5 })
       });
       const latency = Date.now() - t0;
       if (r.ok) db.push({ model: m.id, latency, time: Date.now(), ip: 'health-check' });
-      return { model: m.id, name: m.name, status: r.ok ? 'OK' : 'FAIL', latency: r.ok ? latency + 'ms' : '-' };
+      return { model: m.id, name: m.name, desc: m.desc, status: r.ok ? 'OK' : 'FAIL', latency: r.ok ? latency + 'ms' : '-', code: r.status };
     } catch (e) {
-      return { model: m.id, name: m.name, status: 'FAIL', latency: '-' };
+      return { model: m.id, name: m.name, desc: m.desc, status: 'FAIL', latency: '-', error: e.message };
     }
   }));
   await saveHealthDb(db, sha);
-  res.json({ ok: true, results });
+  res.json({ ok: true, total: results.length, results });
 }
 
 function handleHealthPage(req, res) {
@@ -76,17 +104,25 @@ const mods=${JSON.stringify(MODELOS)};
 mods.forEach(m=>{tbody.innerHTML+='<tr id="r-'+m.id+'"><td>'+m.id+'</td><td>'+m.name+'</td><td style="color:rgba(255,255,255,0.35);font-size:10px">'+(m.desc||'')+'</td><td id="l-'+m.id+'">...</td><td id="s-'+m.id+'">⟳</td></tr>';});
 let ok=0,fail=0;
 (async()=>{
-  for(const m of mods){
-    const t0=performance.now();
-    try{
-      const r=await fetch('/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:m.id,messages:[{role:'user',content:'ping'}],max_tokens:5})});
-      const lat=(performance.now()-t0).toFixed(0);
-      if(r.ok){ok++;document.getElementById('l-'+m.id).textContent=lat+'ms';document.getElementById('s-'+m.id).textContent='✓';document.getElementById('r-'+m.id).className='ok';}
-      else{fail++;document.getElementById('l-'+m.id).textContent=lat+'ms';document.getElementById('s-'+m.id).textContent='✗';document.getElementById('r-'+m.id).className='fail';}
-    }catch(e){fail++;document.getElementById('l-'+m.id).textContent='—';document.getElementById('s-'+m.id).textContent='✗';document.getElementById('r-'+m.id).className='fail';}
-    status.textContent='Probando... '+ok+' OK '+fail+' FAIL ('+mods.filter(x=>document.getElementById('s-'+x.id).textContent!=='⟳').length+'/'+mods.length+')';
+  status.textContent='Probando 21 modelos...';
+  try{
+    const r=await fetch('/api/health/check',{credentials:'same-origin'});
+    const d=await r.json();
+    if(!r.ok||!d.results) throw new Error(d.error||('HTTP '+r.status));
+    (d.results||[]).forEach((x,idx)=>{
+      setTimeout(()=>{
+        const row=document.getElementById('r-'+x.model); if(!row)return;
+        const lat=x.latency||'-';
+        if(x.status==='OK'){ok++;document.getElementById('l-'+x.model).textContent=lat;document.getElementById('s-'+x.model).textContent='✓';row.className='ok';}
+        else{fail++;document.getElementById('l-'+x.model).textContent=lat;document.getElementById('s-'+x.model).textContent='✗ '+(x.code||x.error||'');row.className='fail';}
+        const done=ok+fail;
+        status.textContent=done<mods.length?'Probando... '+ok+' OK '+fail+' FAIL ('+done+'/'+mods.length+')':'✓ Completo — '+done+'/'+mods.length+' modelos · '+ok+' OK · '+fail+' FAIL';
+      }, idx*80);
+    });
+  }catch(e){
+    status.textContent='⛔ Error health: '+e.message;
+    mods.forEach(m=>{const row=document.getElementById('r-'+m.id);document.getElementById('l-'+m.id).textContent='—';document.getElementById('s-'+m.id).textContent='✗';row.className='fail';});
   }
-  status.textContent='✓ Completo — '+ok+' OK · '+fail+' FAIL';
 })();
 </script></body></html>`);
 }
@@ -339,8 +375,12 @@ async function handlePlaygroundChat(req, res) {
     const chunks = []; for await (const chunk of req) chunks.push(chunk);
     const body = Buffer.concat(chunks).toString();
     const data = JSON.parse(body);
+    const headers = { 'Content-Type': 'application/json' };
+    const apiKey = String(process.env.CARBONATO_API_KEYS || process.env.CARBONATO_API_KEY || '').split(',').map(s => s.trim()).filter(Boolean)[0] || '';
+    if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
+
     const r = await fetch(proxyBase(req) + '/v1/chat/completions', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST', headers,
       body: JSON.stringify({ model: data.model || 'modelo1', messages: data.messages || [], max_tokens: data.max_tokens || 2048 })
     });
     const d = await r.json();
@@ -521,6 +561,8 @@ filteredList=getFiltered();renderTable();
 // ========================================================
 async function handleAdminAuth(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: "Method not allowed" });
+  const ip = clientIp(req);
+  if (authLocked(ip)) return res.status(429).json({ error: 'Too many login attempts' });
   let body = '';
   for await (const chunk of req) body += chunk;
   const p = new URLSearchParams(body);
@@ -528,6 +570,7 @@ async function handleAdminAuth(req, res) {
   const passOk = ADMIN_PASS && p.get('pass') === ADMIN_PASS;
   if (userOk && passOk) {
     try {
+      clearAuthFail(ip);
       const host = String(req.headers.host || '');
       const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
       const secure = (req.headers['x-forwarded-proto'] === 'https' && !isLocal) ? '; Secure' : '';
@@ -537,6 +580,7 @@ async function handleAdminAuth(req, res) {
       return res.status(500).json({ error: e.message });
     }
   }
+  recordAuthFail(ip);
   return res.writeHead(302, { 'Location': '/api/admin?error=1' }).end();
 }
 
@@ -656,12 +700,7 @@ function handleDocsIA(req, res) {
         modelo9: { id: "smart-rotator", free: true, provider: "kilo", description: "Failover inteligente — siempre activo" },
         modelo10: { id: "pollinations-image", free: true, provider: "pollinations", description: "Generación de imágenes HD", image_gen: true },
         modelo11: { id: "deepseek-v4-flash-free", free: true, provider: "opencode", description: "Tool calling avanzado" },
-        modelo12: { id: "minimax-m3-free", free: true, provider: "opencode", description: "Ligero y eficiente" },
-        modelo13: { id: "Qwen3.6", free: true, provider: "ollama", description: "Qwen3.6 — 118.253.177.192:11434" },
-        modelo14: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "openrouter", description: "Alta capacidad de proceso" },
-        modelo15: { id: "google/gemma-4-31b-it:free", free: true, provider: "openrouter", description: "Precisión y confiabilidad" },
-        modelo16: { id: "z-ai/glm-4.5-air:free", free: true, provider: "openrouter", description: "Arquitectura MoE eficiente" },
-        modelo17: { id: "deepseek-v4-flash-free", free: true, provider: "opencode", description: "Conocimiento + caveman — respuestas brutales con base de datos" }
+        modelo12: { id: "minimax-m3-free", free: true, provider: "opencode", description: "Ligero y eficiente" }
       },
       endpoints: {
         chat: "/chat/completions", models: "/models", admin: "/api/admin",
@@ -672,10 +711,10 @@ function handleDocsIA(req, res) {
         visitors: "/api/visitors/page", logs: "/api/logs/page", config: "/api/config/page"
       },
       usage: {
-        chat: { method: "POST", body: { model: "modelo1 - modelo17", messages: [{ role: "user", content: "Hello" }] } },
-        image_gen: { endpoint: "/images/generations", model: "modelo10", body: { prompt: "a beautiful sunset over mountains" } }
+        chat: { method: "POST", headers: { Authorization: "Bearer <CARBONATO_API_KEY>" }, body: { model: "modelo1", messages: [{ role: "user", content: "Hello" }] } },
+        image_gen: { endpoint: "/images/generations", headers: { Authorization: "Bearer <CARBONATO_API_KEY>" }, model: "modelo10", body: { prompt: "a beautiful sunset over mountains" } }
       },
-      auth: { note: "No global auth required. Admin panel uses credentials from env vars.", env_vars: ["GITHUB_TOKEN", "OR_KEY1", "OR_KEY2"] }
+      auth: { note: "API requires CARBONATO_API_KEY/CARBONATO_API_KEYS or admin cookie. Admin panel uses credentials from env vars.", env_vars: ["CARBONATO_API_KEY", "CARBONATO_API_KEYS", "ADMIN_USER", "ADMIN_PASS", "SESSION_SECRET"] }
     });
   }
   res.status(404).json({ error: "Not found" });
@@ -1432,6 +1471,7 @@ setInterval(fetchData, 8000);
 }
 
 module.exports = {
+  requireAdmin,
   handleHealthSave, handleHealthCheck, handleHealthPage,
   handleCompetencia, handleCompetenciaPage,
   handlePromptsList, handlePromptsCreate, handlePromptsDelete, handlePromptsPage,

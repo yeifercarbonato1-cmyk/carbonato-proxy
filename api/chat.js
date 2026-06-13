@@ -1,7 +1,8 @@
 const fs = require('fs');
 const path = require('path');
-const { MODELOS } = require('./models-def.js');
+const { MODELOS, PUBLIC_MODELOS, PUBLIC_MODEL_IDS, FREE_MODEL_IDS } = require('./models-def.js');
 const { loadUsageDB, saveUsageDB, addUsageToDb } = require('./admin/db.js');
+const { apiKeyOk, requestAuthOk } = require('./admin/helpers.js');
 const { 
   recordFailure: skynetFail, 
   recordSuccess: skynetSuccess, 
@@ -65,8 +66,8 @@ const KILO_MODELS = [
   "stepfun/step-3.7-flash:free",
   "openrouter/free"
 ];
-// Rotación para modelo9 (modelos de texto/imagen)
-const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12', 'modelo13', 'modelo14', 'modelo15', 'modelo16', 'modelo17', 'modelo18', 'modelo19', 'modelo20'];
+// Rotación pública: solo modelos publicados
+const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12'];
 
 // ─── Helper para extraer último mensaje de usuario ───
 function getLastUserMessage(messages) {
@@ -87,10 +88,27 @@ function getLastUserMessage(messages) {
 
 // ─── Config dinámico desde config.json ───
 // Busca: /tmp/proxy-config.json (hot-reload desde admin) → config.json (deploy)
-function resolveKey(cfg) {
-  if (!cfg.key) return '';
-  if (cfg.key.startsWith('$')) return process.env[cfg.key.slice(1)] || '';
-  return cfg.key;
+function resolveEnvValue(value) {
+  if (!value) return '';
+  if (typeof value === 'string' && value.startsWith('$')) return process.env[value.slice(1)] || '';
+  return value;
+}
+
+function resolveKey(cfg, modelKey = '') {
+  const direct = resolveEnvValue(cfg.key || '');
+  if (direct) return direct;
+  // Fallback por modelo: usa la key global si la del modelo está vacía
+  if (modelKey === 'modelo15' || modelKey === 'modelo16') return process.env.MODELVERSE_KEY || '';
+  if (modelKey === 'modelo18' || modelKey === 'modelo20') return process.env.NVIDIA_NIM_KEY || '';
+  return '';
+}
+
+function resolveUrl(cfg) {
+  return resolveEnvValue(cfg.url || '');
+}
+
+function resolveModel(cfg) {
+  return resolveEnvValue(cfg.model || '');
 }
 
 function getConfig() {
@@ -142,6 +160,7 @@ module.exports = async (req, res) => {
   
   // Endpoint para generación de imágenes (compatible con OpenAI DALL-E)
   if (url.endsWith('/images/generations') && req.method === 'POST') {
+    if (!apiKeyOk(req)) return res.status(401).json({ error: { message: 'CARBONATO_API_KEY requerida', type: 'auth_error' } });
     let body = {};
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
@@ -176,6 +195,10 @@ module.exports = async (req, res) => {
     const CONFIG = getConfig();
     const userModel = body.model;
     const cfg = CONFIG[userModel];
+    if (!apiKeyOk(req) && !FREE_MODEL_IDS.includes(String(userModel || ''))) {
+      return res.status(401).json({ error: { message: 'CARBONATO_API_KEY requerida para este modelo', type: 'auth_error' } });
+    }
+    const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
     const useStream = body.stream === true;
 
     // Modelo10: Generación de imágenes con Pollinations
@@ -203,7 +226,6 @@ module.exports = async (req, res) => {
     
     //Modelo9: Smart Rotator con circuit breaker + ranking dinámico
     if (cfg.isRotator) {
-      const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
       let lastError = null;
       let usedModel = null;
       
@@ -251,10 +273,10 @@ module.exports = async (req, res) => {
           continue;
         }
         
-        console.log(`[rotator] Probando ${modelKey} (${targetCfg.model})...`);
+        console.log(`[rotator] Probando ${modelKey} (${resolveModel(targetCfg)})...`);
         
         try {
-          const rotatorBody = { ...body, model: targetCfg.model };
+          const rotatorBody = { ...body, model: resolveModel(targetCfg) };
           if (targetCfg.system_prompt) {
             const hasSystem = rotatorBody.messages && rotatorBody.messages.some(m => m.role === 'system');
             if (!hasSystem) {
@@ -263,9 +285,9 @@ module.exports = async (req, res) => {
           }
           // modelo14 ahora es OpenAI-compatible, no necesita transformación
           
-          const upstreamRes = await fetch(targetCfg.url, {
+          const upstreamRes = await fetch(resolveUrl(targetCfg), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...(targetCfg.key ? { 'Authorization': `Bearer ${resolveKey(targetCfg)}` } : {}) },
+            headers: { 'Content-Type': 'application/json', ...(resolveKey(targetCfg, modelKey) ? { 'Authorization': `Bearer ${resolveKey(targetCfg, modelKey)}` } : {}) },
             body: JSON.stringify(rotatorBody),
             signal: AbortSignal.timeout(15000)
           });
@@ -351,7 +373,7 @@ module.exports = async (req, res) => {
 
     // ─── Streaming real ───
     if (useStream) {
-      body.model = cfg.model;
+      body.model = resolveModel(cfg);
       body.stream = true;
       // Modelo16 ahora usa gpt-5.5 vía modelverse — soporta tools
       if (cfg.system_prompt) {
@@ -401,13 +423,12 @@ module.exports = async (req, res) => {
         // mode 'tool': el modelo usa /api/knowledge directamente
       }
       const headers = { 'Content-Type': 'application/json' };
-      const resolvedKey = resolveKey(cfg);
+      const resolvedKey = resolveKey(cfg, userModel);
       if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
-      const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
       try {
         const ac = new AbortController();
         const to = setTimeout(() => ac.abort(), 60000);
-        const upstreamRes = await fetch(cfg.url, {
+        const upstreamRes = await fetch(resolveUrl(cfg), {
           method: 'POST', headers, body: JSON.stringify(body), signal: ac.signal
         });
         clearTimeout(to);
@@ -459,7 +480,7 @@ module.exports = async (req, res) => {
       }
     }
 
-    body.model = cfg.model;
+    body.model = resolveModel(cfg);
 
     if (cfg.system_prompt) {
       if (userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo19' || userModel === 'modelo20') {
@@ -508,12 +529,11 @@ module.exports = async (req, res) => {
     }
     
     const headers = { 'Content-Type': 'application/json' };
-    const resolvedKey = resolveKey(cfg);
+    const resolvedKey = resolveKey(cfg, userModel);
     if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
-    
-    const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
+
     try {
-      const upstreamRes = await fetch(cfg.url, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
+      const upstreamRes = await fetch(resolveUrl(cfg), { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
       let result = await upstreamRes.text();
       // modelo14 ahora es OpenAI-compatible, respuesta directa
       if (userModel === 'modelo20') {

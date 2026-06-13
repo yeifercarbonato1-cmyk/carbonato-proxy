@@ -24,7 +24,8 @@
     { "src": "api/modelo17.js", "use": "@vercel/node" },
     { "src": "api/modelo18.js", "use": "@vercel/node" },
     { "src": "api/modelo19.js", "use": "@vercel/node" },
-    { "src": "api/modelo20.js", "use": "@vercel/node" }
+    { "src": "api/modelo20.js", "use": "@vercel/node" },
+    { "src": "api/modelo21.js", "use": "@vercel/node" }
   ],
   "routes": [
     { "src": "/chat/completions", "dest": "/api/chat.js" },
@@ -59,6 +60,7 @@
     { "src": "/api/modelo18(.*)", "dest": "/api/modelo18.js" },
     { "src": "/api/modelo19(.*)", "dest": "/api/modelo19.js" },
     { "src": "/api/modelo20(.*)", "dest": "/api/modelo20.js" },
+    { "src": "/api/modelo21(.*)", "dest": "/api/modelo21.js" },
     { "src": "/(.*)", "dest": "/api/index.js" }
   ]
 }

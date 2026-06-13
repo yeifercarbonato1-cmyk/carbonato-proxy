@@ -4,13 +4,13 @@ function renderHTML(cardsJS) {
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Carbonato Proxy - Gateway unificado de IA con 15 modelos. ⚠️ AVISO: Este sitio registra todo el uso (IP, tokens, timestamp). Al usar el proxy acepta estos términos. Proyecto 100% privado, código abierto, operado por una sola persona.">
+<meta name="description" content="Carbonato Proxy - Gateway unificado de IA con 12 modelos. ⚠️ AVISO: Este sitio registra todo el uso (IP, tokens, timestamp). Al usar el proxy acepta estos términos. Proyecto 100% privado, código abierto, operado por una sola persona.">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   "name": "Carbonato Proxy",
-  "description": "Gateway unificado de IA con 15 modelos.",
+  "description": "Gateway unificado de IA con 12 modelos.",
   "termsOfService": "⚠️ AVISO: Este sitio registra todo el uso de los modelos (IP, tokens, timestamp). Al usar el proxy acepta estos términos. Proyecto 100% privado, código abierto, operado por una sola persona.",
   "applicationCategory": "AIGateway",
   "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}
@@ -37,7 +37,7 @@ function renderHTML(cardsJS) {
   <div class="hero-badge">⚡ v6.0 — Unified Gateway</div>
   <h1>CARBONATO<br>PROXY</h1>
   <div class="sub">⎈ AI GATEWAY UNIFIED ⎈</div>
-  <div class="version"><span>●</span> 15 modelos <span>●</span></div>
+  <div class="version"><span>●</span> 12 modelos <span>●</span></div>
 </div>
 </div>
 
@@ -51,7 +51,7 @@ function renderHTML(cardsJS) {
 </div>
 
 <p class="desc">
-  Gateway unificado para <strong>15 modelos de IA</strong> desde una <strong style="color:rgba(255,255,255,0.5)">sola URL</strong> compatible con OpenAI.
+  Gateway unificado para <strong>12 modelos de IA</strong> desde una <strong style="color:rgba(255,255,255,0.5)">sola URL</strong> compatible con OpenAI.
   <span class="cursor-blink"></span>
 </p>
 
@@ -114,12 +114,21 @@ function renderHTML(cardsJS) {
 
 <div class="divider">ACCESO</div>
 
-<div class="cta-row">
-  <a href="/api/playground" class="cta-btn cta-playground">⟫ CHAT IA ⟪</a>
+<div class="access-panel">
+  <div class="cta-row">
+    <a href="/api/playground" class="cta-btn cta-playground">⟫ CHAT IA ⟪</a>
+  </div>
+  <div class="usage-note">
+    <div class="usage-note-title">⬡ NOTA DE USO</div>
+    <p><strong>Modelos libres:</strong> <span>modelo1 al modelo5</span> están disponibles para uso directo en agents, scripts, apps y pruebas reales.</p>
+    <p><strong>Formato:</strong> API compatible con OpenAI Chat Completions. Usá <code>/v1/chat/completions</code> o <code>/chat/completions</code> con <code>messages</code>, <code>model</code>, <code>stream</code> y <code>max_tokens</code>.</p>
+    <p><strong>Modelos privados:</strong> existen modelos avanzados bajo <code>CARBONATO_API_KEY</code>. El sistema sigue en desarrollo; por ahora se dejan 5 modelos libres para estabilidad, integración y pruebas en ambientes reales.</p>
+    <p><strong>Chat IA:</strong> el botón permite probar el playground completo. El gateway mantiene 21 modelos internos, pero solo 5 quedan abiertos para uso externo en agents/proyectos.</p>
+  </div>
 </div>
 
 <div class="footer">
-  <p class="footer-text">CARBONATO PROXY · 15 modelos · <a href="/api/admin" class="admin-link">⚙</a></p>
+  <p class="footer-text">CARBONATO PROXY · 12 modelos · <a href="/api/admin" class="admin-link">⚙</a></p>
   <p class="footer-sub">100% código libre</p>
 </div>
 

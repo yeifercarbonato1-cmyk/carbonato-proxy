@@ -1,8 +1,8 @@
-// api/modelo18.js — Página de administración para modelo18 GLM 5.1
-// GET  /api/modelo18          → página HTML (requiere auth)
-// POST /api/modelo18/knowledge → actualiza conocimiento
-// POST /api/modelo18/config    → actualiza configuración
-// GET  /api/modelo18/test?q=   → prueba RAG query
+// api/modelo21.js — Página de administración para modelo21 Nemotron
+// GET  /api/modelo21          → página HTML (requiere auth)
+// POST /api/modelo21/knowledge → actualiza conocimiento
+// POST /api/modelo21/config    → actualiza configuración
+// GET  /api/modelo21/test?q=   → prueba RAG query
 
 const fs = require('fs');
 const path = require('path');
@@ -32,11 +32,11 @@ const HTML = (config, knowledgeText) => `
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GLM 5.1 — modelo18</title>
+<title>DEEPSEEK V3.2 TOOLS — modelo21</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}
-h1{font-family:'JetBrains Mono',monospace;font-size:18px;color:#ff3300;margin-bottom:4px;letter-spacing:2px}
+h1{font-family:'JetBrains Mono',monospace;font-size:18px;color:#55ccff;margin-bottom:4px;letter-spacing:2px}
 .sub{font-size:11px;color:rgba(255,255,255,0.35);margin-bottom:24px;font-family:'JetBrains Mono',monospace}
 .section{border:1px solid rgba(255,255,255,0.08);padding:20px;margin-bottom:20px;border-radius:4px}
 .section-title{font-size:11px;color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;letter-spacing:1px;margin-bottom:12px;text-transform:uppercase}
@@ -48,8 +48,8 @@ h1{font-family:'JetBrains Mono',monospace;font-size:18px;color:#ff3300;margin-bo
 textarea{width:100%;padding:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.85);border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace;resize:vertical;min-height:200px}
 button{padding:8px 20px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:rgba(255,255,255,0.85);cursor:pointer;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.5px;border-radius:3px;transition:0.2s}
 button:hover{background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.3)}
-button.primary{background:#ff3300;color:#0a0a0f;border-color:#ff3300;font-weight:bold}
-button.primary:hover{background:#ff5522}
+button.primary{background:#55ccff;color:#0a0a0f;border-color:#55ccff;font-weight:bold}
+button.primary:hover{background:#77ddff}
 #status{font-size:11px;margin-top:8px;padding:8px 12px;border-radius:3px;font-family:'JetBrains Mono',monospace;display:none}
 #status.show{display:block}
 #status.ok{background:rgba(0,255,136,0.08);color:#00ff88;border:1px solid rgba(0,255,136,0.2)}
@@ -57,7 +57,7 @@ button.primary:hover{background:#ff5522}
 #testResult{margin-top:8px;padding:12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:3px;font-size:12px;font-family:'JetBrains Mono',monospace;white-space:pre-wrap;min-height:40px;display:none}
 #testResult.show{display:block}
 .kb-entry{border:1px solid rgba(255,255,255,0.06);padding:12px;margin-bottom:8px;border-radius:3px;position:relative}
-.kb-entry .title{font-size:12px;font-weight:bold;color:#ff3300;margin-bottom:4px}
+.kb-entry .title{font-size:12px;font-weight:bold;color:#55ccff;margin-bottom:4px}
 .kb-entry .content{font-size:11px;color:rgba(255,255,255,0.6);margin-bottom:4px}
 .kb-entry .del{position:absolute;top:8px;right:8px;cursor:pointer;font-size:14px;color:rgba(255,255,255,0.2);border:none;background:none;padding:2px 6px}
 .kb-entry .del:hover{color:#ff3333}
@@ -68,8 +68,8 @@ button.primary:hover{background:#ff5522}
 </head>
 <body>
 <a href="/api/admin-panel" class="back">⟵ VOLVER AL PANEL</a>
-<h1>🦖 GLM 5.1 — Zhipu AI</h1>
-<div class="sub">modelo18 — z-ai/glm-5.1 · OpenRouter</div>
+<h1>⚙️ DEEPSEEK V3.2 TOOLS</h1>
+<div class="sub">modelo21 — Configuración y base de conocimiento</div>
 
 <!-- Config section -->
 <div class="section">
@@ -77,15 +77,15 @@ button.primary:hover{background:#ff5522}
   <div class="row">
     <div class="field">
       <label>Modo conocimiento</label>
-      <select id="mode">${['rag','full','tool'].map(m => `<option value="${m}"${config.modelo18?.knowledge?.mode === m ? ' selected' : ''}>${m.toUpperCase()} — ${m === 'rag' ? 'Inyección inteligente' : m === 'full' ? 'System prompt completo' : 'Endpoint externo'}</option>`).join('')}</select>
+      <select id="mode">${['rag','full','tool'].map(m => `<option value="${m}"${config.modelo21?.knowledge?.mode === m ? ' selected' : ''}>${m.toUpperCase()} — ${m === 'rag' ? 'Inyección inteligente' : m === 'full' ? 'System prompt completo' : 'Endpoint externo'}</option>`).join('')}</select>
     </div>
     <div class="field">
       <label>Nivel Caveman</label>
-      <select id="cavemanLevel">${['lite','full','ultra'].map(l => `<option value="${l}"${config.modelo18?.caveman?.default_level === l ? ' selected' : ''}>${l.toUpperCase()} — ${l === 'lite' ? 'Ligero' : l === 'full' ? 'Cavernícola' : 'Telegráfico'}</option>`).join('')}</select>
+      <select id="cavemanLevel">${['lite','full','ultra'].map(l => `<option value="${l}"${config.modelo21?.caveman?.default_level === l ? ' selected' : ''}>${l.toUpperCase()} — ${l === 'lite' ? 'Ligero' : l === 'full' ? 'Cavernícola' : 'Telegráfico'}</option>`).join('')}</select>
     </div>
     <div class="field">
       <label>Límite RAG</label>
-      <input type="number" id="ragLimit" min="1" max="10" value="${config.modelo18?.knowledge?.rag_limit || 3}">
+      <input type="number" id="ragLimit" min="1" max="10" value="${config.modelo21?.knowledge?.rag_limit || 3}">
     </div>
   </div>
   <button class="primary" onclick="saveConfig()">⟫ GUARDAR CONFIG</button>
@@ -158,7 +158,7 @@ async function saveConfig(){
   const mode=document.getElementById('mode').value;
   const level=document.getElementById('cavemanLevel').value;
   const limit=document.getElementById('ragLimit').value;
-  const r=await fetch('/api/modelo18/config',{
+  const r=await fetch('/api/modelo21/config',{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({mode, cavemanLevel:level, ragLimit:parseInt(limit)})
   });
@@ -172,9 +172,9 @@ async function saveKnowledge(){
   if(raw.style.display==='block'){
     text=raw.value;
   } else {
-    text='# Base de Conocimiento — modelo18\\n\\n'+buildKnowledgeText();
+    text='# Base de Conocimiento — modelo21\\n\\n'+buildKnowledgeText();
   }
-  const r=await fetch('/api/modelo18/knowledge',{
+  const r=await fetch('/api/modelo21/knowledge',{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({knowledge:text})
   });
@@ -204,7 +204,7 @@ async function testQuery(){
   if(!q) return;
   const tr=document.getElementById('testResult');
   tr.className='show'; tr.textContent='⟫ BUSCANDO...';
-  const r=await fetch('/api/modelo18/test?q='+encodeURIComponent(q));
+  const r=await fetch('/api/modelo21/test?q='+encodeURIComponent(q));
   const d=await r.json();
   if(d.found){
     tr.textContent=d.sections.map(s => s.content).join('\\n\\n---\\n\\n');
@@ -223,8 +223,8 @@ module.exports = async (req, res) => {
   const pathname = url.pathname;
   const method = req.method;
 
-  // GET /api/modelo18 → página HTML
-  if (pathname === '/api/modelo18' && method === 'GET') {
+  // GET /api/modelo21 → página HTML
+  if (pathname === '/api/modelo21' && method === 'GET') {
     if (!cookieOk(req)) {
       res.statusCode = 302;
       res.setHeader('Location', '/api/admin');
@@ -238,16 +238,16 @@ module.exports = async (req, res) => {
     return res.end(HTML(config, kbText));
   }
 
-  // GET /api/modelo18/test?q=... → probar RAG
-  if (pathname === '/api/modelo18/test' && method === 'GET') {
+  // GET /api/modelo21/test?q=... → probar RAG
+  if (pathname === '/api/modelo21/test' && method === 'GET') {
     if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
     const query = url.searchParams.get('q') || '';
     const result = rag.search(query, 5);
     return res.status(200).json({ ok: true, ...result });
   }
 
-  // POST /api/modelo18/knowledge → actualizar conocimiento
-  if (pathname === '/api/modelo18/knowledge' && method === 'POST') {
+  // POST /api/modelo21/knowledge → actualizar conocimiento
+  if (pathname === '/api/modelo21/knowledge' && method === 'POST') {
     if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
     let body = {};
     try {
@@ -286,14 +286,14 @@ module.exports = async (req, res) => {
             sha
           })
         });
-      } catch(e) { console.log('[modelo18] Error GitHub knowledge:', e.message); }
+      } catch(e) { console.log('[modelo21] Error GitHub knowledge:', e.message); }
     }
 
     return res.status(200).json({ ok: true, sections: db.sections });
   }
 
-  // POST /api/modelo18/config → actualizar configuración
-  if (pathname === '/api/modelo18/config' && method === 'POST') {
+  // POST /api/modelo21/config → actualizar configuración
+  if (pathname === '/api/modelo21/config' && method === 'POST') {
     if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
     let body = {};
     try {
@@ -309,18 +309,18 @@ module.exports = async (req, res) => {
     try { config = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8')); } catch(e) {}
     try { config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch(e) {}
 
-    // Actualizar modelo18
-    if (!config.modelo18) config.modelo18 = {};
-    if (!config.modelo18.knowledge) config.modelo18.knowledge = {};
-    config.modelo18.knowledge.mode = mode;
-    config.modelo18.knowledge.rag_limit = parseInt(ragLimit) || 3;
-    config.modelo18.knowledge.enabled = true;
-    config.modelo18.knowledge.tool_endpoint = '/api/knowledge';
-    config.modelo18.knowledge.available_modes = ['rag', 'tool', 'full'];
-    if (!config.modelo18.caveman) config.modelo18.caveman = {};
-    config.modelo18.caveman.default_level = cavemanLevel;
-    config.modelo18.caveman.enabled = true;
-    config.modelo18.caveman.levels = ['lite', 'full', 'ultra'];
+    // Actualizar modelo21
+    if (!config.modelo21) config.modelo21 = {};
+    if (!config.modelo21.knowledge) config.modelo21.knowledge = {};
+    config.modelo21.knowledge.mode = mode;
+    config.modelo21.knowledge.rag_limit = parseInt(ragLimit) || 3;
+    config.modelo21.knowledge.enabled = true;
+    config.modelo21.knowledge.tool_endpoint = '/api/knowledge';
+    config.modelo21.knowledge.available_modes = ['rag', 'tool', 'full'];
+    if (!config.modelo21.caveman) config.modelo21.caveman = {};
+    config.modelo21.caveman.default_level = cavemanLevel;
+    config.modelo21.caveman.enabled = true;
+    config.modelo21.caveman.levels = ['lite', 'full', 'ultra'];
 
     // Guardar local
     try {
@@ -341,13 +341,13 @@ module.exports = async (req, res) => {
             method: 'PUT',
             headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              message: `Update modelo18 config - ${new Date().toISOString().slice(0,10)}`,
+              message: `Update modelo21 config - ${new Date().toISOString().slice(0,10)}`,
               content: Buffer.from(JSON.stringify(config, null, 2)).toString('base64'),
               sha
             })
           });
         }
-      } catch(e) { console.log('[modelo18] Error GitHub config:', e.message); }
+      } catch(e) { console.log('[modelo21] Error GitHub config:', e.message); }
     }
 
     return res.status(200).json({ ok: true });

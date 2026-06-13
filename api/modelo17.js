@@ -240,6 +240,7 @@ module.exports = async (req, res) => {
 
   // GET /api/modelo17/test?q=... → probar RAG
   if (pathname === '/api/modelo17/test' && method === 'GET') {
+    if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
     const query = url.searchParams.get('q') || '';
     const result = rag.search(query, 5);
     return res.status(200).json({ ok: true, ...result });

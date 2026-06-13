@@ -66,6 +66,8 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 .m-result{margin-top:8px;padding:8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:9px;word-break:break-all;display:none;line-height:1.5}
 .m-result.ok{display:block;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.15);color:var(--green)}
 .m-result.err{display:block;background:rgba(255,0,0,0.05);border:1px solid rgba(255,0,0,0.15);color:#ff4444}
+.api-key-box{background:var(--card);border:1px solid rgba(0,255,245,0.16);border-radius:10px;padding:14px 16px;margin:16px 0 20px;backdrop-filter:blur(12px)}
+.api-key-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.api-key-row input{flex:1;min-width:260px;padding:9px 10px;background:rgba(0,0,0,0.35);border:1px solid var(--border);border-radius:6px;color:var(--cyan);font-family:'JetBrains Mono',monospace;font-size:11px}.api-key-note{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--dim);margin-top:8px;line-height:1.5}.copy-small{padding:8px 12px;border:1px solid var(--cyan);background:transparent;color:var(--cyan);border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:10px;cursor:pointer}
 .actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:20px 0}
 .action-btn{padding:12px 24px;border:none;border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.3s;letter-spacing:2px;text-transform:uppercase;position:relative;overflow:hidden}
 .action-btn::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.1),transparent);transition:left 0.5s}
@@ -147,6 +149,7 @@ function navHTML() {
   <a href="/api/modelo18" class="nav-link" style="color:#ffaa00">🦖 GLM 5.1</a>
   <a href="/api/modelo19" class="nav-link" style="color:#ffcc00">🧟 CAVERNÍCOLA SLOP</a>
   <a href="/api/modelo20" class="nav-link" style="color:#44ccff">🐉 CAVERNÍCOLA CN</a>
+  <a href="/api/modelo21" class="nav-link" style="color:#55ccff">⚙️ DEEPSEEK TOOLS</a>
   <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>
   <a href="/api/playground" class="nav-link">⟐ PLAYGROUND</a>
   <a href="/api/visitors/page" class="nav-link">⟐ VISITANTES</a>
@@ -162,7 +165,7 @@ function overviewHTML(totalReq, totalTok, totalIps, modelsActive) {
   <div class="ov-card"><div class="ov-label">Total Requests</div><div class="ov-value">${totalReq.toLocaleString()}</div></div>
   <div class="ov-card"><div class="ov-label">Tokens Consumidos</div><div class="ov-value">${totalTok.toLocaleString()}</div></div>
   <div class="ov-card"><div class="ov-label">IPs Únicas</div><div class="ov-value">${totalIps}</div></div>
-  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">${modelsActive}<span> / 19 activos</span></div></div>
+  <div class="ov-card"><div class="ov-label">Modelos</div><div class="ov-value">${modelsActive}<span> activos</span></div></div>
 </div>`;
 }
 
@@ -172,11 +175,17 @@ function modelCardHTML(modelo, cfg, stats, idx) {
   const name = m.name || modelo;
   const color = COLORS[idx] || '#00fff5';
   const s = stats || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+  // Mostrar key fallback explícito si está vacía
+  let keyDisplay = cfg.key || '';
+  if (!keyDisplay) {
+    if (modelo === 'modelo15' || modelo === 'modelo16') keyDisplay = '$MODELVERSE_KEY';
+    else if (modelo === 'modelo18' || modelo === 'modelo20') keyDisplay = '$NVIDIA_NIM_KEY';
+  }
   return `<div class="m-card" style="--card-color:${color}">
     <div class="m-head"><span class="m-icon">${icon}</span><span class="m-name" style="color:${color}">${modelo}</span></div>
-    <div class="m-field"><span class="m-label">BASE URL</span><input class="m-inp" id="url${idx+1}" value="${esc(cfg.url||'')}"></div>
-    <div class="m-field"><span class="m-label">MODEL ID</span><input class="m-inp" id="id${idx+1}" value="${esc(cfg.model||'')}"></div>
-    <div class="m-field"><span class="m-label">API KEY</span><input class="m-inp" id="key${idx+1}" value="${esc(cfg.key||'')}"></div>
+    <div class="m-field"><span class="m-label">BASE URL</span><input class="m-inp" id="url${idx+1}" value="${esc(cfg.url||'')}" placeholder="https://..."></div>
+    <div class="m-field"><span class="m-label">MODEL ID</span><input class="m-inp" id="id${idx+1}" value="${esc(cfg.model||'')}" placeholder="model-id"></div>
+    <div class="m-field"><span class="m-label">API KEY</span><input class="m-inp" id="key${idx+1}" value="${esc(keyDisplay)}" placeholder="vacío = usa key global"></div>
     <div class="m-field"><span class="m-label">SYSTEM PROMPT</span><textarea class="m-ta" id="sp${idx+1}" rows="2">${esc(cfg.system_prompt||'')}</textarea></div>
     <div class="m-stats"><span>📊 ${s.totalRequests}</span><span>🔢 ${(s.totalTokens||0).toLocaleString()}</span><span>🌐 ${(s.uniqueIPs||[]).length}</span></div>
     <button class="m-btn" onclick="test('${modelo}',${idx+1})">⟫ PROBAR</button>
@@ -211,6 +220,18 @@ function usageTableHTML(usages) {
   </div>`;
 }
 
+function apiKeyBoxHTML(apiKey) {
+  const key = apiKey || '';
+  return `<div class="section-title">🔐 CARBONATO API KEY</div>
+  <div class="api-key-box">
+    <div class="api-key-row">
+      <input id="carbonatoApiKey" readonly value="${esc(key)}" placeholder="CARBONATO_API_KEY no configurada en env">
+      <button class="copy-small" onclick="navigator.clipboard.writeText(document.getElementById('carbonatoApiKey').value);this.textContent='✓ COPIADA';setTimeout(()=>this.textContent='COPIAR',1500)">COPIAR</button>
+    </div>
+    <div class="api-key-note">Usar en agents/proyectos como <strong>Authorization: Bearer &lt;CARBONATO_API_KEY&gt;</strong>. modelo1-modelo5 libres; modelo6-modelo21 requieren esta llave.</div>
+  </div>`;
+}
+
 function actionButtonsHTML() {
   return `<div class="actions">
     <button class="action-btn save" onclick="saveAll()">⟫ GUARDAR CAMBIOS</button>
@@ -236,7 +257,7 @@ function chartScriptsHTML() {
   return `<script>
 function test(m,n){
   var d=document.getElementById('r'+n);d.className='m-result';d.style.display='block';d.textContent='⟫ CONECTANDO...';
-  var h={'Content-Type':'application/json'};var msgs=[];var sp=document.getElementById('sp'+n).value;
+  var h={'Content-Type':'application/json'};var ak=document.getElementById('carbonatoApiKey')?.value||'';if(ak)h['Authorization']='Bearer '+ak;var msgs=[];var sp=document.getElementById('sp'+n).value;
   if(sp) msgs.push({role:'system',content:sp});msgs.push({role:'user',content:'Responde solo OK'});
   fetch('/chat/completions',{method:'POST',headers:h,body:JSON.stringify({model:m,messages:msgs})})
   .then(r=>r.text()).then(x=>{try{var js=JSON.parse(x);if(js.error){d.className='m-result err';d.textContent='⛔ '+(js.error.message||JSON.stringify(js.error)).substring(0,500)}
@@ -244,7 +265,7 @@ function test(m,n){
   .catch(e=>{d.className='m-result err';d.textContent='⛔ Error: '+e.message});
 }
 function saveAll(){
-  for(var i=1;i<=20;i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
+  for(var i=1;i<=${MODELOS.length};i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
   var st=document.getElementById('status');var ls=document.getElementById('lastSave');
   st.innerHTML='<span class="info">⟫⟫ GUARDANDO CONFIGURACIÓN...</span>';
   fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})
@@ -296,5 +317,5 @@ function telegramStatusHTML(botStatus) {
 module.exports = {
   COLORS, esc, headHTML, footHTML, topBarHTML, navHTML, overviewHTML,
   modelCardHTML, statCardHTML, usageTableHTML, actionButtonsHTML,
-  chartsSectionHTML, chartScriptsHTML, telegramStatusHTML
+  chartsSectionHTML, chartScriptsHTML, telegramStatusHTML, apiKeyBoxHTML
 };

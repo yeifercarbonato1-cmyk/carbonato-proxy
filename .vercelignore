@@ -1,0 +1,11 @@
+.env
+.env.*
+*.local
+node_modules
+.git
+.opencode
+.hermes
+nosubiragitkeys.txt
+*.bak
+*.swp
+.DS_Store

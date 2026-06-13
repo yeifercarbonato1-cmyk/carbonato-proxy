@@ -13,17 +13,26 @@ const MODELOS = [
   { id: 'modelo10', name: 'Pollinations HD',           icon: '💎', desc: 'Generación de imágenes HD' },
   { id: 'modelo11', name: 'DeepSeek V4 Flash',         icon: '🧬', desc: 'Tool calling avanzado' },
   { id: 'modelo12', name: 'MiMo V2.5',                icon: '🔮', desc: 'Ligero y eficiente' },
-  { id: 'modelo13', name: 'Qwen3.6',                   icon: '🔥', desc: 'Qwen3.6 — Ollama 118.253.177.192' },
-  { id: 'modelo14', name: 'Qwen3.6 Abliterated 27B',      icon: '🌀', desc: 'huihui_ai/qwen3.6-abliterated:27b — Ollama local' },
-  { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
-  { id: 'modelo16', name: 'Cavernícola Mos',            icon: '🧌', desc: 'Mos-Agro relay — jailbreak vía relay externo' },
-  { id: 'modelo17', name: 'Cavernícola',                icon: '🦴', desc: 'NVIDIA 550B MoE — razonamiento masivo' },
-  { id: 'modelo18', name: 'GLM 5.1 — Zhipu AI',           icon: '🦖', desc: 'z-ai/glm-5.1 — razonamiento vía NVIDIA NIM' },
-  { id: 'modelo19', name: 'Cavernícola Slop',            icon: '🧟', desc: 'DeepSeek V4 Flash — jailbreak puro, sin filtros' },
-  { id: 'modelo20', name: 'Cavernícola CN',             icon: '🐉', desc: 'GPT-4 relay — tool calling activo' },
+  { id: 'modelo13', name: 'Qwen3.6',                    icon: '🔥', desc: 'Qwen3.6 — Ollama' },
+  { id: 'modelo14', name: 'Qwen3.6 Abliterated 27B',    icon: '🌀', desc: 'huihui_ai/qwen3.6-abliterated:27b' },
+  { id: 'modelo15', name: 'Claude Sonnet 4.6',          icon: '💫', desc: 'Modelo premium vía Modelverse' },
+  { id: 'modelo16', name: 'GPT-5.5',                    icon: '🧌', desc: 'Modelo premium vía Modelverse' },
+  { id: 'modelo17', name: 'DeepSeek V4 Flash',          icon: '🦴', desc: 'DeepSeek V4 Flash — relay especializado' },
+  { id: 'modelo18', name: 'GLM 5.1 — Zhipu AI',         icon: '🦖', desc: 'z-ai/glm-5.1 — razonamiento vía NVIDIA NIM' },
+  { id: 'modelo19', name: 'Qwen3.6 Abliterated 27B',    icon: '🧟', desc: 'huihui_ai/qwen3.6-abliterated:27b' },
+  { id: 'modelo20', name: 'Minimax M2.7',               icon: '🐉', desc: 'minimaxai/minimax-m2.7 vía NVIDIA NIM' },
+  { id: 'modelo21', name: 'DeepSeek V3.2 Tools',        icon: '⚙️', desc: 'DeepSeek-V3.2 — OpenAI compatible con tool calling' },
 ];
+
+// Modelos mostrados en la página pública/bienvenida
+const PUBLIC_MODELOS = MODELOS.slice(0, 12);
+
+// Modelos de uso libre sin API key
+const FREE_MODELOS = MODELOS.slice(0, 5);
 
 // IDs-only list for quick iteration
 const MODEL_IDS = MODELOS.map(m => m.id);
+const PUBLIC_MODEL_IDS = PUBLIC_MODELOS.map(m => m.id);
+const FREE_MODEL_IDS = FREE_MODELOS.map(m => m.id);
 
-module.exports = { MODELOS, MODEL_IDS };
+module.exports = { MODELOS, PUBLIC_MODELOS, FREE_MODELOS, MODEL_IDS, PUBLIC_MODEL_IDS, FREE_MODEL_IDS };

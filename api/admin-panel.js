@@ -52,9 +52,12 @@ module.exports = async (req, res) => {
   const stats = db.stats || {};
   const usages = db.usages || [];
 
+  const modelsCount = MODELOS.length;
+  const adminApiKey = (process.env.CARBONATO_API_KEY || String(process.env.CARBONATO_API_KEYS || '').split(',')[0] || '').trim();
+
   // Generar cards desde MODELOS
   let cards = '';
-  for (let i = 1; i <= 20; i++) {
+  for (let i = 1; i <= modelsCount; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || {};
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
@@ -93,7 +96,7 @@ module.exports = async (req, res) => {
 
   // Stats cards
   let statsCards = '';
-  for (let i = 1; i <= 20; i++) {
+  for (let i = 1; i <= modelsCount; i++) {
     const name = 'modelo' + i;
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
     statsCards += T.statCardHTML(name, s, i-1);
@@ -127,9 +130,10 @@ module.exports = async (req, res) => {
     T.headHTML('⎈ CARBONATO — PANEL ⎈') +
     T.topBarHTML(userIp) +
     T.navHTML() +
-    T.overviewHTML(totalReq, totalTok, totalIps.size, 20) +
+    T.overviewHTML(totalReq, totalTok, totalIps.size, modelsCount) +
     T.telegramStatusHTML(botStatus) +
     T.chartsSectionHTML(dailyLabels, dailyData, topModelsLabels, topModelsData, topIPsLabels, topIPsData, usages) +
+    T.apiKeyBoxHTML(adminApiKey) +
     T.actionButtonsHTML() +
     `<div class="section-title">GESTIÓN DE MODELOS</div><div class="m-grid">${cards}</div>` +
     `<div class="stats-section"><div class="section-title">ESTADÍSTICAS POR MODELO</div><div class="s-grid">${statsCards}</div></div>` +

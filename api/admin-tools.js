@@ -9,12 +9,12 @@ module.exports = async (req, res) => {
   const method = req.method;
 
   // --- HEALTH ---
-  if (pathname === '/api/health' || pathname === '/api/health/check') return h.handleHealthCheck(req, res);
+  if (pathname === '/api/health' || pathname === '/api/health/check') return h.requireAdmin(req, res, () => h.handleHealthCheck(req, res));
   if (pathname === '/api/health/page') return h.handleHealthPage(req, res);
-  if (pathname === '/api/health/save' && method === 'POST') return h.handleHealthSave(req, res);
+  if (pathname === '/api/health/save' && method === 'POST') return h.requireAdmin(req, res, () => h.handleHealthSave(req, res));
 
   // --- COMPETENCIA ---
-  if (pathname === '/api/competencia' && method === 'POST') return h.handleCompetencia(req, res);
+  if (pathname === '/api/competencia' && method === 'POST') return h.requireAdmin(req, res, () => h.handleCompetencia(req, res));
   if (pathname === '/api/competencia/page') return h.handleCompetenciaPage(req, res);
 
   // --- PROMPTS ---

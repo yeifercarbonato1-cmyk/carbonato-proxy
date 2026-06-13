@@ -1,7 +1,7 @@
 const CSS = require('./landing-css.js');
 const { renderHTML } = require('./landing-html.js');
 const { renderScript } = require('./landing-js.js');
-const { MODELOS } = require('./models-def.js');
+const { PUBLIC_MODELOS } = require('./models-def.js');
 
 module.exports = async (req, res) => {
   // Serve static video from public/
@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     }
   }
 
-  const modelos = MODELOS.slice(0, 15).map(m => ({icon:m.icon, name:m.id, desc:m.desc}));
+  const modelos = PUBLIC_MODELOS.map(m => ({icon:m.icon, name:m.id, desc:m.desc}));
   const cardsJS = JSON.stringify(modelos);
 
   let html = renderHTML(cardsJS);

@@ -96,6 +96,12 @@ const server = http.createServer((req, res) => {
     return m20Handler(req, res);
   }
 
+  // Modelo21 admin page
+  if (path.startsWith('/api/modelo21')) {
+    const m21Handler = wrapHandler(require('./api/modelo21.js'));
+    return m21Handler(req, res);
+  }
+
   // SEE routes
   if (path.startsWith('/api/see')) {
     const seeHandler = wrapHandler(require('./api/see.js'));

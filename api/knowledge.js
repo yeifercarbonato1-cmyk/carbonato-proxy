@@ -5,11 +5,14 @@
 
 const rag = require('../knowledge/rag.js');
 const tool = require('../knowledge/tool.js');
+const { requestAuthOk } = require('./admin/helpers.js');
 
 module.exports = async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
   const pathname = url.pathname;
   const method = req.method;
+
+  if (!requestAuthOk(req)) return res.status(401).json({ error: 'Auth required' });
 
   // GET /api/knowledge?q=... → RAG search
   if (pathname === '/api/knowledge' && method === 'GET') {

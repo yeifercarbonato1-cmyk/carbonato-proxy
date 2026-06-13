@@ -4,123 +4,92 @@
 `https://carbonato-proxy.vercel.app`
 
 ## Authentication
-No global auth. /chat/completions es público.
-Panel admin requiere cookie `admin_sess=ok` (login en `/api/admin`).
+La API requiere autenticación.
+
+Usar uno:
+- `Authorization: Bearer <CARBONATO_API_KEY>`
+- `x-api-key: <CARBONATO_API_KEY>`
+- cookie admin `admin_sess` después de login en `/api/admin`
+
+Variables:
+- `CARBONATO_API_KEY`: una llave única
+- `CARBONATO_API_KEYS`: varias llaves separadas por coma
+- `ADMIN_USER`, `ADMIN_PASS`, `SESSION_SECRET`: login admin
 
 ---
 
 ## Endpoints
 
-### POST /chat/completions (alias: /v1/chat/completions)
-API principal compatible OpenAI.
+### POST /chat/completions
+Alias: `/v1/chat/completions`
 
-**Request body:**
-```json
-{
-  "model": "modelo1",
-  "messages": [{"role": "user", "content": "Hola"}],
-  "stream": false,
-  "temperature": 0.7,
-  "max_tokens": 2048
-}
+Compatible OpenAI.
+
+```bash
+curl -s https://carbonato-proxy.vercel.app/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer $CARBONATO_API_KEY" \
+  -d '{
+    "model": "modelo1",
+    "messages": [{"role":"user","content":"Hola"}],
+    "stream": false
+  }'
 ```
 
-**Streaming:** pasar `"stream": true` para recibir SSE chunks en tiempo real.
+### GET /models
+Alias: `/v1/models`
 
-### POST /v1/images/generations (alias: /images/generations)
-Generación de imágenes vía modelo10.
+Requiere la misma autenticación. Devuelve solo modelos públicos.
 
-### GET /models (alias: /v1/models)
-Lista todos los modelos disponibles.
+```bash
+curl -s https://carbonato-proxy.vercel.app/v1/models \
+  -H "Authorization: Bearer $CARBONATO_API_KEY"
+```
+
+### POST /v1/images/generations
+Alias: `/images/generations`
+
+Requiere autenticación.
 
 ---
 
-## Modelos
+## Modelos públicos
 
-### Kilo.ai Gateway (sin key)
+Solo se publican 12 modelos:
 
-| ID | Modelo Interno | Notas |
-|----|---------------|-------|
-| modelo1 | kilo-auto/free | Auto-selección |
-| modelo2 | nvidia/nemotron-3-super-120b-a12b:free | 120B params |
-| modelo3 | poolside/laguna-m.1:free | Balance |
-| modelo4 | poolside/laguna-xs.2:free | Rápido |
-| modelo5 | nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free | **Visión multimodal** |
-| modelo6 | stepfun/step-3.7-flash:free | Razonamiento |
-| modelo7 | nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free | Código |
-| modelo8 | openrouter/free | Multi-modelo |
+| ID | Tipo |
+|----|------|
+| modelo1 | Chat |
+| modelo2 | Chat |
+| modelo3 | Chat |
+| modelo4 | Chat |
+| modelo5 | Visión/texto |
+| modelo6 | Chat |
+| modelo7 | Chat |
+| modelo8 | Chat |
+| modelo9 | Rotador público |
+| modelo10 | Imágenes |
+| modelo11 | Chat |
+| modelo12 | Chat |
 
-### Smart Rotator
-
-| ID | Comportamiento |
-|----|---------------|
-| modelo9 | Prueba modelo1→16 secuencialmente. Circuit breaker: 2 fallos/30s |
-
-### Imágenes
-
-| ID | Endpoint | Tipo |
-|----|----------|------|
-| modelo10 | https://image.pollinations.ai/prompt/ | Generación de imágenes |
-
-**Uso imágenes:**
-```json
-{"model":"modelo10","messages":[{"role":"user","content":"Gato astronauta"}]}
-```
-Respuesta: `{ "data": [{ "url": "https://image.pollinations.ai/..." }] }`
-
-### OpenCode Zen (sin key)
-
-| ID | Modelo Interno |
-|----|---------------|
-| modelo11 | deepseek-v4-flash-free |
-| modelo12 | minimax-m3-free |
-
-Endpoint: `https://opencode.ai/zen/v1/chat/completions`
-No requiere API key.
-
-### OpenRouter (con key)
-
-| ID | Modelo Interno | Key |
-|----|---------------|-----|
-| modelo13 | openai/gpt-oss-120b:free | `OR_KEY1` |
-| modelo14 | nvidia/nemotron-3-super-120b-a12b:free | `OR_KEY2` |
-| modelo15 | google/gemma-4-1b-it:free | `OR_KEY1` |
-| modelo16 | z-ai/glm-4.5-air:free | `OR_KEY2` |
-
-Endpoint: `https://openrouter.ai/api/v1/chat/completions`
+Modelos privados no aparecen en `/models` ni pueden llamarse sin cookie admin.
 
 ---
 
-## Streaming
+## Knowledge
 
-Todos los modelos de texto (1-4, 6-8, 11-16) soportan streaming real.
-No soportan streaming: modelo5 (visión), modelo9 (rotador), modelo10 (imagen).
-
-**Respuesta SSE:**
-```
-data: {"id":"...","object":"chat.completion.chunk","choices":[{"delta":{"content":"token"}}]}
-
-data: [DONE]
-```
-
-Timeout streaming: 60s. Timeout rotador: 15s por intento.
+`GET /api/knowledge?q=...` requiere API key o cookie admin.
 
 ---
 
-## Visión (modelo5)
+## Admin
 
-```json
-{
-  "model": "modelo5",
-  "messages": [{
-    "role": "user",
-    "content": [
-      {"type": "text", "text": "Describe esta imagen"},
-      {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64,..."}}
-    ]
-  }]
-}
-```
+- Login: `GET /api/admin`
+- Auth: `POST /api/admin-auth`
+- Dashboard: `GET /api/admin-panel`
+- Logout: `GET /api/admin-logout`
+
+`/api/admin-auth` tiene rate limit básico por IP.
 
 ---
 
@@ -129,39 +98,7 @@ Timeout streaming: 60s. Timeout rotador: 15s por intento.
 | Código | Significado |
 |--------|------------|
 | 400 | Modelo inválido / bad request |
-| 401 | API key faltante |
-| 500 | Error upstream del provider |
-| 502 | Timeout / provider caído |
-
----
-
-## Model Check
-
-`GET /api/models-check` — verifica disponibilidad de modelos en Kilo.ai.
-Requiere cookie admin. Retorna estado de cada modelo + sugerencias de actualización.
-
----
-
-## Admin Panel
-
-- **Login:** `GET /api/admin`
-- **Dashboard:** `GET /api/admin-panel` (requiere cookie)
-- **Auth:** `POST /api/admin-auth` (form: user, pass)
-- **Save:** `POST /api/admin-save` (JSON con config completa)
-- **Logout:** `GET /api/admin-logout`
-
-Diseño cyberpunk: dark mode, glassmorphism, neón, animaciones.
-
----
-
-## Variables de Entorno (Vercel)
-
-```
-GITHUB_TOKEN=<token_repo_scope>
-ADMIN_USER=admin
-ADMIN_PASS=carbonato2026
-OR_KEY1=sk-or-...
-OR_KEY2=sk-or-...
-```
-
-⚠️ Usar API REST de Vercel para setear env vars (CLI bug: `vercel env add` guarda valores vacíos).
+| 401 | Auth faltante o inválida |
+| 429 | Demasiados intentos login |
+| 500 | Error interno/upstream |
+| 502 | Provider caído/timeout |
