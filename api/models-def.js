@@ -13,7 +13,7 @@ const MODELOS = [
   { id: 'modelo10', name: 'Pollinations HD',           icon: '💎', desc: 'Generación de imágenes HD' },
   { id: 'modelo11', name: 'DeepSeek V4 Flash',         icon: '🧬', desc: 'Tool calling avanzado' },
   { id: 'modelo12', name: 'MiMo V2.5',                icon: '🔮', desc: 'Ligero y eficiente' },
-  { id: 'modelo13', name: 'OpenAI GPT OSS',            icon: '🔥', desc: 'Potencia open-source' },
+  { id: 'modelo13', name: 'Qwen3.6',                   icon: '🔥', desc: 'Qwen3.6 — Ollama 118.253.177.192' },
   { id: 'modelo14', name: 'Qwen3.6 Abliterated 27B',      icon: '🌀', desc: 'huihui_ai/qwen3.6-abliterated:27b — Ollama local' },
   { id: 'modelo15', name: 'Gemma 4',                   icon: '💫', desc: 'Precisión y confiabilidad' },
   { id: 'modelo16', name: 'Cavernícola Mos',            icon: '🧌', desc: 'Mos-Agro relay — jailbreak vía relay externo' },

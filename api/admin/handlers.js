@@ -67,13 +67,13 @@ function handleHealthPage(req, res) {
 <title>HEALTH — Carbonato Proxy</title>
 <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#0a0a0f;color:rgba(255,255,255,0.85);font-family:'Inter',sans-serif;padding:24px}h1{font-family:'JetBrains Mono',monospace;font-size:14px;color:rgba(255,255,255,0.6);margin-bottom:16px}table{width:100%;border-collapse:collapse;font-size:12px}th{text-align:left;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.08);color:rgba(255,255,255,0.4);font-family:'JetBrains Mono',monospace;font-size:9px;letter-spacing:1px}td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.04);font-family:'JetBrains Mono',monospace;font-size:11px}tr:hover td{background:rgba(255,255,255,0.02)}#status{font-size:11px;font-family:'JetBrains Mono',monospace;color:rgba(255,255,255,0.4);margin-bottom:12px}.live{color:rgba(255,255,255,0.3);font-size:9px}.ok{color:rgba(255,255,255,0.7)}.fail{color:rgba(255,255,255,0.25)}</style></head>
 <body><h1>⟐ HEALTH DASHBOARD <span class="live">● LIVE</span></h1>
-<div id="status">Probando 18 modelos...</div>
-<table><thead><tr><th>MODELO</th><th>NOMBRE</th><th>LATENCIA</th><th>STATUS</th></tr></thead><tbody id="tbody"></tbody></table>
+<div id="status">Probando ${MODELOS.length} modelos...</div>
+<table><thead><tr><th>MODELO</th><th>NOMBRE</th><th>DESCRIPCIÓN</th><th>LATENCIA</th><th>STATUS</th></tr></thead><tbody id="tbody"></tbody></table>
 <script>
 const tbody=document.getElementById('tbody');
 const status=document.getElementById('status');
 const mods=${JSON.stringify(MODELOS)};
-mods.forEach(m=>{tbody.innerHTML+='<tr id="r-'+m.id+'"><td>'+m.id+'</td><td>'+m.name+'</td><td id="l-'+m.id+'">...</td><td id="s-'+m.id+'">⟳</td></tr>';});
+mods.forEach(m=>{tbody.innerHTML+='<tr id="r-'+m.id+'"><td>'+m.id+'</td><td>'+m.name+'</td><td style="color:rgba(255,255,255,0.35);font-size:10px">'+(m.desc||'')+'</td><td id="l-'+m.id+'">...</td><td id="s-'+m.id+'">⟳</td></tr>';});
 let ok=0,fail=0;
 (async()=>{
   for(const m of mods){
@@ -657,7 +657,7 @@ function handleDocsIA(req, res) {
         modelo10: { id: "pollinations-image", free: true, provider: "pollinations", description: "Generación de imágenes HD", image_gen: true },
         modelo11: { id: "deepseek-v4-flash-free", free: true, provider: "opencode", description: "Tool calling avanzado" },
         modelo12: { id: "minimax-m3-free", free: true, provider: "opencode", description: "Ligero y eficiente" },
-        modelo13: { id: "openai/gpt-oss-120b:free", free: true, provider: "openrouter", description: "Potencia open-source" },
+        modelo13: { id: "Qwen3.6", free: true, provider: "ollama", description: "Qwen3.6 — 118.253.177.192:11434" },
         modelo14: { id: "nvidia/nemotron-3-super-120b-a12b:free", free: true, provider: "openrouter", description: "Alta capacidad de proceso" },
         modelo15: { id: "google/gemma-4-31b-it:free", free: true, provider: "openrouter", description: "Precisión y confiabilidad" },
         modelo16: { id: "z-ai/glm-4.5-air:free", free: true, provider: "openrouter", description: "Arquitectura MoE eficiente" },

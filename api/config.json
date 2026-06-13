@@ -73,9 +73,9 @@
     "system_prompt": ""
   },
   "modelo13": {
-    "url": "https://openrouter.ai/api/v1/chat/completions",
-    "model": "openai/gpt-oss-120b:free",
-    "key": "$OR_KEY1",
+    "url": "http://118.253.177.192:11434/v1/chat/completions",
+    "model": "Qwen3.6",
+    "key": "",
     "system_prompt": ""
   },
   "modelo14": {
