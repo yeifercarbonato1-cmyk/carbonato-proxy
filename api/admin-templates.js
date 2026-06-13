@@ -92,6 +92,18 @@ body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(
 #status .ok{color:var(--green)}#status .err{color:#ff4444}#status .info{color:var(--cyan)}
 .stats-section{margin-top:24px}
 .s-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;margin-bottom:20px}
+.env-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:10px;margin-bottom:4px}
+.env-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;backdrop-filter:blur(12px);position:relative;overflow:hidden;transition:all 0.3s}
+.env-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--card-color),transparent);opacity:0.4}
+.env-card:hover{border-color:rgba(0,255,245,0.15);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,255,245,0.03)}
+.env-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.env-icon{font-size:16px;line-height:1}
+.env-name{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700}
+.env-id{font-family:'JetBrains Mono',monospace;font-size:7px;color:rgba(255,255,255,0.2);margin-left:auto;letter-spacing:1px;text-transform:uppercase}
+.env-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.env-key{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,0.25);letter-spacing:0.5px;background:rgba(255,255,255,0.03);padding:1px 5px;border-radius:3px}
+.env-arrow{font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.15)}
+.env-val{font-family:'JetBrains Mono',monospace;font-size:10px;word-break:break-all;flex:1}
 .s-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;backdrop-filter:blur(12px)}
 .s-card h4{font-family:'JetBrains Mono',monospace;font-size:11px;margin-bottom:10px}
 .s-row{display:flex;justify-content:space-between;padding:6px 0;font-family:'JetBrains Mono',monospace;font-size:9px;border-bottom:1px solid rgba(255,255,255,0.03)}
@@ -304,6 +316,63 @@ function exportCSV(){const ud=CHART_DATA._raw;if(!ud||!ud.length){alert('Sin dat
 </script>`;
 }
 
+function envSectionHTML(envData, globalVars) {
+  if (!envData || envData.length === 0) return '';
+  let cards = '';
+  for (const ed of envData) {
+    const color = COLORS[envData.indexOf(ed) % COLORS.length] || '#00fff5';
+    const hasModel = ed.model ? 'color:var(--green);font-weight:600' : 'color:rgba(255,255,255,0.3)';
+    const hasUrl = ed.url ? 'color:var(--cyan)' : 'color:rgba(255,255,255,0.3)';
+    cards += `<div class="env-card" style="--card-color:${color}">
+      <div class="env-head">
+        <span class="env-icon">${ed.icon}</span>
+        <span class="env-name" style="color:${color}">${esc(ed.name)}</span>
+        <span class="env-id">${esc(ed.id)}</span>
+      </div>
+      <div class="env-row">
+        <span class="env-key">${esc(ed.modelEnvName)}</span>
+        <span class="env-arrow">→</span>
+        <span class="env-val" style="${hasModel}">${esc(ed.model || '(❌ vacío)')}</span>
+      </div>
+      <div class="env-row" style="margin-top:3px">
+        <span class="env-key">${esc(ed.urlEnvName)}</span>
+        <span class="env-arrow">→</span>
+        <span class="env-val" style="${hasUrl};font-size:9px;word-break:break-all">${esc(ed.url || '(❌ vacío)')}</span>
+      </div>
+      ${ed.key !== undefined ? `<div class="env-row" style="margin-top:3px">
+        <span class="env-key">${esc(ed.keyEnvName)}</span>
+        <span class="env-arrow">→</span>
+        <span class="env-val" style="font-size:9px;color:${ed.key ? 'var(--gold)' : 'rgba(255,255,255,0.3)'}">${ed.key ? '🔑 (configurada)' : '🔒 (vacía)'}</span>
+      </div>` : ''}
+    </div>`;
+  }
+  // Global vars section
+  let globalCards = '';
+  if (globalVars && globalVars.length > 0) {
+    for (const g of globalVars) {
+      const hasVal = g.val ? 'color:var(--green);font-weight:600' : 'color:rgba(255,255,255,0.3)';
+      globalCards += `<div class="env-card" style="--card-color:var(--purple)">
+        <div class="env-head">
+          <span class="env-icon">${g.icon}</span>
+          <span class="env-name" style="color:var(--purple)">${esc(g.label)}</span>
+          <span class="env-id">GLOBAL</span>
+        </div>
+        <div class="env-row">
+          <span class="env-key">${esc(g.key)}</span>
+          <span class="env-arrow">→</span>
+          <span class="env-val" style="${hasVal};word-break:break-all">${esc(g.val || '(❌ vacío)')}</span>
+        </div>
+      </div>`;
+    }
+  }
+  return `<div class="section-title" style="margin-top:32px">📦 VARIABLES DE ENTORNO EN VIVO</div>
+  ${globalCards ? `<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">${globalCards}</div>` : ''}
+  <div class="env-grid">${cards}</div>
+  <div style="font-family:'JetBrains Mono',monospace;font-size:9px;color:rgba(255,255,255,0.15);text-align:center;margin-top:8px;margin-bottom:4px">
+    ↻ Los valores se leen de <code>process.env</code> al cargar la página · se actualizan al recargar
+  </div>`;
+}
+
 function telegramStatusHTML(botStatus) {
   const cl = botStatus === 'ok' ? 'var(--green)' : 'rgba(255,255,255,0.3)';
   const icon = botStatus === 'ok' ? '✓' : '⟳';
@@ -317,5 +386,5 @@ function telegramStatusHTML(botStatus) {
 module.exports = {
   COLORS, esc, headHTML, footHTML, topBarHTML, navHTML, overviewHTML,
   modelCardHTML, statCardHTML, usageTableHTML, actionButtonsHTML,
-  chartsSectionHTML, chartScriptsHTML, telegramStatusHTML, apiKeyBoxHTML
+  chartsSectionHTML, chartScriptsHTML, envSectionHTML, telegramStatusHTML, apiKeyBoxHTML
 };

@@ -125,6 +125,32 @@ module.exports = async (req, res) => {
     else if (lastCheck) botStatus = 'error';
   }
 
+  // Collect live env vars for display
+  const envData = [];
+  for (let i = 1; i <= modelsCount; i++) {
+    const m = MODELOS[i - 1];
+    const idx = i;
+    const modelEnv = process.env[`MODELO${idx}_MODEL`] || '';
+    const urlEnv = process.env[`MODELO${idx}_URL`] || '';
+    const keyEnv = process.env[`MODELO${idx}_KEY`];
+    envData.push({
+      id: m.id,
+      name: m.name,
+      icon: m.icon || '🔷',
+      model: modelEnv,
+      url: urlEnv,
+      key: keyEnv,
+      modelEnvName: `MODELO${idx}_MODEL`,
+      urlEnvName: `MODELO${idx}_URL`,
+      keyEnvName: keyEnv !== undefined ? `MODELO${idx}_KEY` : undefined
+    });
+  }
+  // Global env vars
+  const globalEnvVars = [
+    { key: 'SYSTEM_PROMPT1', label: 'System Prompt Global', val: process.env.SYSTEM_PROMPT1 || '', icon: '📝' },
+    { key: 'CARBONATO_API_KEY', label: 'Carbonato API Key', val: process.env.CARBONATO_API_KEY || '(usando lista)', icon: '🔐' },
+  ];
+
   res.setHeader('Content-Type', 'text/html');
   res.status(200).send(
     T.headHTML('⎈ CARBONATO — PANEL ⎈') +
@@ -137,6 +163,7 @@ module.exports = async (req, res) => {
     T.actionButtonsHTML() +
     `<div class="section-title">GESTIÓN DE MODELOS</div><div class="m-grid">${cards}</div>` +
     `<div class="stats-section"><div class="section-title">ESTADÍSTICAS POR MODELO</div><div class="s-grid">${statsCards}</div></div>` +
+    T.envSectionHTML(envData, globalEnvVars) +
     T.usageTableHTML(usages) +
     T.footHTML() +
     T.chartScriptsHTML() +
