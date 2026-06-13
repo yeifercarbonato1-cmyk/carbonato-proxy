@@ -1,12 +1,13 @@
 const crypto = require('crypto');
 
 function getSecret() {
-  return process.env.SESSION_SECRET || 'carbonato-2026-session-secret';
+  return process.env.SESSION_SECRET || '';
 }
 
 // Genera token firmado HMAC-SHA256: timestamp.hmac
 function signToken() {
   const secret = getSecret();
+  if (!secret) throw new Error('SESSION_SECRET no configurado');
   const ts = Date.now();
   const data = `admin:${ts}`;
   const mac = crypto.createHmac('sha256', secret).update(data).digest('hex');
@@ -24,6 +25,7 @@ function verifyCookie(cookie) {
     if (parts.length !== 2) return false;
     const [ts, mac] = parts;
     const secret = getSecret();
+    if (!secret) return false;
     const data = `admin:${ts}`;
     const expected = crypto.createHmac('sha256', secret).update(data).digest('hex');
     if (mac.length !== expected.length) return false;

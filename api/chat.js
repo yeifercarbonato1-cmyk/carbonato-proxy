@@ -1,7 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const { MODELOS } = require('./models-def.js');
-const { loadUsageDB, saveUsageDB } = require('./admin/db.js');
+const { loadUsageDB, saveUsageDB, addUsageToDb } = require('./admin/db.js');
 const { 
   recordFailure: skynetFail, 
   recordSuccess: skynetSuccess, 
@@ -448,14 +448,7 @@ module.exports = async (req, res) => {
             }
             tokens = Math.max(1, Math.round(contentLen / 4));
           }
-          const db = loadUsageDB();
-          db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
-          if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-          db.stats[userModel].totalRequests += 1;
-          if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
-          if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
-          db.lastUpdated = new Date().toISOString();
-          db.lastModel = userModel;
+          const db = addUsageToDb(loadUsageDB(), { model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
           saveUsageDB(db);
         } catch(e) { console.log('Error guardando uso streaming:', e.message); }
         saveLog(userModel, userIp, 200, 0, null);
@@ -542,16 +535,7 @@ module.exports = async (req, res) => {
           }
         } catch(e) {}
         
-        const db = loadUsageDB();
-        db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
-        if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-        db.stats[userModel].totalTokens += tokens;
-        db.stats[userModel].totalRequests += 1;
-        if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
-        if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
-        db.lastUpdated = new Date().toISOString();
-        db.lastModel = userModel;
-        db.lastTokens = tokens;
+        const db = addUsageToDb(loadUsageDB(), { model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
         saveUsageDB(db);
       } catch(e) { console.log('Error guardando uso:', e.message); }
       

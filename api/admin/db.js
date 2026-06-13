@@ -86,10 +86,122 @@ function shouldSyncToGitHub() {
   return true;
 }
 
+function normalizeUsageDB(db) {
+  if (!db || typeof db !== 'object') db = {};
+  if (!Array.isArray(db.usages)) db.usages = [];
+  if (!db.stats || typeof db.stats !== 'object') db.stats = {};
+  if (!db.visitors || typeof db.visitors !== 'object' || Array.isArray(db.visitors)) db.visitors = {};
+  return db;
+}
+
+function usageKey(u) {
+  return [u.timestamp || '', u.model || '', u.ip || '', u.tokens || 0].join('|');
+}
+
+function mergeVisitors(target, source) {
+  for (const [ip, v] of Object.entries(source || {})) {
+    if (!ip) continue;
+    if (!target[ip]) target[ip] = { ip, count: 0, lastSeen: '', models: [], tokens: 0 };
+    target[ip].count = Math.max(target[ip].count || 0, v.count || 0);
+    target[ip].tokens = Math.max(target[ip].tokens || 0, v.tokens || 0);
+    if ((v.lastSeen || '') > (target[ip].lastSeen || '')) target[ip].lastSeen = v.lastSeen;
+    for (const model of (v.models || [])) {
+      if (model && !target[ip].models.includes(model)) target[ip].models.push(model);
+    }
+  }
+  return target;
+}
+
+function addUsageToVisitors(visitors, u) {
+  const ip = u.ip || 'unknown';
+  if (!visitors[ip]) visitors[ip] = { ip, count: 0, lastSeen: '', models: [], tokens: 0 };
+  visitors[ip].count += 1;
+  visitors[ip].tokens += u.tokens || 0;
+  if ((u.timestamp || '') > (visitors[ip].lastSeen || '')) visitors[ip].lastSeen = u.timestamp || '';
+  if (u.model && !visitors[ip].models.includes(u.model)) visitors[ip].models.push(u.model);
+}
+
+function addUsageToDb(db, usage) {
+  db = normalizeUsageDB(db);
+  db.usages.push(usage);
+  addUsageToVisitors(db.visitors, usage);
+  if (!db.stats[usage.model]) db.stats[usage.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+  db.stats[usage.model].totalTokens += usage.tokens || 0;
+  db.stats[usage.model].totalRequests += 1;
+  if (!db.stats[usage.model].uniqueIPs.includes(usage.ip || 'unknown')) db.stats[usage.model].uniqueIPs.push(usage.ip || 'unknown');
+  if (db.usages.length > 2000) db.usages = db.usages.slice(-2000);
+  db.lastUpdated = new Date().toISOString();
+  db.lastModel = usage.model;
+  db.lastTokens = usage.tokens || 0;
+  return db;
+}
+
+function rebuildStats(usages, previousStats = {}) {
+  const stats = {};
+
+  // Preservar IPs históricas aunque el registro viejo ya no esté en usages.
+  for (const [model, s] of Object.entries(previousStats || {})) {
+    if (!stats[model]) stats[model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+    for (const ip of (s.uniqueIPs || [])) {
+      if (ip && !stats[model].uniqueIPs.includes(ip)) stats[model].uniqueIPs.push(ip);
+    }
+  }
+
+  for (const u of usages || []) {
+    const model = u.model || 'unknown';
+    const ip = u.ip || 'unknown';
+    if (!stats[model]) stats[model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+    stats[model].totalTokens += u.tokens || 0;
+    stats[model].totalRequests += 1;
+    if (!stats[model].uniqueIPs.includes(ip)) stats[model].uniqueIPs.push(ip);
+  }
+
+  return stats;
+}
+
+function mergeUsageDB(...dbs) {
+  const seen = new Set();
+  const allUsages = [];
+  const previousStats = {};
+  const visitors = {};
+
+  for (const raw of dbs) {
+    const db = normalizeUsageDB(raw);
+    const hasPersistedVisitors = Object.keys(db.visitors || {}).length > 0;
+    mergeVisitors(visitors, db.visitors);
+    for (const [model, s] of Object.entries(db.stats || {})) {
+      if (!previousStats[model]) previousStats[model] = { uniqueIPs: [] };
+      for (const ip of (s.uniqueIPs || [])) {
+        if (ip && !previousStats[model].uniqueIPs.includes(ip)) previousStats[model].uniqueIPs.push(ip);
+        if (ip && !visitors[ip]) visitors[ip] = { ip, count: 0, lastSeen: '', models: [model], tokens: 0 };
+        if (ip && visitors[ip] && model && !visitors[ip].models.includes(model)) visitors[ip].models.push(model);
+      }
+    }
+    for (const u of db.usages || []) {
+      const k = usageKey(u);
+      if (!seen.has(k)) {
+        seen.add(k);
+        allUsages.push(u);
+        if (!hasPersistedVisitors) addUsageToVisitors(visitors, u);
+      }
+    }
+  }
+
+  allUsages.sort((a, b) => String(a.timestamp || '').localeCompare(String(b.timestamp || '')));
+  const maxRecords = 2000;
+  const trimmedUsages = allUsages.length > maxRecords ? allUsages.slice(-maxRecords) : allUsages;
+  return {
+    usages: trimmedUsages,
+    stats: rebuildStats(trimmedUsages, previousStats),
+    visitors,
+    lastUpdated: new Date().toISOString()
+  };
+}
+
 function loadUsageDB() {
   // Hot path: solo /tmp/ (sincrónico, rápido)
   try {
-    return JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8'));
+    return normalizeUsageDB(JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')));
   } catch(e) {}
   return { usages: [], stats: {} };
 }
@@ -113,26 +225,10 @@ async function loadUsageDBAsync() {
   // Mergear datos locales que GitHub no tenga aún (ventana de ~3s)
   let localDb = null;
   try { localDb = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
-  if (localDb && localDb.usages && localDb.usages.length > 0) {
-    const remoteKeys = new Set((db.usages || []).map(u => u.timestamp + '|' + u.model + '|' + u.ip));
-    const nuevos = (localDb.usages || []).filter(u => !remoteKeys.has(u.timestamp + '|' + u.model + '|' + u.ip));
-    if (nuevos.length > 0) {
-      db.usages = [...(db.usages || []), ...nuevos];
-      // Reconstruir stats
-      db.stats = {};
-      for (const u of (db.usages || [])) {
-        if (!db.stats[u.model]) db.stats[u.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-        db.stats[u.model].totalTokens += u.tokens || 0;
-        db.stats[u.model].totalRequests += 1;
-        if (!db.stats[u.model].uniqueIPs.includes(u.ip)) db.stats[u.model].uniqueIPs.push(u.ip);
-      }
-    }
-  }
+  db = mergeUsageDB(db, localDb);
 
   // Actualizar cache local
-  if (db.usages && db.usages.length > 0) {
-    try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(db, null, 2)); } catch(e) {}
-  }
+  try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(db, null, 2)); } catch(e) {}
 
   return db;
 }
@@ -167,43 +263,41 @@ async function _syncToGitHub(localDb) {
       try { remoteDb = JSON.parse(Buffer.from(fileData.content, 'base64').toString()); } catch(e) {}
     }
 
-    // Merge dedup por timestamp+model+ip
-    const seen = new Set();
-    const allUsages = [];
-
-    for (const u of (remoteDb.usages || [])) {
-      const k = u.timestamp + '|' + u.model + '|' + u.ip;
-      if (!seen.has(k)) { seen.add(k); allUsages.push(u); }
-    }
-    for (const u of (localDb.usages || [])) {
-      const k = u.timestamp + '|' + u.model + '|' + u.ip;
-      if (!seen.has(k)) { seen.add(k); allUsages.push(u); }
-    }
-
-    // Limitar a últimos 2000 registros (antes 1000)
-    const maxRecords = 2000;
-    const trimmedUsages = allUsages.length > maxRecords ? allUsages.slice(-maxRecords) : allUsages;
-
-    // Reconstruir stats desde los registros completos (antes de truncar, para no perder IPs)
-    const mergedDb = { usages: trimmedUsages, stats: {} };
-    for (const u of allUsages) {
-      if (!mergedDb.stats[u.model]) mergedDb.stats[u.model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-      mergedDb.stats[u.model].totalTokens += u.tokens || 0;
-      mergedDb.stats[u.model].totalRequests += 1;
-      if (!mergedDb.stats[u.model].uniqueIPs.includes(u.ip)) mergedDb.stats[u.model].uniqueIPs.push(u.ip);
-    }
+    const currentLocal = loadUsageDB();
+    let mergedDb = mergeUsageDB(remoteDb, currentLocal, localDb);
 
     // Escribir merged a GitHub
-    const content = JSON.stringify(mergedDb, null, 2);
-    const putRes = await fetch(GITHUB_USAGE_URL, {
+    let content = JSON.stringify(mergedDb, null, 2);
+    let putRes = await fetch(GITHUB_USAGE_URL, {
       method: 'PUT',
       headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: `Update usage stats - ${trimmedUsages.length} records`,
+        message: `Update usage stats - ${mergedDb.usages.length} records`,
         content: Buffer.from(content).toString('base64'),
         sha
       })
     });
+
+    if (!putRes.ok && putRes.status === 409) {
+      const retryRes = await fetch(GITHUB_USAGE_URL, {
+        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' }
+      });
+      if (retryRes.ok) {
+        const retryData = await retryRes.json();
+        const retryRemoteDb = JSON.parse(Buffer.from(retryData.content, 'base64').toString());
+        mergedDb = mergeUsageDB(retryRemoteDb, currentLocal, localDb);
+        content = JSON.stringify(mergedDb, null, 2);
+        putRes = await fetch(GITHUB_USAGE_URL, {
+          method: 'PUT',
+          headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: `Update usage stats - ${mergedDb.usages.length} records`,
+            content: Buffer.from(content).toString('base64'),
+            sha: retryData.sha || ''
+          })
+        });
+      }
+    }
 
     if (!putRes.ok) {
       const errText = await putRes.text();
@@ -214,7 +308,7 @@ async function _syncToGitHub(localDb) {
     // Actualizar /tmp/ con datos merged (consistente con GitHub)
     try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), content); } catch(e) {}
 
-    console.log('[db] GitHub sync OK:', trimmedUsages.length, 'registros');
+    console.log('[db] GitHub sync OK:', mergedDb.usages.length, 'registros');
   } catch(e) {
     console.log('[db] _syncToGitHub error:', e.message);
   }
@@ -222,6 +316,6 @@ async function _syncToGitHub(localDb) {
 
 module.exports = {
   getHealthDb, saveHealthDb, readFromGitHub, writeToGitHub,
-  loadUsageDB, loadUsageDBAsync, saveUsageDB,
+  loadUsageDB, loadUsageDBAsync, saveUsageDB, mergeUsageDB, addUsageToDb,
   GITHUB_URL, GITHUB_USAGE_URL, DB_PATH
 };

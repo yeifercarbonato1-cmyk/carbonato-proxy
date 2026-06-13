@@ -5,7 +5,7 @@ const path = require('path');
 const { MODELOS, MODEL_IDS } = require('../models-def.js');
 const { signToken } = require('../auth.js');
 const { proxyBase, esc, escTpl, cookieOk, html, getGithubToken } = require('./helpers.js');
-const { getHealthDb, saveHealthDb, loadUsageDB, saveUsageDB, GITHUB_USAGE_URL, DB_PATH } = require('./db.js');
+const { getHealthDb, saveHealthDb, loadUsageDB, saveUsageDB, loadUsageDBAsync, GITHUB_USAGE_URL, DB_PATH } = require('./db.js');
 
 const PROMPTS_PATH = path.join(DB_PATH, 'prompt-templates.json');
 const ADMIN_USER = process.env.ADMIN_USER;
@@ -364,9 +364,9 @@ async function handleVisitorsGeo(req, res) {
 
 async function handleVisitorsReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
-  await saveUsageDB({ usages: [], stats: {} });
+  await saveUsageDB({ usages: [], stats: {}, visitors: {} });
   // También escribir directo a GitHub (saveUsageDB tiene sync desactivado)
-  await writeUsageResetToGitHub({ usages: [], stats: {} });
+  await writeUsageResetToGitHub({ usages: [], stats: {}, visitors: {} });
   res.json({ ok: true, message: 'Usage DB reset to zero' });
 }
 
@@ -408,31 +408,16 @@ async function handleUsageReset(req, res) {
 
 async function handleVisitorsPage(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
-  let db = { usages: [], stats: {} };
-  const token = getGithubToken();
-  if (token) {
-    try {
-      const r = await fetch(GITHUB_USAGE_URL, { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } });
-      if (r.ok) { const d = await r.json(); db = JSON.parse(Buffer.from(d.content, 'base64').toString()); }
-    } catch(e) {}
-  }
-  let localDb = null;
-  try { localDb = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
-  if (localDb && localDb.usages && localDb.usages.length > 0) {
-    const remoteKeys = new Set(db.usages.map(u => u.timestamp + '|' + u.model + '|' + u.ip));
-    const nuevos = localDb.usages.filter(u => !remoteKeys.has(u.timestamp + '|' + u.model + '|' + u.ip));
-    if (nuevos.length > 0) db.usages.push(...nuevos);
-  }
+  const db = await loadUsageDBAsync();
   const usages = db.usages || [];
-  const ipMap = {};
-  usages.forEach(u => {
-    const ip = u.ip || 'unknown';
-    if (!ipMap[ip]) ipMap[ip] = { ip, count: 0, lastSeen: '', models: new Set(), tokens: 0 };
-    ipMap[ip].count++; ipMap[ip].tokens += u.tokens || 0;
-    if (u.timestamp > ipMap[ip].lastSeen) ipMap[ip].lastSeen = u.timestamp;
-    if (u.model) ipMap[ip].models.add(u.model);
-  });
-  const ips = Object.values(ipMap).sort((a, b) => b.count - a.count);
+  const visitors = db.visitors || {};
+  const ips = Object.values(visitors).map(v => ({
+    ip: v.ip,
+    count: v.count || 0,
+    lastSeen: v.lastSeen || '',
+    models: new Set(v.models || []),
+    tokens: v.tokens || 0
+  })).sort((a, b) => b.count - a.count);
   const filteredIps = ips;
 
   html(res, `<!DOCTYPE html>
@@ -539,11 +524,18 @@ async function handleAdminAuth(req, res) {
   let body = '';
   for await (const chunk of req) body += chunk;
   const p = new URLSearchParams(body);
-  const userOk = p.get('user') === ADMIN_USER || p.get('user') === 'admin';
-  const passOk = p.get('pass') === ADMIN_PASS || p.get('pass') === 'yeifer125@';
+  const userOk = ADMIN_USER && p.get('user') === ADMIN_USER;
+  const passOk = ADMIN_PASS && p.get('pass') === ADMIN_PASS;
   if (userOk && passOk) {
-    res.setHeader('Set-Cookie', `admin_sess=${signToken()}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400`);
-    return res.writeHead(302, { 'Location': '/api/admin-panel' }).end();
+    try {
+      const host = String(req.headers.host || '');
+      const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+      const secure = (req.headers['x-forwarded-proto'] === 'https' && !isLocal) ? '; Secure' : '';
+      res.setHeader('Set-Cookie', `admin_sess=${signToken()}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400${secure}`);
+      return res.writeHead(302, { 'Location': '/api/admin-panel' }).end();
+    } catch(e) {
+      return res.status(500).json({ error: e.message });
+    }
   }
   return res.writeHead(302, { 'Location': '/api/admin?error=1' }).end();
 }
@@ -615,6 +607,7 @@ async function handleUpload(req, res) {
 // MODELS CHECK
 // ========================================================
 async function handleModelsCheck(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
   const kiloModels = [
     "kilo-auto/free", "nvidia/nemotron-3-super-120b-a12b:free", "poolside/laguna-m.1:free",
     "poolside/laguna-xs.2:free", "stepfun/step-3.7-flash:free",

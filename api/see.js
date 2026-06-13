@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const report = require('../see/report.js');
 const memory = require('../see/memory.js');
+const { cookieOk } = require('./admin/helpers.js');
 
 const LATEST_FILE = '/tmp/see-latest.json';
 const GH_LATEST_RAW = 'https://raw.githubusercontent.com/yeifer125/proxi-datos/main/see-latest.json';
@@ -126,9 +127,11 @@ module.exports = async (req, res) => {
     return handleSeePage(req, res);
   }
   if (pathname === '/api/see/status') {
+    if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
     return handleSeeStatus(req, res);
   }
   if (pathname === '/api/see/run' && method === 'POST') {
+    if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
     return handleSeeRun(req, res);
   }
 
