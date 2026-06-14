@@ -1,12 +1,15 @@
 // Telegram Bot - Carbonato Proxy Monitor v2
 // Llama a /api/health/check en Vercel (no prueba modelos localmente)
-const TOKEN = '8626223246:***';
-const CHAT_ID = '7507526979';
-const API = `https://api.telegram.org/bot${TOKEN}`;
+const TOKEN = String(process.env.TELEGRAM_BOT_TOKEN || '').trim();
+const CHAT_ID = String(process.env.TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHATID || '').trim();
+const API = TOKEN ? `https://api.telegram.org/bot${TOKEN}` : '';
 const BASE = process.env.BASE_URL || 'https://carbonato-proxy.vercel.app';
 const fs = require('fs');
 
 function sendMsg(text) {
+  if (!TOKEN || !CHAT_ID) {
+    throw new Error('TELEGRAM env config missing: TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID');
+  }
   return fetch(`${API}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

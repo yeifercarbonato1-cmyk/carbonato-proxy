@@ -277,10 +277,11 @@ module.exports = async (req, res) => {
         
         try {
           const rotatorBody = { ...body, model: resolveModel(targetCfg) };
-          if (targetCfg.system_prompt) {
+          const rotatorSysPrompt = resolveEnvValue(targetCfg.system_prompt);
+          if (rotatorSysPrompt) {
             const hasSystem = rotatorBody.messages && rotatorBody.messages.some(m => m.role === 'system');
             if (!hasSystem) {
-              rotatorBody.messages = [{ role: 'system', content: targetCfg.system_prompt }, ...(rotatorBody.messages || [])];
+              rotatorBody.messages = [{ role: 'system', content: rotatorSysPrompt }, ...(rotatorBody.messages || [])];
             }
           }
           // modelo14 ahora es OpenAI-compatible, no necesita transformación
@@ -376,21 +377,22 @@ module.exports = async (req, res) => {
       body.model = resolveModel(cfg);
       body.stream = true;
       // Modelo16 ahora usa gpt-5.5 vía modelverse — soporta tools
-      if (cfg.system_prompt) {
+      const resolvedSysPrompt = resolveEnvValue(cfg.system_prompt);
+      if (resolvedSysPrompt) {
         if (userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo19' || userModel === 'modelo20') {
           body.messages = body.messages || [];
           const idx = body.messages.findIndex(m => m.role === 'system');
-          if (idx >= 0) body.messages[idx] = { role: 'system', content: cfg.system_prompt };
-          else body.messages.unshift({ role: 'system', content: cfg.system_prompt });
+          if (idx >= 0) body.messages[idx] = { role: 'system', content: resolvedSysPrompt };
+          else body.messages.unshift({ role: 'system', content: resolvedSysPrompt });
         } else {
           const hasSystem = body.messages && body.messages.some(m => m.role === 'system');
           if (!hasSystem) {
-            body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
+            body.messages = [{ role: 'system', content: resolvedSysPrompt }, ...(body.messages || [])];
           }
         }
       }
-      // Modelo17/18/20: inyección de conocimiento
-      if ((userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo20') && cfg.knowledge && cfg.knowledge.enabled) {
+      // Inyección de conocimiento — cualquier modelo con knowledge.enabled=true en config
+      if (cfg.knowledge && cfg.knowledge.enabled) {
         const mode = cfg.knowledge.mode || 'rag';
         if (mode === 'rag') {
           const q = getLastUserMessage(body.messages);
@@ -482,21 +484,22 @@ module.exports = async (req, res) => {
 
     body.model = resolveModel(cfg);
 
-    if (cfg.system_prompt) {
+    const resolvedSysPrompt = resolveEnvValue(cfg.system_prompt);
+    if (resolvedSysPrompt) {
       if (userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo19' || userModel === 'modelo20') {
         body.messages = body.messages || [];
         const idx = body.messages.findIndex(m => m.role === 'system');
-        if (idx >= 0) body.messages[idx] = { role: 'system', content: cfg.system_prompt };
-        else body.messages.unshift({ role: 'system', content: cfg.system_prompt });
+        if (idx >= 0) body.messages[idx] = { role: 'system', content: resolvedSysPrompt };
+        else body.messages.unshift({ role: 'system', content: resolvedSysPrompt });
       } else {
         const hasSystem = body.messages && body.messages.some(m => m.role === 'system');
         if (!hasSystem) {
-          body.messages = [{ role: 'system', content: cfg.system_prompt }, ...(body.messages || [])];
+          body.messages = [{ role: 'system', content: resolvedSysPrompt }, ...(body.messages || [])];
         }
       }
     }
-    // Modelo17/18/20: inyección de conocimiento (solo 17/18/20)
-    if ((userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo20') && cfg.knowledge && cfg.knowledge.enabled) {
+    // Inyección de conocimiento — cualquier modelo con knowledge.enabled=true en config
+    if (cfg.knowledge && cfg.knowledge.enabled) {
       const mode = cfg.knowledge.mode || 'rag';
       if (mode === 'rag') {
         const q = getLastUserMessage(body.messages);

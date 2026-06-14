@@ -835,7 +835,7 @@ async function handleConfigSave(req, res) {
 // ========================================================
 const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
 const TG_API = `https://api.telegram.org/bot${TG_TOKEN}`;
-const ALLOWED_CHAT = '7507526979';
+const ALLOWED_CHAT = String(process.env.TELEGRAM_CHAT_ID || process.env.TELEGRAM_CHATID || '').trim();
 
 function tgReply(chatId, text) {
   return fetch(`${TG_API}/sendMessage`, {

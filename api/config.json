@@ -3,80 +3,80 @@
     "url": "$MODELO1_URL",
     "model": "$MODELO1_MODEL",
     "key": "$MODELO1_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo2": {
     "url": "$MODELO2_URL",
     "model": "$MODELO2_MODEL",
     "key": "$MODELO2_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo3": {
     "url": "$MODELO3_URL",
     "model": "$MODELO3_MODEL",
     "key": "$MODELO3_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo4": {
     "url": "$MODELO4_URL",
     "model": "$MODELO4_MODEL",
     "key": "$MODELO4_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo5": {
     "url": "$MODELO5_URL",
     "model": "$MODELO5_MODEL",
     "key": "$MODELO5_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo6": {
     "url": "$MODELO6_URL",
     "model": "$MODELO6_MODEL",
     "key": "$MODELO6_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo7": {
     "url": "$MODELO7_URL",
     "model": "$MODELO7_MODEL",
     "key": "$MODELO7_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo8": {
     "url": "$MODELO8_URL",
     "model": "$MODELO8_MODEL",
     "key": "$MODELO8_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo9": {
     "url": "$MODELO9_URL",
     "model": "$MODELO9_MODEL",
     "key": "$MODELO9_KEY",
-    "system_prompt": "",
+    "system_prompt": "$SYSTEM_PROMPT1",
     "isRotator": true
   },
   "modelo10": {
     "url": "$MODELO10_URL",
     "model": "$MODELO10_MODEL",
     "key": "$MODELO10_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo11": {
     "url": "$MODELO11_URL",
     "model": "$MODELO11_MODEL",
     "key": "$MODELO11_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo12": {
     "url": "$MODELO12_URL",
     "model": "$MODELO12_MODEL",
     "key": "$MODELO12_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo13": {
     "url": "$MODELO13_URL",
     "model": "$MODELO13_MODEL",
     "key": "$MODELO13_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo14": {
     "url": "$MODELO14_URL",
@@ -88,13 +88,13 @@
     "url": "$MODELO15_URL",
     "model": "$MODELO15_MODEL",
     "key": "$MODELVERSE_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo16": {
     "url": "$MODELO16_URL",
     "model": "$MODELO16_MODEL",
     "key": "$MODELVERSE_KEY",
-    "system_prompt": ""
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo17": {
     "url": "$MODELO17_URL",
