@@ -192,6 +192,13 @@ module.exports = async (req, res) => {
       try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch(e) {}
     }
     
+    // Fix para modelo21: vLLM solo soporta tool_choice "required", no "auto"
+    if (body.model === 'modelo21' && Array.isArray(body.tools) && body.tools.length > 0) {
+      if (body.tool_choice !== 'required') {
+        body.tool_choice = 'required';
+      }
+    }
+    
     const CONFIG = getConfig();
     const userModel = body.model;
     const cfg = CONFIG[userModel];

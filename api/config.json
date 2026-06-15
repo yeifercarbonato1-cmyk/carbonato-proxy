@@ -82,7 +82,7 @@
     "url": "$MODELO14_URL",
     "model": "$MODELO14_MODEL",
     "key": "$MODELO14_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1"
+    "system_prompt": "$SYSTEM_PROMPT2"
   },
   "modelo15": {
     "url": "$MODELO15_URL",
@@ -201,9 +201,9 @@
     }
   },
   "modelo21": {
-    "url": "$MODELO21_URL",
-    "model": "$MODELO21_MODEL",
-    "key": "$MODELO21_KEY",
+    "url": "https://prod-vllm-1.kriyam.ai/invocations",
+    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1",
     "knowledge": {
       "enabled": true,
