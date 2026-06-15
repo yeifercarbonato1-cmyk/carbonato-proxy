@@ -921,7 +921,10 @@ async function handleTelegramWebhook(req, res) {
       case '/status': {
         await tgReply(chatId, '🔄 Probando modelos...');
         try {
-          const r = await fetch('https://carbonato-proxy.vercel.app/api/health/check', { signal: AbortSignal.timeout(130000) });
+          const apiKey = (process.env.CARBONATO_API_KEY || String(process.env.CARBONATO_API_KEYS || '').split(',')[0] || '').trim();
+          const headers = {};
+          if (apiKey) headers.Authorization = 'Bearer ' + apiKey;
+          const r = await fetch('https://carbonato-proxy.vercel.app/api/health/check', { signal: AbortSignal.timeout(130000), headers });
           const data = await r.json();
           if (!data.ok || !data.results) throw new Error('Respuesta inválida');
           const fail = data.results.filter(x => x.status !== 'OK');
@@ -944,7 +947,10 @@ async function handleTelegramWebhook(req, res) {
       case '/rapidos': {
         await tgReply(chatId, '🔄 Consultando...');
         try {
-          const r = await fetch('https://carbonato-proxy.vercel.app/api/health/check', { signal: AbortSignal.timeout(130000) });
+          const apiKey = (process.env.CARBONATO_API_KEY || String(process.env.CARBONATO_API_KEYS || '').split(',')[0] || '').trim();
+          const headers = {};
+          if (apiKey) headers.Authorization = 'Bearer ' + apiKey;
+          const r = await fetch('https://carbonato-proxy.vercel.app/api/health/check', { signal: AbortSignal.timeout(130000), headers });
           const data = await r.json();
           if (!data.results) throw new Error('Sin datos');
           const fastest = data.results
