@@ -66,6 +66,31 @@ const KILO_MODELS = [
   "stepfun/step-3.7-flash:free",
   "openrouter/free"
 ];
+
+// Modelos codex que NO aceptan system messages (Modelverse)
+// Convierten el system msg en prefijo del primer user msg
+function isCodexModel(modelName) {
+  if (!modelName) return false;
+  const lower = modelName.toLowerCase();
+  return lower.includes('codex') || lower.includes('codex-mini') || lower.includes('codex-max');
+}
+
+// Elimina system messages de codex, fusionando su contenido en el primer user msg
+function stripSystemForCodex(messages) {
+  if (!messages || !Array.isArray(messages)) return messages;
+  const systemMsgs = messages.filter(m => m.role === 'system');
+  if (systemMsgs.length === 0) return messages;
+  const systemContent = systemMsgs.map(m => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))).join('\n');
+  const rest = messages.filter(m => m.role !== 'system');
+  // Fusionar system content como instrucción en el primer user message
+  const firstUserIdx = rest.findIndex(m => m.role === 'user');
+  if (firstUserIdx >= 0) {
+    const firstUser = rest[firstUserIdx];
+    const userContent = typeof firstUser.content === 'string' ? firstUser.content : JSON.stringify(firstUser.content);
+    rest[firstUserIdx] = { ...firstUser, content: `[Instructions: ${systemContent}]\n\n${userContent}` };
+  }
+  return rest;
+}
 // Rotación pública: solo modelos publicados
 const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12'];
 
@@ -424,6 +449,10 @@ module.exports = async (req, res) => {
         }
         // mode 'tool': el modelo usa /api/knowledge directamente
       }
+      // Codex models no aceptan system messages — strip automático
+      if (isCodexModel(body.model)) {
+        body.messages = stripSystemForCodex(body.messages);
+      }
       const headers = { 'Content-Type': 'application/json' };
       const resolvedKey = resolveKey(cfg, userModel);
       if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
@@ -531,6 +560,11 @@ module.exports = async (req, res) => {
       // mode 'tool': el modelo usa /api/knowledge directamente
     }
     
+    // Codex models no aceptan system messages — strip automático
+    if (isCodexModel(body.model)) {
+      body.messages = stripSystemForCodex(body.messages);
+    }
+
     const headers = { 'Content-Type': 'application/json' };
     const resolvedKey = resolveKey(cfg, userModel);
     if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
