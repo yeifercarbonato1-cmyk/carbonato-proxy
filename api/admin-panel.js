@@ -61,19 +61,21 @@ module.exports = async (req, res) => {
   const envData = [];
   for (let i = 1; i <= modelsCount; i++) {
     const m = MODELOS[i - 1];
-    const idx = i;
-    const modelEnv = process.env[`MODELO${idx}_MODEL`] || '';
-    const urlEnv = process.env[`MODELO${idx}_URL`] || '';
-    const keyEnv = process.env[`MODELO${idx}_KEY`];
+    const name = 'modelo' + i;
+    const c = cfg[name] || {};
+    const rawKeyName = (c.key || `MODELO${i}_KEY`).replace(/^\$/, '');
+    const modelEnv = process.env[`MODELO${i}_MODEL`] || '';
+    const urlEnv = process.env[`MODELO${i}_URL`] || '';
+    const keyEnv = process.env[rawKeyName];
     envData.push({
       id: m.id,
       icon: m.icon || '🔷',
       model: modelEnv,
       url: urlEnv,
       key: keyEnv,
-      modelEnvName: `MODELO${idx}_MODEL`,
-      urlEnvName: `MODELO${idx}_URL`,
-      keyEnvName: keyEnv !== undefined ? `MODELO${idx}_KEY` : undefined
+      modelEnvName: `MODELO${i}_MODEL`,
+      urlEnvName: `MODELO${i}_URL`,
+      keyEnvName: rawKeyName
     });
   }
   for (let i = 1; i <= modelsCount; i++) {
