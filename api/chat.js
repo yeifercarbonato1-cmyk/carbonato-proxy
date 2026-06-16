@@ -98,7 +98,7 @@ function resolveKey(cfg, modelKey = '') {
   const direct = resolveEnvValue(cfg.key || '');
   if (direct) return direct;
   // Fallback por modelo: usa la key global si la del modelo está vacía
-  if (modelKey === 'modelo15' || modelKey === 'modelo16') return process.env.MODELVERSE_KEY || '';
+  if (modelKey === 'modelo14' || modelKey === 'modelo15' || modelKey === 'modelo16') return process.env.MODELVERSE_KEY || '';
   if (modelKey === 'modelo18' || modelKey === 'modelo20') return process.env.NVIDIA_NIM_KEY || '';
   return '';
 }
@@ -190,13 +190,6 @@ module.exports = async (req, res) => {
     for await (const chunk of req) chunks.push(chunk);
     if (chunks.length > 0) {
       try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch(e) {}
-    }
-    
-    // Fix para modelo21: vLLM solo soporta tool_choice "required", no "auto"
-    if (body.model === 'modelo21' && Array.isArray(body.tools) && body.tools.length > 0) {
-      if (body.tool_choice !== 'required') {
-        body.tool_choice = 'required';
-      }
     }
     
     const CONFIG = getConfig();
