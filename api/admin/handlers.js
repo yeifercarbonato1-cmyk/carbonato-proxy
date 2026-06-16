@@ -13,6 +13,11 @@ const ADMIN_PASS = process.env.ADMIN_PASS;
 const AUTH_FAILS = new Map();
 const AUTH_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_MAX_FAILS = Number(process.env.ADMIN_AUTH_MAX_FAILS || 8);
+function modelName(id) {
+  const n = parseInt(id.replace('modelo', ''), 10);
+  if (!n) return id;
+  return process.env[`MODELO${n}_MODEL`] || id;
+}
 function clientIp(req) {
   return String(req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
 }
@@ -79,9 +84,9 @@ async function handleHealthCheck(req, res) {
       });
       const latency = Date.now() - t0;
       if (r.ok) db.push({ model: m.id, latency, time: Date.now(), ip: 'health-check' });
-      return { model: m.id, name: m.name, desc: m.desc, status: r.ok ? 'OK' : 'FAIL', latency: r.ok ? latency + 'ms' : '-', code: r.status };
+      return { model: m.id, name: modelName(m.id), desc: m.desc, status: r.ok ? 'OK' : 'FAIL', latency: r.ok ? latency + 'ms' : '-', code: r.status };
     } catch (e) {
-      return { model: m.id, name: m.name, desc: m.desc, status: 'FAIL', latency: '-', error: e.message };
+      return { model: m.id, name: modelName(m.id), desc: m.desc, status: 'FAIL', latency: '-', error: e.message };
     }
   }));
   await saveHealthDb(db, sha);
@@ -90,6 +95,7 @@ async function handleHealthCheck(req, res) {
 
 function handleHealthPage(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
+  const modsWithNames = MODELOS.map(m => ({ ...m, name: modelName(m.id) }));
   html(res, `<!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>HEALTH — Carbonato Proxy</title>
@@ -100,7 +106,7 @@ function handleHealthPage(req, res) {
 <script>
 const tbody=document.getElementById('tbody');
 const status=document.getElementById('status');
-const mods=${JSON.stringify(MODELOS)};
+const mods=${JSON.stringify(modsWithNames)};
 mods.forEach(m=>{tbody.innerHTML+='<tr id="r-'+m.id+'"><td>'+m.id+'</td><td>'+m.name+'</td><td style="color:rgba(255,255,255,0.35);font-size:10px">'+(m.desc||'')+'</td><td id="l-'+m.id+'">...</td><td id="s-'+m.id+'">⟳</td></tr>';});
 let ok=0,fail=0;
 (async()=>{
@@ -989,7 +995,7 @@ async function handleTelegramWebhook(req, res) {
       case '/modelos': {
         let text = '<b>📋 Modelos disponibles</b>\n\n';
         MODELOS.forEach(m => {
-          text += `${m.icon} <b>${m.id}</b> — ${m.name}\n${' '.repeat(8)}${m.desc}\n`;
+          text += `${m.icon} <b>${m.id}</b> — ${modelName(m.id)}\n${' '.repeat(8)}${m.desc}\n`;
         });
         await tgReply(chatId, text.trim());
         break;

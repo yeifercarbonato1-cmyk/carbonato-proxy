@@ -57,11 +57,30 @@ module.exports = async (req, res) => {
 
   // Generar cards desde MODELOS
   let cards = '';
+  // Collect live env vars for display (debe ir antes del loop de cards)
+  const envData = [];
+  for (let i = 1; i <= modelsCount; i++) {
+    const m = MODELOS[i - 1];
+    const idx = i;
+    const modelEnv = process.env[`MODELO${idx}_MODEL`] || '';
+    const urlEnv = process.env[`MODELO${idx}_URL`] || '';
+    const keyEnv = process.env[`MODELO${idx}_KEY`];
+    envData.push({
+      id: m.id,
+      icon: m.icon || '🔷',
+      model: modelEnv,
+      url: urlEnv,
+      key: keyEnv,
+      modelEnvName: `MODELO${idx}_MODEL`,
+      urlEnvName: `MODELO${idx}_URL`,
+      keyEnvName: keyEnv !== undefined ? `MODELO${idx}_KEY` : undefined
+    });
+  }
   for (let i = 1; i <= modelsCount; i++) {
     const name = 'modelo' + i;
     const c = cfg[name] || {};
     const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-    cards += T.modelCardHTML(name, c, s, i-1);
+    cards += T.modelCardHTML(name, c, s, i-1, envData[i-1]);
   }
 
   // Stats overview
@@ -125,26 +144,6 @@ module.exports = async (req, res) => {
     else if (lastCheck) botStatus = 'error';
   }
 
-  // Collect live env vars for display
-  const envData = [];
-  for (let i = 1; i <= modelsCount; i++) {
-    const m = MODELOS[i - 1];
-    const idx = i;
-    const modelEnv = process.env[`MODELO${idx}_MODEL`] || '';
-    const urlEnv = process.env[`MODELO${idx}_URL`] || '';
-    const keyEnv = process.env[`MODELO${idx}_KEY`];
-    envData.push({
-      id: m.id,
-      name: m.name,
-      icon: m.icon || '🔷',
-      model: modelEnv,
-      url: urlEnv,
-      key: keyEnv,
-      modelEnvName: `MODELO${idx}_MODEL`,
-      urlEnvName: `MODELO${idx}_URL`,
-      keyEnvName: keyEnv !== undefined ? `MODELO${idx}_KEY` : undefined
-    });
-  }
   // Global env vars
   const globalEnvVars = [
     { key: 'SYSTEM_PROMPT1', label: 'System Prompt Global', val: process.env.SYSTEM_PROMPT1 || '', icon: '📝' },
@@ -164,6 +163,7 @@ module.exports = async (req, res) => {
     `<div class="section-title">GESTIÓN DE MODELOS</div><div class="m-grid">${cards}</div>` +
     `<div class="stats-section"><div class="section-title">ESTADÍSTICAS POR MODELO</div><div class="s-grid">${statsCards}</div></div>` +
     T.envSectionHTML(envData, globalEnvVars) +
+    T.costSectionHTML(stats) +
     T.usageTableHTML(usages) +
     T.footHTML() +
     T.chartScriptsHTML() +

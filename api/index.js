@@ -16,7 +16,7 @@ module.exports = async (req, res) => {
     }
   }
 
-  const modelos = PUBLIC_MODELOS.map(m => ({icon:m.icon, name:m.id, desc:m.desc}));
+  const modelos = PUBLIC_MODELOS.map(m => ({icon:m.icon, name: (process.env[`MODELO${parseInt(m.id.replace('modelo',''),10)}_MODEL`] || m.id), desc:m.desc}));
   const cardsJS = JSON.stringify(modelos);
 
   let html = renderHTML(cardsJS);
