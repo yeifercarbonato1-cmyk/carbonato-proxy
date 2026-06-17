@@ -200,13 +200,11 @@
   "modelo21": {
     "url": "$MODELO21_URL",
     "model": "$MODELO21_MODEL",
-    "key": "$MODELO21_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1"
+    "key": "$MODELO21_KEY"
   },
   "modelo22": {
     "url": "$MODELO22_URL",
     "model": "$MODELO22_MODEL",
-    "key": "$MODELO22_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1"
+    "key": "$MODELO22_KEY"
   }
 }

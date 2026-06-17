@@ -115,14 +115,6 @@ module.exports = async (req, res) => {
   const topIPsLabels = topIPs.map(r => r[0]);
   const topIPsData = topIPs.map(r => r[1]);
 
-  // Stats cards
-  let statsCards = '';
-  for (let i = 1; i <= modelsCount; i++) {
-    const name = 'modelo' + i;
-    const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-    statsCards += T.statCardHTML(name, s, i-1);
-  }
-
   // Telegram bot status
   let botStatus = 'nodata';
   let hdb = null;
@@ -146,12 +138,6 @@ module.exports = async (req, res) => {
     else if (lastCheck) botStatus = 'error';
   }
 
-  // Global env vars
-  const globalEnvVars = [
-    { key: 'SYSTEM_PROMPT1', label: 'System Prompt Global', val: process.env.SYSTEM_PROMPT1 || '', icon: '📝' },
-    { key: 'CARBONATO_API_KEY', label: 'Carbonato API Key', val: process.env.CARBONATO_API_KEY || '(usando lista)', icon: '🔐' },
-  ];
-
   res.setHeader('Content-Type', 'text/html');
   res.status(200).send(
     T.headHTML('⎈ CARBONATO — PANEL ⎈') +
@@ -163,10 +149,6 @@ module.exports = async (req, res) => {
     T.apiKeyBoxHTML(adminApiKey) +
     T.actionButtonsHTML() +
     `<div class="section-title">GESTIÓN DE MODELOS</div><div class="m-grid">${cards}</div>` +
-    `<div class="stats-section"><div class="section-title">ESTADÍSTICAS POR MODELO</div><div class="s-grid">${statsCards}</div></div>` +
-    T.envSectionHTML(envData, globalEnvVars) +
-    T.costSectionHTML(stats) +
-    T.usageTableHTML(usages) +
     T.footHTML() +
     T.chartScriptsHTML() +
     `<style>#resetBtn{position:fixed;bottom:8px;right:8px;background:none;border:none;color:rgba(255,255,255,0.12);font-size:9px;cursor:pointer;font-family:'JetBrains Mono',monospace;padding:4px 8px;transition:color 0.3s;z-index:999}#resetBtn:hover{color:rgba(255,255,255,0.4)}#resetBtn.confirm{color:#ff4444}</style>

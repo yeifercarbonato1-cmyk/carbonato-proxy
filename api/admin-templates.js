@@ -157,6 +157,7 @@ function navHTML() {
   return `<nav class="nav">
   <a href="/api/admin-panel" class="nav-link">⟐ DASHBOARD</a>
   <a href="/api/health/page" class="nav-link">⟐ HEALTH</a>
+  <a href="/api/stats/page" class="nav-link">⟐ STATS</a>
   <a href="/api/competencia/page" class="nav-link">⟐ COMPETENCIA</a>
   <a href="/api/rotator/page" class="nav-link">⟐ ROTADOR</a>
   <a href="/api/modelo17" class="nav-link" style="color:#ff3300">☠ ${process.env.MODELO17_MODEL || 'modelo17'}</a>
@@ -197,13 +198,17 @@ function modelCardHTML(modelo, cfg, stats, idx, env) {
   const envModel = env ? `<span class="m-env-name">${esc(env.modelEnvName)}</span><span class="m-env-val">${esc(env.model || '—')}</span>` : '';
   const envUrl   = env ? `<span class="m-env-name">${esc(env.urlEnvName)}</span><span class="m-env-val">${esc(env.url || '—')}</span>` : '';
   const envBlock = env ? `<div class="m-env-row">${envModel}</div><div class="m-env-row">${envUrl}</div>` : '';
+  const hasSystemPrompt = Object.prototype.hasOwnProperty.call(cfg || {}, 'system_prompt');
+  const systemPromptField = hasSystemPrompt
+    ? `<div class="m-field"><span class="m-label">SYSTEM PROMPT</span><textarea class="m-ta" id="sp${idx+1}" rows="2">${esc(cfg.system_prompt||'')}</textarea></div>`
+    : '';
   return `<div class="m-card" style="--card-color:${color}">
     <div class="m-head"><span class="m-icon">${icon}</span><span class="m-name" style="color:${color}">${modelo}</span></div>
     ${envBlock}
     <div class="m-field"><span class="m-label">BASE URL</span><input class="m-inp" id="url${idx+1}" value="${esc(cfg.url||'')}" placeholder="https://..."></div>
     <div class="m-field"><span class="m-label">MODEL ID</span><input class="m-inp" id="id${idx+1}" value="${esc(cfg.model||'')}" placeholder="model-id"></div>
     <div class="m-field"><span class="m-label">API KEY</span><input class="m-inp" id="key${idx+1}" value="${esc(keyDisplay)}" placeholder="vacío = usa key global"></div>
-    <div class="m-field"><span class="m-label">SYSTEM PROMPT</span><textarea class="m-ta" id="sp${idx+1}" rows="2">${esc(cfg.system_prompt||'')}</textarea></div>
+    ${systemPromptField}
     <div class="m-stats"><span>📊 ${s.totalRequests}</span><span>🔢 ${(s.totalTokens||0).toLocaleString()}</span><span>🌐 ${(s.uniqueIPs||[]).length}</span></div>
     <button class="m-btn" onclick="test('${modelo}',${idx+1})">⟫ PROBAR</button>
     <div id="r${idx+1}" class="m-result"></div>
@@ -274,7 +279,7 @@ function chartScriptsHTML() {
   return `<script>
 function test(m,n){
   var d=document.getElementById('r'+n);d.className='m-result';d.style.display='block';d.textContent='⟫ CONECTANDO...';
-  var h={'Content-Type':'application/json'};var ak=document.getElementById('carbonatoApiKey')?.value||'';if(ak)h['Authorization']='Bearer '+ak;var msgs=[];var sp=document.getElementById('sp'+n).value;
+  var h={'Content-Type':'application/json'};var ak=document.getElementById('carbonatoApiKey')?.value||'';if(ak)h['Authorization']='Bearer '+ak;var msgs=[];var spEl=document.getElementById('sp'+n);var sp=spEl?spEl.value:'';
   if(sp) msgs.push({role:'system',content:sp});msgs.push({role:'user',content:'Responde solo OK'});
   fetch('/chat/completions',{method:'POST',headers:h,body:JSON.stringify({model:m,messages:msgs})})
   .then(r=>r.text()).then(x=>{try{var js=JSON.parse(x);if(js.error){d.className='m-result err';d.textContent='⛔ '+(js.error.message||JSON.stringify(js.error)).substring(0,500)}
@@ -282,7 +287,7 @@ function test(m,n){
   .catch(e=>{d.className='m-result err';d.textContent='⛔ Error: '+e.message});
 }
 function saveAll(){
-  for(var i=1;i<=${MODELOS.length};i++){c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value,system_prompt:document.getElementById('sp'+i).value};}
+  for(var i=1;i<=${MODELOS.length};i++){var spEl=document.getElementById('sp'+i);c['modelo'+i]={url:document.getElementById('url'+i).value,model:document.getElementById('id'+i).value,key:document.getElementById('key'+i).value};if(spEl)c['modelo'+i].system_prompt=spEl.value;}
   var st=document.getElementById('status');var ls=document.getElementById('lastSave');
   st.innerHTML='<span class="info">⟫⟫ GUARDANDO CONFIGURACIÓN...</span>';
   fetch('/api/admin-save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(c)})

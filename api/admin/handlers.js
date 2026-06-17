@@ -6,6 +6,7 @@ const { MODELOS, PUBLIC_MODELOS, MODEL_IDS } = require('../models-def.js');
 const { signToken } = require('../auth.js');
 const { proxyBase, esc, escTpl, cookieOk, requestAuthOk, apiKeyOk, html, getGithubToken } = require('./helpers.js');
 const { getHealthDb, saveHealthDb, loadUsageDB, saveUsageDB, loadUsageDBAsync, GITHUB_USAGE_URL, DB_PATH } = require('./db.js');
+const T = require('../admin-templates.js');
 
 const PROMPTS_PATH = path.join(DB_PATH, 'prompt-templates.json');
 const ADMIN_USER = process.env.ADMIN_USER;
@@ -110,7 +111,7 @@ const mods=${JSON.stringify(modsWithNames)};
 mods.forEach(m=>{tbody.innerHTML+='<tr id="r-'+m.id+'"><td>'+m.id+'</td><td>'+m.name+'</td><td style="color:rgba(255,255,255,0.35);font-size:10px">'+(m.desc||'')+'</td><td id="l-'+m.id+'">...</td><td id="s-'+m.id+'">⟳</td></tr>';});
 let ok=0,fail=0;
 (async()=>{
-  status.textContent='Probando 21 modelos...';
+  status.textContent='Probando '+mods.length+' modelos...';
   try{
     const r=await fetch('/api/health/check',{credentials:'same-origin'});
     const d=await r.json();
@@ -762,7 +763,59 @@ tr:hover td{background:rgba(255,255,255,0.02)}
 }
 
 // ========================================================
-// CONFIG PAGE
+// STATS / VARIABLES / COSTOS
+// ========================================================
+async function handleStatsPage(req, res) {
+  if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
+  const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'Desconocida').split(',')[0].trim();
+  const db = await loadUsageDBAsync();
+  const stats = db.stats || {};
+  const usages = db.usages || [];
+
+  const envData = [];
+  for (let i = 1; i <= MODELOS.length; i++) {
+    const m = MODELOS[i - 1];
+    const rawKeyName = `MODELO${i}_KEY`;
+    envData.push({
+      id: m.id,
+      icon: m.icon || '🔷',
+      model: process.env[`MODELO${i}_MODEL`] || '',
+      url: process.env[`MODELO${i}_URL`] || '',
+      key: process.env[rawKeyName],
+      modelEnvName: `MODELO${i}_MODEL`,
+      urlEnvName: `MODELO${i}_URL`,
+      keyEnvName: rawKeyName
+    });
+  }
+
+  const globalEnvVars = [
+    { key: 'SYSTEM_PROMPT1', label: 'System Prompt Global', val: process.env.SYSTEM_PROMPT1 || '', icon: '📝' },
+    { key: 'CARBONATO_API_KEY', label: 'Carbonato API Key', val: process.env.CARBONATO_API_KEY || '(usando lista)', icon: '🔐' },
+    { key: 'GITHUB_TOKEN', label: 'GitHub Token', val: process.env.GITHUB_TOKEN ? 'configurado' : '', icon: '🔑' },
+  ];
+
+  let statsCards = '';
+  for (let i = 1; i <= MODELOS.length; i++) {
+    const name = 'modelo' + i;
+    const s = stats[name] || { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+    statsCards += T.statCardHTML(name, s, i-1);
+  }
+
+  res.setHeader('Content-Type', 'text/html');
+  res.status(200).send(
+    T.headHTML('⎈ CARBONATO — STATS ⎈') +
+    T.topBarHTML(userIp) +
+    T.navHTML() +
+    `<div class="section-title">ESTADÍSTICAS POR MODELO</div><div class="s-grid">${statsCards}</div>` +
+    T.costSectionHTML(stats) +
+    T.usageTableHTML(usages) +
+    T.envSectionHTML(envData, globalEnvVars) +
+    T.footHTML()
+  );
+}
+
+// ========================================================
+// CONFIG EDITOR
 // ========================================================
 async function handleConfigPage(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'Auth required' });
@@ -1492,7 +1545,7 @@ module.exports = {
   handleVisitorsGeo, handleVisitorsReset, handleUsageReset, handleVisitorsPage,
   handleAdminAuth, handleAdminSave, handleAdminLogout,
   handleUpload, handleModelsCheck, handleDocsIA,
-  handleLogsPage, handleConfigPage, handleConfigSave,
+  handleLogsPage, handleStatsPage, handleConfigPage, handleConfigSave,
   handleTelegramWebhook,
   handleSkynetPage, handleSkynetData,
   handleSkynetLogsPage

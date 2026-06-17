@@ -58,6 +58,9 @@ module.exports = async (req, res) => {
   // --- LOGS ---
   if (pathname === '/api/logs/page') return h.handleLogsPage(req, res);
 
+  // --- STATS ---
+  if (pathname === '/api/stats/page') return h.handleStatsPage(req, res);
+
   // --- CONFIG ---
   if (pathname === '/api/config/page') return h.handleConfigPage(req, res);
   if (pathname === '/api/config/save' && method === 'POST') return h.handleConfigSave(req, res);
