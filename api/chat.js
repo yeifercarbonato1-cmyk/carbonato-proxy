@@ -67,29 +67,64 @@ const KILO_MODELS = [
   "openrouter/free"
 ];
 
-// Modelos codex que NO aceptan system messages (Modelverse)
-// Convierten el system msg en prefijo del primer user msg
-function isCodexModel(modelName) {
-  if (!modelName) return false;
-  const lower = modelName.toLowerCase();
-  return lower.includes('codex') || lower.includes('codex-mini') || lower.includes('codex-max');
+// ─── OpenAI Responses API adapter (para modelos codex en Modelverse) ───
+// Detecta si el endpoint es /v1/responses
+function isResponsesEndpoint(url) {
+  return typeof url === 'string' && url.endsWith('/responses');
 }
 
-// Elimina system messages de codex, fusionando su contenido en el primer user msg
-function stripSystemForCodex(messages) {
-  if (!messages || !Array.isArray(messages)) return messages;
+// Convierte body de chat/completions → Responses API
+// messages: [{role:'system',...}, {role:'user',...}, ...]
+// → { model, input: [...user/assistant], instructions: <system content>, stream }
+function chatToResponsesBody(body) {
+  const messages = body.messages || [];
   const systemMsgs = messages.filter(m => m.role === 'system');
-  if (systemMsgs.length === 0) return messages;
-  const systemContent = systemMsgs.map(m => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))).join('\n');
-  const rest = messages.filter(m => m.role !== 'system');
-  // Fusionar system content como instrucción en el primer user message
-  const firstUserIdx = rest.findIndex(m => m.role === 'user');
-  if (firstUserIdx >= 0) {
-    const firstUser = rest[firstUserIdx];
-    const userContent = typeof firstUser.content === 'string' ? firstUser.content : JSON.stringify(firstUser.content);
-    rest[firstUserIdx] = { ...firstUser, content: `[Instructions: ${systemContent}]\n\n${userContent}` };
-  }
-  return rest;
+  const chatMsgs   = messages.filter(m => m.role !== 'system');
+
+  const instructions = systemMsgs
+    .map(m => (typeof m.content === 'string' ? m.content : JSON.stringify(m.content)))
+    .join('\n') || undefined;
+
+  // input puede ser string (solo último user) o array de {role, content}
+  const input = chatMsgs.map(m => ({
+    role: m.role,
+    content: typeof m.content === 'string' ? m.content : JSON.stringify(m.content)
+  }));
+
+  const out = { model: body.model, input };
+  if (instructions) out.instructions = instructions;
+  if (body.stream)      out.stream      = true;
+  if (body.max_tokens)  out.max_output_tokens = body.max_tokens;
+  if (body.temperature !== undefined) out.temperature = body.temperature;
+  if (body.tools)       out.tools       = body.tools;
+  return out;
+}
+
+// Convierte respuesta Responses API → formato OpenAI chat/completions
+function responsesToChatResult(data, originalModel) {
+  // output es array de items; el primero con type='message' tiene el texto
+  const outputItem = (data.output || []).find(o => o.type === 'message');
+  const contentArr = outputItem?.content || [];
+  const textPart   = contentArr.find(c => c.type === 'text' || c.type === 'output_text');
+  const text       = textPart?.text || '';
+
+  const usage = data.usage || {};
+  return {
+    id:      data.id || ('resp-' + Date.now()),
+    object:  'chat.completion',
+    created: Math.floor(Date.now() / 1000),
+    model:   originalModel,
+    choices: [{
+      index:         0,
+      message:       { role: 'assistant', content: text },
+      finish_reason: data.status === 'completed' ? 'stop' : (data.incomplete_details?.reason || 'stop')
+    }],
+    usage: {
+      prompt_tokens:     usage.input_tokens     || 0,
+      completion_tokens: usage.output_tokens    || 0,
+      total_tokens:      usage.total_tokens     || (usage.input_tokens || 0) + (usage.output_tokens || 0)
+    }
+  };
 }
 // Rotación pública: solo modelos publicados
 const ROTATION_ORDER = ['modelo1', 'modelo2', 'modelo3', 'modelo4', 'modelo5', 'modelo6', 'modelo7', 'modelo8', 'modelo10', 'modelo11', 'modelo12'];
@@ -449,9 +484,10 @@ module.exports = async (req, res) => {
         }
         // mode 'tool': el modelo usa /api/knowledge directamente
       }
-      // Codex models no aceptan system messages — strip automático
-      if (isCodexModel(body.model)) {
-        body.messages = stripSystemForCodex(body.messages);
+      const upstreamUrl = resolveUrl(cfg);
+      // Responses API adapter (codex models en Modelverse)
+      if (isResponsesEndpoint(upstreamUrl)) {
+        body = chatToResponsesBody(body);
       }
       const headers = { 'Content-Type': 'application/json' };
       const resolvedKey = resolveKey(cfg, userModel);
@@ -459,7 +495,7 @@ module.exports = async (req, res) => {
       try {
         const ac = new AbortController();
         const to = setTimeout(() => ac.abort(), 60000);
-        const upstreamRes = await fetch(resolveUrl(cfg), {
+        const upstreamRes = await fetch(upstreamUrl, {
           method: 'POST', headers, body: JSON.stringify(body), signal: ac.signal
         });
         clearTimeout(to);
@@ -559,10 +595,13 @@ module.exports = async (req, res) => {
       }
       // mode 'tool': el modelo usa /api/knowledge directamente
     }
-    
-    // Codex models no aceptan system messages — strip automático
-    if (isCodexModel(body.model)) {
-      body.messages = stripSystemForCodex(body.messages);
+
+    const upstreamUrl = resolveUrl(cfg);
+    const useResponsesApi = isResponsesEndpoint(upstreamUrl);
+    // Responses API adapter (codex models en Modelverse)
+    const originalModel = body.model;
+    if (useResponsesApi) {
+      body = chatToResponsesBody(body);
     }
 
     const headers = { 'Content-Type': 'application/json' };
@@ -570,9 +609,15 @@ module.exports = async (req, res) => {
     if (resolvedKey) headers['Authorization'] = `Bearer ${resolvedKey}`;
 
     try {
-      const upstreamRes = await fetch(resolveUrl(cfg), { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
+      const upstreamRes = await fetch(upstreamUrl, { method: 'POST', headers, body: JSON.stringify(body), signal: AbortSignal.timeout(90000) });
       let result = await upstreamRes.text();
-      // modelo14 ahora es OpenAI-compatible, respuesta directa
+      // Responses API → convertir a formato chat/completions
+      if (useResponsesApi && upstreamRes.ok) {
+        try {
+          result = JSON.stringify(responsesToChatResult(JSON.parse(result), originalModel));
+        } catch(e) { /* dejar result tal cual si falla el parse */ }
+      }
+      // modelo20 tool calls normalization
       if (userModel === 'modelo20') {
         try {
           const parsed = normalizeModelo20ToolCalls(JSON.parse(result));
