@@ -173,7 +173,7 @@
   "modelo20": {
     "url": "$MODELO20_URL",
     "model": "$MODELO20_MODEL",
-    "key": "$MODELO20_KEY",
+    "key": "$NVIDIA_NIM_KEY",
     "system_prompt": "$SYSTEM_PROMPT1",
     "knowledge": {
       "enabled": true,
