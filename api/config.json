@@ -81,20 +81,17 @@
   "modelo14": {
     "url": "$MODELO14_URL",
     "model": "$MODELO14_MODEL",
-    "key": "$MODELO14_KEY",
-    "system_prompt": "$SYSTEM_PROMPT2"
+    "key": "$MODELVERSE_KEY"
   },
   "modelo15": {
     "url": "$MODELO15_URL",
     "model": "$MODELO15_MODEL",
-    "key": "$MODELVERSE_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1"
+    "key": "$MODELVERSE_KEY"
   },
   "modelo16": {
     "url": "$MODELO16_URL",
     "model": "$MODELO16_MODEL",
-    "key": "$MODELVERSE_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1"
+    "key": "$MODELVERSE_KEY"
   },
   "modelo17": {
     "url": "$MODELO17_URL",
@@ -177,7 +174,7 @@
   "modelo20": {
     "url": "$MODELO20_URL",
     "model": "$MODELO20_MODEL",
-    "key": "$NVIDIA_NIM_KEY",
+    "key": "$MODELO20_KEY",
     "system_prompt": "$SYSTEM_PROMPT1",
     "knowledge": {
       "enabled": true,
@@ -201,29 +198,15 @@
     }
   },
   "modelo21": {
-    "url": "https://prod-vllm-1.kriyam.ai/invocations",
-    "model": "Qwen/Qwen2.5-VL-7B-Instruct",
-    "key": "",
-    "system_prompt": "$SYSTEM_PROMPT1",
-    "knowledge": {
-      "enabled": true,
-      "mode": "rag",
-      "rag_limit": 6,
-      "tool_endpoint": "/api/knowledge",
-      "available_modes": [
-        "rag",
-        "tool",
-        "full"
-      ]
-    },
-    "caveman": {
-      "enabled": true,
-      "default_level": "full",
-      "levels": [
-        "lite",
-        "full",
-        "ultra"
-      ]
-    }
+    "url": "$MODELO21_URL",
+    "model": "$MODELO21_MODEL",
+    "key": "$MODELO21_KEY",
+    "system_prompt": "$SYSTEM_PROMPT1"
+  },
+  "modelo22": {
+    "url": "$MODELO22_URL",
+    "model": "$MODELO22_MODEL",
+    "key": "$MODELO22_KEY",
+    "system_prompt": "$SYSTEM_PROMPT1"
   }
 }

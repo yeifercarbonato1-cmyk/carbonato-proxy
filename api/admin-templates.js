@@ -163,7 +163,6 @@ function navHTML() {
   <a href="/api/modelo18" class="nav-link" style="color:#ffaa00">⌖ ${process.env.MODELO18_MODEL || 'modelo18'}</a>
   <a href="/api/modelo19" class="nav-link" style="color:#ffcc00">⟁ ${process.env.MODELO19_MODEL || 'modelo19'}</a>
   <a href="/api/modelo20" class="nav-link" style="color:#44ccff">⬡ ${process.env.MODELO20_MODEL || 'modelo20'}</a>
-  <a href="/api/modelo21" class="nav-link" style="color:#55ccff">⚙ ${process.env.MODELO21_MODEL || 'modelo21'}</a>
   <a href="/api/prompts/page" class="nav-link">⟐ TEMPLATES</a>
   <a href="/api/playground" class="nav-link">⟐ PLAYGROUND</a>
   <a href="/api/visitors/page" class="nav-link">⟐ VISITANTES</a>
@@ -246,7 +245,7 @@ function apiKeyBoxHTML(apiKey) {
       <input id="carbonatoApiKey" readonly value="${esc(key)}" placeholder="CARBONATO_API_KEY no configurada en env">
       <button class="copy-small" onclick="navigator.clipboard.writeText(document.getElementById('carbonatoApiKey').value);this.textContent='✓ COPIADA';setTimeout(()=>this.textContent='COPIAR',1500)">COPIAR</button>
     </div>
-    <div class="api-key-note">Usar en agents/proyectos como <strong>Authorization: Bearer &lt;CARBONATO_API_KEY&gt;</strong>. modelo1-modelo5 libres; modelo6-modelo21 requieren esta llave.</div>
+    <div class="api-key-note">Usar en agents/proyectos como <strong>Authorization: Bearer &lt;CARBONATO_API_KEY&gt;</strong>. modelo1-modelo5 libres; modelo6-modelo22 requieren esta llave.</div>
   </div>`;
 }
 

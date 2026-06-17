@@ -23,7 +23,8 @@ const MODELOS = [
   { id: 'modelo18', icon: '⌖', desc: 'GLM 5.1 — NVIDIA NIM',                       price_in: 0.8, price_out: 0.8 },
   { id: 'modelo19', icon: '⟁', desc: 'Qwen3.6 Abliterated — Ollama',               price_in: 0,   price_out: 0 },
   { id: 'modelo20', icon: '⬡', desc: 'Qwen3 Coder 30B — Ollama local',             price_in: 0,   price_out: 0 },
-  { id: 'modelo21', icon: '⚙', desc: 'Claude Sonnet 4.6 — proxy privado',          price_in: 3.0, price_out: 15.0 },
+  { id: 'modelo21', icon: '◇', desc: process.env.MODELO21_MODEL || 'modelo21',     price_in: 0,   price_out: 0 },
+  { id: 'modelo22', icon: '◆', desc: process.env.MODELO22_MODEL || 'modelo22',     price_in: 0,   price_out: 0 },
 ];
 
 // Modelos mostrados en la página pública/bienvenida
