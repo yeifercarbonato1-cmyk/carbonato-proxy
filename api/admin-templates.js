@@ -191,7 +191,7 @@ function modelCardHTML(modelo, cfg, stats, idx, env) {
   // Mostrar key fallback explícito si está vacía
   let keyDisplay = cfg.key || '';
   if (!keyDisplay) {
-    if (modelo === 'modelo15' || modelo === 'modelo16') keyDisplay = '$MODELVERSE_KEY';
+    if (modelo === 'modelo13' || modelo === 'modelo14' || modelo === 'modelo15' || modelo === 'modelo16') keyDisplay = '$MODELVERSE_KEY';
     else if (modelo === 'modelo18' || modelo === 'modelo20') keyDisplay = '$NVIDIA_NIM_KEY';
   }
   // Env vars en vivo

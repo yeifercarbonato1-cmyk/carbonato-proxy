@@ -75,8 +75,7 @@
   "modelo13": {
     "url": "$MODELO13_URL",
     "model": "$MODELO13_MODEL",
-    "key": "$MODELO13_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1"
+    "key": "$MODELVERSE_KEY"
   },
   "modelo14": {
     "url": "$MODELO14_URL",

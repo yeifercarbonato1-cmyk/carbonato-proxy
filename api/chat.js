@@ -158,7 +158,7 @@ function resolveKey(cfg, modelKey = '') {
   const direct = resolveEnvValue(cfg.key || '');
   if (direct) return direct;
   // Fallback por modelo: usa la key global si la del modelo está vacía
-  if (modelKey === 'modelo14' || modelKey === 'modelo15' || modelKey === 'modelo16') return process.env.MODELVERSE_KEY || '';
+  if (modelKey === 'modelo13' || modelKey === 'modelo14' || modelKey === 'modelo15' || modelKey === 'modelo16') return process.env.MODELVERSE_KEY || '';
   if (modelKey === 'modelo18' || modelKey === 'modelo20') return process.env.NVIDIA_NIM_KEY || '';
   return '';
 }
