@@ -101,6 +101,35 @@ function normalizeUsageDB(db) {
   return db;
 }
 
+// Descarta usages/visitors/stats anteriores a resetAt (si existe en el db remoto)
+function applyResetFilter(localDb, resetAt) {
+  if (!resetAt) return localDb;
+  const cutoff = new Date(resetAt).getTime();
+  if (!cutoff || isNaN(cutoff)) return localDb;
+  const filtered = (localDb.usages || []).filter(u => {
+    const t = new Date(u.timestamp || 0).getTime();
+    return t >= cutoff;
+  });
+  if (filtered.length === (localDb.usages || []).length) return localDb;
+  // Reconstruir stats y visitors solo con los usages que sobrevivieron
+  const stats = {};
+  const visitors = {};
+  for (const u of filtered) {
+    const model = u.model || 'unknown';
+    const ip = u.ip || 'unknown';
+    if (!stats[model]) stats[model] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
+    stats[model].totalTokens += u.tokens || 0;
+    stats[model].totalRequests += 1;
+    if (!stats[model].uniqueIPs.includes(ip)) stats[model].uniqueIPs.push(ip);
+    if (!visitors[ip]) visitors[ip] = { ip, count: 0, lastSeen: '', models: [], tokens: 0 };
+    visitors[ip].count += 1;
+    visitors[ip].tokens += u.tokens || 0;
+    if ((u.timestamp || '') > (visitors[ip].lastSeen || '')) visitors[ip].lastSeen = u.timestamp;
+    if (u.model && !visitors[ip].models.includes(u.model)) visitors[ip].models.push(u.model);
+  }
+  return { ...localDb, usages: filtered, stats, visitors };
+}
+
 function usageKey(u) {
   return [u.timestamp || '', u.model || '', u.ip || '', u.tokens || 0].join('|');
 }
@@ -233,12 +262,17 @@ async function loadUsageDBAsync() {
 
   // Si GitHub devolvió datos vacíos (reset reciente), NO mergear /tmp —
   // /tmp puede tener datos obsoletos de antes del reset.
+  const resetAt = db.resetAt || null;
   const githubEmpty = loadedFromGitHub && (!db.usages || db.usages.length === 0);
   if (!githubEmpty) {
     // Mergear datos locales que GitHub no tenga aún (ventana de ~3s)
     let localDb = null;
     try { localDb = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
-    if (localDb) db = mergeUsageDB(db, localDb);
+    if (localDb) {
+      const filteredLocal = applyResetFilter(localDb, resetAt);
+      db = mergeUsageDB(db, filteredLocal);
+      if (resetAt) db.resetAt = resetAt;
+    }
   }
 
   // Actualizar cache local con lo que hay en GitHub (incluso si es vacío)
@@ -280,14 +314,16 @@ async function _syncToGitHub(localDb) {
     // Si GitHub está vacío (reset reciente), no mergear datos locales viejos.
     // Solo subir localDb si también está vacío, o salir y dejar GitHub limpio.
     const remoteEmpty = !remoteDb.usages || remoteDb.usages.length === 0;
+    const resetAt = remoteDb.resetAt || null;
     let mergedDb;
-    if (remoteEmpty) {
-      // Respetar el reset — solo subir localDb si es la DB que causó este sync
-      // (puede tener 1 registro nuevo legítimo post-reset)
+    if (remoteEmpty && !resetAt) {
+      // GitHub vacío sin resetAt — primera vez o cold start limpio
       mergedDb = normalizeUsageDB(localDb);
     } else {
-      const currentLocal = loadUsageDB();
-      mergedDb = mergeUsageDB(remoteDb, currentLocal, localDb);
+      const currentLocal = applyResetFilter(loadUsageDB(), resetAt);
+      const filteredLocal = applyResetFilter(localDb, resetAt);
+      mergedDb = mergeUsageDB(remoteDb, currentLocal, filteredLocal);
+      if (resetAt) mergedDb.resetAt = resetAt; // propagar resetAt
     }
 
     // Escribir merged a GitHub

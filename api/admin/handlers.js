@@ -412,9 +412,9 @@ async function handleVisitorsGeo(req, res) {
 async function handleVisitorsReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
   invalidateSyncState();
-  await saveUsageDB({ usages: [], stats: {}, visitors: {} });
-  // También escribir directo a GitHub (saveUsageDB tiene sync desactivado)
-  await writeUsageResetToGitHub({ usages: [], stats: {}, visitors: {} });
+  const now = new Date().toISOString();
+  await saveUsageDB({ usages: [], stats: {}, visitors: {}, resetAt: now });
+  await writeUsageResetToGitHub({ usages: [], stats: {}, visitors: {}, resetAt: now });
   res.json({ ok: true, message: 'Usage DB reset to zero' });
 }
 
@@ -445,9 +445,10 @@ async function writeUsageResetToGitHub(data) {
 
 async function handleUsageReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
-  const errors = [];
-  const emptyUsage = { usages: [], stats: {}, visitors: {} };
   invalidateSyncState();
+  const now = new Date().toISOString();
+  const emptyUsage = { usages: [], stats: {}, visitors: {}, resetAt: now };
+  const errors = [];
   // Escribir directo a /tmp y GitHub (sin pasar por saveUsageDB que tiene throttle de sync)
   try {
     fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(emptyUsage, null, 2));
