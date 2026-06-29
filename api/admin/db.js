@@ -86,6 +86,13 @@ function shouldSyncToGitHub() {
   return true;
 }
 
+// Llamar después de un reset para que el próximo saveUsageDB
+// no re-suba datos viejos que estaban en tránsito.
+function invalidateSyncState() {
+  _lastGithubSync = Date.now(); // bloquea sync por 3s
+  _pendingSync = null;
+}
+
 function normalizeUsageDB(db) {
   if (!db || typeof db !== 'object') db = {};
   if (!Array.isArray(db.usages)) db.usages = [];
@@ -209,6 +216,7 @@ function loadUsageDB() {
 // Admin panel: lee de GitHub + mergea datos locales no sincronizados
 async function loadUsageDBAsync() {
   let db = { usages: [], stats: {} };
+  let loadedFromGitHub = false;
   const token = getGithubToken();
   if (token) {
     try {
@@ -218,16 +226,22 @@ async function loadUsageDBAsync() {
       if (r.ok) {
         const d = await r.json();
         db = JSON.parse(Buffer.from(d.content, 'base64').toString());
+        loadedFromGitHub = true;
       }
     } catch(e) {}
   }
 
-  // Mergear datos locales que GitHub no tenga aún (ventana de ~3s)
-  let localDb = null;
-  try { localDb = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
-  db = mergeUsageDB(db, localDb);
+  // Si GitHub devolvió datos vacíos (reset reciente), NO mergear /tmp —
+  // /tmp puede tener datos obsoletos de antes del reset.
+  const githubEmpty = loadedFromGitHub && (!db.usages || db.usages.length === 0);
+  if (!githubEmpty) {
+    // Mergear datos locales que GitHub no tenga aún (ventana de ~3s)
+    let localDb = null;
+    try { localDb = JSON.parse(fs.readFileSync(path.join(DB_PATH, 'usage-db.json'), 'utf8')); } catch(e) {}
+    if (localDb) db = mergeUsageDB(db, localDb);
+  }
 
-  // Actualizar cache local
+  // Actualizar cache local con lo que hay en GitHub (incluso si es vacío)
   try { fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(db, null, 2)); } catch(e) {}
 
   return db;
@@ -263,8 +277,18 @@ async function _syncToGitHub(localDb) {
       try { remoteDb = JSON.parse(Buffer.from(fileData.content, 'base64').toString()); } catch(e) {}
     }
 
-    const currentLocal = loadUsageDB();
-    let mergedDb = mergeUsageDB(remoteDb, currentLocal, localDb);
+    // Si GitHub está vacío (reset reciente), no mergear datos locales viejos.
+    // Solo subir localDb si también está vacío, o salir y dejar GitHub limpio.
+    const remoteEmpty = !remoteDb.usages || remoteDb.usages.length === 0;
+    let mergedDb;
+    if (remoteEmpty) {
+      // Respetar el reset — solo subir localDb si es la DB que causó este sync
+      // (puede tener 1 registro nuevo legítimo post-reset)
+      mergedDb = normalizeUsageDB(localDb);
+    } else {
+      const currentLocal = loadUsageDB();
+      mergedDb = mergeUsageDB(remoteDb, currentLocal, localDb);
+    }
 
     // Escribir merged a GitHub
     let content = JSON.stringify(mergedDb, null, 2);
@@ -317,5 +341,6 @@ async function _syncToGitHub(localDb) {
 module.exports = {
   getHealthDb, saveHealthDb, readFromGitHub, writeToGitHub,
   loadUsageDB, loadUsageDBAsync, saveUsageDB, mergeUsageDB, addUsageToDb,
+  invalidateSyncState,
   GITHUB_URL, GITHUB_USAGE_URL, DB_PATH
 };

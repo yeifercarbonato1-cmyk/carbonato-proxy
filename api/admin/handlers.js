@@ -5,7 +5,7 @@ const path = require('path');
 const { MODELOS, PUBLIC_MODELOS, MODEL_IDS } = require('../models-def.js');
 const { signToken } = require('../auth.js');
 const { proxyBase, esc, escTpl, cookieOk, requestAuthOk, apiKeyOk, html, getGithubToken } = require('./helpers.js');
-const { getHealthDb, saveHealthDb, loadUsageDB, saveUsageDB, loadUsageDBAsync, GITHUB_USAGE_URL, DB_PATH } = require('./db.js');
+const { getHealthDb, saveHealthDb, loadUsageDB, saveUsageDB, loadUsageDBAsync, invalidateSyncState, GITHUB_USAGE_URL, DB_PATH } = require('./db.js');
 const T = require('../admin-templates.js');
 
 const PROMPTS_PATH = path.join(DB_PATH, 'prompt-templates.json');
@@ -411,6 +411,7 @@ async function handleVisitorsGeo(req, res) {
 
 async function handleVisitorsReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
+  invalidateSyncState();
   await saveUsageDB({ usages: [], stats: {}, visitors: {} });
   // También escribir directo a GitHub (saveUsageDB tiene sync desactivado)
   await writeUsageResetToGitHub({ usages: [], stats: {}, visitors: {} });
@@ -445,8 +446,13 @@ async function writeUsageResetToGitHub(data) {
 async function handleUsageReset(req, res) {
   if (!cookieOk(req)) return res.status(401).json({ error: 'No auth' });
   const errors = [];
-  const emptyUsage = { usages: [], stats: {} };
-  try { await saveUsageDB(emptyUsage); await writeUsageResetToGitHub(emptyUsage); } catch(e) { errors.push('usage-db: ' + e.message); }
+  const emptyUsage = { usages: [], stats: {}, visitors: {} };
+  invalidateSyncState();
+  // Escribir directo a /tmp y GitHub (sin pasar por saveUsageDB que tiene throttle de sync)
+  try {
+    fs.writeFileSync(path.join(DB_PATH, 'usage-db.json'), JSON.stringify(emptyUsage, null, 2));
+    await writeUsageResetToGitHub(emptyUsage);
+  } catch(e) { errors.push('usage-db: ' + e.message); }
   try { const h = await getHealthDb(); await saveHealthDb([], h.sha || ''); } catch(e) { errors.push('health-db: ' + e.message); }
   try { fs.writeFileSync(path.join(DB_PATH, 'proxy-logs.json'), '[]'); } catch(e) {}
   try { fs.writeFileSync(path.join(DB_PATH, 'model9-circuit.json'), JSON.stringify({ failures: {}, lastFailures: {} })); } catch(e) {}
