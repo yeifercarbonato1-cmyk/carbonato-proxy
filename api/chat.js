@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { MODELOS, PUBLIC_MODELOS, PUBLIC_MODEL_IDS, FREE_MODEL_IDS } = require('./models-def.js');
 const { loadUsageDB, saveUsageDB, addUsageToDb } = require('./admin/db.js');
-const { apiKeyOk, requestAuthOk } = require('./admin/helpers.js');
+const { apiKeyOk, requestAuthOk, extractCandidateKey } = require('./admin/helpers.js');
+const { findClientKey } = require('./admin/client-keys.js');
+const { getSettings } = require('./admin/settings.js');
 const { 
   recordFailure: skynetFail, 
   recordSuccess: skynetSuccess, 
@@ -28,11 +30,11 @@ function recordSuccess(modelKey) {
 function saveLog(model, ip, status, latency, error) {
   try {
     let logs = [];
-    try { logs = JSON.parse(fs.readFileSync('/tmp/proxy-logs.json', 'utf8')); } catch(e) { logs = []; }
+    try { logs = JSON.parse(fs.readFileSync('/tmp/proxy-logs.json', 'utf8')); } catch(e) { logs = []; /* si no existe el archivo, arranca vacío */ }
     logs.push({ time: Date.now(), model, ip, status, latency, error });
     if (logs.length > 1000) logs = logs.slice(-1000);
     fs.writeFileSync('/tmp/proxy-logs.json', JSON.stringify(logs));
-  } catch(e) {}
+  } catch(e) { /* fallo en log no debe romper la respuesta */ }
 }
 
 // Transform message content for vision models
@@ -158,24 +160,35 @@ function resolveKey(cfg, modelKey = '') {
   const direct = resolveEnvValue(cfg.key || '');
   if (direct) return direct;
   // Fallback por modelo: usa la key global si la del modelo está vacía
-  if (modelKey === 'modelo13' || modelKey === 'modelo14' || modelKey === 'modelo15' || modelKey === 'modelo16') return process.env.MODELVERSE_KEY || '';
+  if (modelKey === 'modelo11' || modelKey === 'modelo12' || modelKey === 'modelo13' || modelKey === 'modelo14' || modelKey === 'modelo15' || modelKey === 'modelo16') return process.env.MODELVERSE_KEY || '';
   if (modelKey === 'modelo18' || modelKey === 'modelo20') return process.env.NVIDIA_NIM_KEY || '';
   return '';
 }
 
-function resolveUrl(cfg) {
+function resolveUrl(cfg, modelId = '') {
+  // El .env manda SIEMPRE: MODELO{N}_URL es la fuente de verdad.
+  const n = /^modelo(\d+)$/.exec(String(modelId || ''));
+  if (n) {
+    const envUrl = process.env[`MODELO${n[1]}_URL`];
+    if (envUrl) return envUrl;
+  }
+  // Fallback (slots especiales sin env, ej. rotator): valor de config.
   return resolveEnvValue(cfg.url || '');
 }
 
-function resolveModel(cfg) {
+function resolveModel(cfg, modelId = '') {
+  // El .env manda SIEMPRE: MODELO{N}_MODEL es la fuente de verdad.
+  const n = /^modelo(\d+)$/.exec(String(modelId || ''));
+  if (n) {
+    const envModel = process.env[`MODELO${n[1]}_MODEL`];
+    if (envModel) return envModel;
+  }
   return resolveEnvValue(cfg.model || '');
 }
 
 function getConfig() {
-  try {
-    const tmp = JSON.parse(fs.readFileSync('/tmp/proxy-config.json', 'utf8'));
-    if (tmp && typeof tmp === 'object' && Object.keys(tmp).length > 0) return tmp;
-  } catch(e) {}
+  // Fuente de verdad: config.json del deploy (estructura de slots) + .env (url/model/key).
+  // Ya NO se lee /tmp/proxy-config.json: el dashboard es solo de lectura, no configura.
   try {
     const cfgPath = path.join(__dirname, 'config.json');
     return JSON.parse(fs.readFileSync(cfgPath, 'utf8'));
@@ -212,8 +225,7 @@ module.exports = async (req, res) => {
     const data = MODELOS.map(m => ({
       id: m.id,
       object: "model",
-      owned_by: "carbonato",
-      description: m.desc
+      owned_by: "carbonato"
     }));
     return res.status(200).json({ object: "list", data });
   }
@@ -225,7 +237,7 @@ module.exports = async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     if (chunks.length > 0) {
-      try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch(e) {}
+      try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch(e) { body = {}; }
     }
     
     try {
@@ -249,7 +261,7 @@ module.exports = async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     if (chunks.length > 0) {
-      try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch(e) {}
+      try { body = JSON.parse(Buffer.concat(chunks).toString()); } catch(e) { body = {}; }
     }
     
     const CONFIG = getConfig();
@@ -259,6 +271,21 @@ module.exports = async (req, res) => {
       return res.status(401).json({ error: { message: 'CARBONATO_API_KEY requerida para este modelo', type: 'auth_error' } });
     }
     const userIp = (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || 'unknown').split(',')[0].trim();
+    // Origen de la request: playground/telegram/health-check (header interno), apikey (Bearer válido) o free (sin key)
+    // El header interno solo se respeta si la request viene autenticada (evita que un externo se camufle de monitor)
+    const internalSource = String(req.headers['x-carbonato-source'] || '').trim().toLowerCase();
+    const ALLOWED_SOURCES = ['playground', 'telegram', 'health-check', 'competencia'];
+    const usageSource = (ALLOWED_SOURCES.includes(internalSource) && requestAuthOk(req)) ? internalSource : (apiKeyOk(req) ? 'apikey' : 'free');
+    // Si la key pertenece a un cliente premium, etiquetar el uso con su nombre
+    const clientRec = findClientKey(extractCandidateKey(req));
+    const clientLabel = clientRec ? (clientRec.name || clientRec.key.slice(0, 12)) : null;
+    // Toggle runtime de inyección de system prompt (admin: /api/settings/toggle, cache TTL 60s)
+    const runtimeSettings = getSettings();
+    const promptInjectionOn = runtimeSettings.promptInjection !== false;
+    // Modelos pausados manualmente (persistente vía settings.json; el health-check las salta para poder diagnosticar)
+    if (runtimeSettings.disabledModels && runtimeSettings.disabledModels[userModel] && internalSource !== 'health-check') {
+      return res.status(503).json({ error: { message: `${userModel} está pausado por el administrador`, type: 'model_paused' } });
+    }
     const useStream = body.stream === true;
 
     // Modelo10: Generación de imágenes con Pollinations
@@ -333,11 +360,11 @@ module.exports = async (req, res) => {
           continue;
         }
         
-        console.log(`[rotator] Probando ${modelKey} (${resolveModel(targetCfg)})...`);
+        console.log(`[rotator] Probando ${modelKey} (${resolveModel(targetCfg, modelKey)})...`);
         
         try {
-          const rotatorBody = { ...body, model: resolveModel(targetCfg) };
-          const rotatorSysPrompt = resolveEnvValue(targetCfg.system_prompt);
+          const rotatorBody = { ...body, model: resolveModel(targetCfg, modelKey) };
+          const rotatorSysPrompt = promptInjectionOn ? resolveEnvValue(targetCfg.system_prompt) : '';
           if (rotatorSysPrompt) {
             const hasSystem = rotatorBody.messages && rotatorBody.messages.some(m => m.role === 'system');
             if (!hasSystem) {
@@ -346,7 +373,7 @@ module.exports = async (req, res) => {
           }
           // modelo14 ahora es OpenAI-compatible, no necesita transformación
           
-          const upstreamRes = await fetch(resolveUrl(targetCfg), {
+          const upstreamRes = await fetch(resolveUrl(targetCfg, modelKey), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', ...(resolveKey(targetCfg, modelKey) ? { 'Authorization': `Bearer ${resolveKey(targetCfg, modelKey)}` } : {}) },
             body: JSON.stringify(rotatorBody),
@@ -380,19 +407,10 @@ module.exports = async (req, res) => {
                   const content = parsed.choices?.[0]?.message?.content || '';
                   tokens = Math.max(1, Math.round(content.length / 4));
                 }
-              } catch(e) {}
-              const db = loadUsageDB();
-              db.usages.push({ model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString(), rotatorModel: modelKey });
-              if (!db.stats[userModel]) db.stats[userModel] = { totalTokens: 0, totalRequests: 0, uniqueIPs: [] };
-              db.stats[userModel].totalTokens += tokens;
-              db.stats[userModel].totalRequests += 1;
-              if (db.stats[userModel].uniqueIPs && !db.stats[userModel].uniqueIPs.includes(userIp)) db.stats[userModel].uniqueIPs.push(userIp);
-              if (db.usages.length > 1000) db.usages = db.usages.slice(-1000);
-              db.lastUpdated = new Date().toISOString();
-              db.lastModel = userModel;
-              db.lastTokens = tokens;
+                } catch(e) { /* respuesta no parseable, tokens=0 */ }
+              const db = addUsageToDb(loadUsageDB(), { model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString(), rotatorModel: modelKey, source: usageSource, ...(clientLabel ? { client: clientLabel } : {}) });
               saveUsageDB(db);
-            } catch(e) {}
+            } catch(e) { /* error guardando uso no debe romper la respuesta */ }
             
             saveLog(userModel, userIp, upstreamRes.status, 0, null);
             
@@ -434,10 +452,10 @@ module.exports = async (req, res) => {
 
     // ─── Streaming real ───
     if (useStream) {
-      body.model = resolveModel(cfg);
+      body.model = resolveModel(cfg, userModel);
       body.stream = true;
       // Modelo16 ahora usa gpt-5.5 vía modelverse — soporta tools
-      const resolvedSysPrompt = resolveEnvValue(cfg.system_prompt);
+      const resolvedSysPrompt = promptInjectionOn ? resolveEnvValue(cfg.system_prompt) : '';
       if (resolvedSysPrompt) {
         if (userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo19' || userModel === 'modelo20') {
           body.messages = body.messages || [];
@@ -484,7 +502,7 @@ module.exports = async (req, res) => {
         }
         // mode 'tool': el modelo usa /api/knowledge directamente
       }
-      const upstreamUrl = resolveUrl(cfg);
+      const upstreamUrl = resolveUrl(cfg, userModel);
       // Responses API adapter (codex models en Modelverse)
       if (isResponsesEndpoint(upstreamUrl)) {
         body = chatToResponsesBody(body);
@@ -531,12 +549,12 @@ module.exports = async (req, res) => {
                   const parsed = JSON.parse(line.slice(6));
                   const delta = parsed.choices?.[0]?.delta?.content || '';
                   contentLen += delta.length;
-                } catch(e) {}
+                } catch(e) { /* SSE line no parseable, continua */ }
               }
             }
             tokens = Math.max(1, Math.round(contentLen / 4));
           }
-          const db = addUsageToDb(loadUsageDB(), { model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
+          const db = addUsageToDb(loadUsageDB(), { model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString(), source: usageSource, ...(clientLabel ? { client: clientLabel } : {}) });
           saveUsageDB(db);
         } catch(e) { console.log('Error guardando uso streaming:', e.message); }
         saveLog(userModel, userIp, 200, 0, null);
@@ -547,9 +565,9 @@ module.exports = async (req, res) => {
       }
     }
 
-    body.model = resolveModel(cfg);
+    body.model = resolveModel(cfg, userModel);
 
-    const resolvedSysPrompt = resolveEnvValue(cfg.system_prompt);
+    const resolvedSysPrompt = promptInjectionOn ? resolveEnvValue(cfg.system_prompt) : '';
     if (resolvedSysPrompt) {
       if (userModel === 'modelo17' || userModel === 'modelo18' || userModel === 'modelo19' || userModel === 'modelo20') {
         body.messages = body.messages || [];
@@ -596,7 +614,7 @@ module.exports = async (req, res) => {
       // mode 'tool': el modelo usa /api/knowledge directamente
     }
 
-    const upstreamUrl = resolveUrl(cfg);
+    const upstreamUrl = resolveUrl(cfg, userModel);
     const useResponsesApi = isResponsesEndpoint(upstreamUrl);
     // Responses API adapter (codex models en Modelverse)
     const originalModel = body.model;
@@ -622,7 +640,7 @@ module.exports = async (req, res) => {
         try {
           const parsed = normalizeModelo20ToolCalls(JSON.parse(result));
           result = JSON.stringify(parsed);
-        } catch(e) {}
+        } catch(e) { /* raw result no se pudo normalizar, sigue igual */ }
       }
       
       // Registrar uso
@@ -635,9 +653,9 @@ module.exports = async (req, res) => {
             const content = parsed.choices?.[0]?.message?.content || '';
             tokens = Math.max(1, Math.round(content.length / 4));
           }
-        } catch(e) {}
+        } catch(e) { /* respuesta no parseable, tokens=0 */ }
         
-        const db = addUsageToDb(loadUsageDB(), { model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString() });
+        const db = addUsageToDb(loadUsageDB(), { model: userModel, ip: userIp, tokens, timestamp: new Date().toISOString(), source: usageSource, ...(clientLabel ? { client: clientLabel } : {}) });
         saveUsageDB(db);
       } catch(e) { console.log('Error guardando uso:', e.message); }
       

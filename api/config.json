@@ -1,209 +1,144 @@
 {
   "modelo1": {
-    "url": "$MODELO1_URL",
-    "model": "$MODELO1_MODEL",
-    "key": "$MODELO1_KEY",
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "kilo-auto/free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo2": {
-    "url": "$MODELO2_URL",
-    "model": "$MODELO2_MODEL",
-    "key": "$MODELO2_KEY",
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "nvidia/nemotron-3-super-120b-a12b:free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo3": {
-    "url": "$MODELO3_URL",
-    "model": "$MODELO3_MODEL",
-    "key": "$MODELO3_KEY",
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "poolside/laguna-m.1:free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo4": {
-    "url": "$MODELO4_URL",
-    "model": "$MODELO4_MODEL",
-    "key": "$MODELO4_KEY",
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "poolside/laguna-xs.2:free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo5": {
-    "url": "$MODELO5_URL",
-    "model": "$MODELO5_MODEL",
-    "key": "$MODELO5_KEY",
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo6": {
-    "url": "$MODELO6_URL",
-    "model": "$MODELO6_MODEL",
-    "key": "$MODELO6_KEY",
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "stepfun/step-3.7-flash:free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo7": {
-    "url": "$MODELO7_URL",
-    "model": "$MODELO7_MODEL",
-    "key": "$MODELO7_KEY",
+    "url": "https://opencode.ai/zen/v1/chat/completions",
+    "model": "nemotron-3-ultra-free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo8": {
-    "url": "$MODELO8_URL",
-    "model": "$MODELO8_MODEL",
-    "key": "$MODELO8_KEY",
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "openrouter/free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo9": {
-    "url": "$MODELO9_URL",
-    "model": "$MODELO9_MODEL",
-    "key": "$MODELO9_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1",
-    "isRotator": true
+    "url": "https://api.kilo.ai/api/gateway/chat/completions",
+    "model": "kilo-auto/free",
+    "key": "",
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo10": {
-    "url": "$MODELO10_URL",
-    "model": "$MODELO10_MODEL",
-    "key": "$MODELO10_KEY",
+    "url": "https://image.pollinations.ai/prompt/",
+    "model": "pollinations-image",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo11": {
-    "url": "$MODELO11_URL",
-    "model": "$MODELO11_MODEL",
-    "key": "$MODELO11_KEY",
+    "url": "https://opencode.ai/zen/v1/chat/completions",
+    "model": "deepseek-v4-flash-free",
+    "key": "$MODELVERSE_KEY",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo12": {
-    "url": "$MODELO12_URL",
-    "model": "$MODELO12_MODEL",
-    "key": "$MODELO12_KEY",
+    "url": "https://opencode.ai/zen/v1/chat/completions",
+    "model": "mimo-v2.5-free",
+    "key": "$MODELVERSE_KEY",
     "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo13": {
-    "url": "$MODELO13_URL",
-    "model": "$MODELO13_MODEL",
+    "url": "https://api.modelverse.cn/v1/chat/completions",
+    "model": "claude-opus-4-8",
     "key": "$MODELVERSE_KEY"
   },
   "modelo14": {
-    "url": "$MODELO14_URL",
-    "model": "$MODELO14_MODEL",
-    "key": "$MODELVERSE_KEY"
+    "url": "https://api.modelverse.cn/v1/chat/completions",
+    "model": "gpt-5.5",
+    "key": "$MODELVERSE_KEY",
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo15": {
-    "url": "$MODELO15_URL",
-    "model": "$MODELO15_MODEL",
-    "key": "$MODELVERSE_KEY"
+    "url": "https://api.modelverse.cn/v1/chat/completions",
+    "model": "claude-sonnet-4-6",
+    "key": "$MODELVERSE_KEY",
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo16": {
-    "url": "$MODELO16_URL",
-    "model": "$MODELO16_MODEL",
-    "key": "$MODELVERSE_KEY"
+    "url": "https://api.modelverse.cn/v1/chat/completions",
+    "model": "glm-5.2",
+    "key": "$MODELVERSE_KEY",
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo17": {
-    "url": "$MODELO17_URL",
-    "model": "$MODELO17_MODEL",
-    "key": "$MODELO17_KEY",
+    "url": "https://opencode.ai/zen/v1/chat/completions",
+    "model": "deepseek-v4-flash-free",
+    "key": "",
     "system_prompt": "$SYSTEM_PROMPT1",
     "knowledge": {
       "enabled": true,
       "mode": "rag",
-      "rag_limit": 6,
+      "rag_limit": 3,
       "tool_endpoint": "/api/knowledge",
       "available_modes": [
         "rag",
         "tool",
         "full"
-      ]
-    },
-    "caveman": {
-      "enabled": true,
-      "default_level": "full",
-      "levels": [
-        "lite",
-        "full",
-        "ultra"
       ]
     }
   },
   "modelo18": {
-    "url": "$MODELO18_URL",
-    "model": "$MODELO18_MODEL",
+    "url": "https://integrate.api.nvidia.com/v1/chat/completions",
+    "model": "z-ai/glm-5.1",
     "key": "$NVIDIA_NIM_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1",
-    "knowledge": {
-      "enabled": true,
-      "mode": "rag",
-      "rag_limit": 6,
-      "tool_endpoint": "/api/knowledge",
-      "available_modes": [
-        "rag",
-        "tool",
-        "full"
-      ]
-    },
-    "caveman": {
-      "enabled": true,
-      "default_level": "full",
-      "levels": [
-        "lite",
-        "full",
-        "ultra"
-      ]
-    }
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo19": {
-    "url": "$MODELO19_URL",
-    "model": "$MODELO19_MODEL",
-    "key": "$MODELO19_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1",
-    "knowledge": {
-      "enabled": true,
-      "mode": "rag",
-      "rag_limit": 6,
-      "tool_endpoint": "/api/knowledge",
-      "available_modes": [
-        "rag",
-        "tool",
-        "full"
-      ]
-    },
-    "caveman": {
-      "enabled": true,
-      "default_level": "full",
-      "levels": [
-        "lite",
-        "full",
-        "ultra"
-      ]
-    }
+    "url": "http://74.50.77.70:11434/v1/chat/completions",
+    "model": "qwen3-coder:30b",
+    "key": "",
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo20": {
-    "url": "$MODELO20_URL",
-    "model": "$MODELO20_MODEL",
+    "url": "https://integrate.api.nvidia.com/v1/chat/completions",
+    "model": "minimaxai/minimax-m2.7",
     "key": "$NVIDIA_NIM_KEY",
-    "system_prompt": "$SYSTEM_PROMPT1",
-    "knowledge": {
-      "enabled": true,
-      "mode": "rag",
-      "rag_limit": 6,
-      "tool_endpoint": "/api/knowledge",
-      "available_modes": [
-        "rag",
-        "tool",
-        "full"
-      ]
-    },
-    "caveman": {
-      "enabled": true,
-      "default_level": "full",
-      "levels": [
-        "lite",
-        "full",
-        "ultra"
-      ]
-    }
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo21": {
-    "url": "$MODELO21_URL",
-    "model": "$MODELO21_MODEL",
-    "key": "$MODELO21_KEY"
+    "url": "http://147.182.242.47:5001/v1/chat/completions",
+    "model": "guzesqdro/Claude_Sonnet_4.6_Reduced:latest",
+    "key": "",
+    "system_prompt": "$SYSTEM_PROMPT1"
   },
   "modelo22": {
-    "url": "$MODELO22_URL",
-    "model": "$MODELO22_MODEL",
-    "key": "$MODELO22_KEY"
+    "url": "http://57.130.24.2:31984/v1/chat/completions",
+    "model": "kimi-k2.7-code",
+    "key": "",
+    "system_prompt": "$SYSTEM_PROMPT1"
   }
 }
